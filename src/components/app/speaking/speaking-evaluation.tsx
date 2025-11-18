@@ -1,19 +1,32 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import WaveSurfer from 'wavesurfer.js';
-import RecordPlugin from 'wavesurfer.js/dist/plugins/record.esm.js';
 import { aiPoweredSpeakingEvaluation } from '@/ai/flows/ai-powered-speaking-evaluation';
 import type { AiSpeakingReport } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mic, StopCircle, Sparkles, Send } from 'lucide-react';
+import { Loader2, Mic, StopCircle, Sparkles, Send, VideoOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { toast } from '@/hooks/use-toast';
 
 interface SpeakingEvaluationProps {
   task: string;
 }
+
+// Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
+let WaveSurfer: any = null;
+let RecordPlugin: any = null;
+if (typeof window !== 'undefined') {
+  import('wavesurfer.js').then(module => {
+    WaveSurfer = module.default;
+  });
+  import('wavesurfer.js/dist/plugins/record.esm.js').then(module => {
+    RecordPlugin = module.default;
+  });
+}
+
 
 export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -21,13 +34,35 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
   const [result, setResult] = useState<AiSpeakingReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
   
-  const wavesurferRef = useRef<WaveSurfer | null>(null);
+  const wavesurferRef = useRef<any | null>(null);
   const waveformRef = useRef<HTMLDivElement>(null);
-  const recordPluginRef = useRef<RecordPlugin | null>(null);
+  const recordPluginRef = useRef<any | null>(null);
 
   useEffect(() => {
-    if (waveformRef.current) {
+    if (!WaveSurfer || !RecordPlugin) return;
+
+    const getMicPermission = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        setHasMicPermission(true);
+      } catch (err) {
+        console.error('Error accessing microphone:', err);
+        setHasMicPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Microphone Access Denied',
+          description: 'Please enable microphone permissions in your browser settings.',
+        });
+      }
+    };
+
+    getMicPermission();
+  }, []);
+
+  useEffect(() => {
+    if (waveformRef.current && hasMicPermission && WaveSurfer && RecordPlugin && !wavesurferRef.current) {
         const wavesurfer = WaveSurfer.create({
             container: waveformRef.current,
             waveColor: 'hsl(var(--muted-foreground))',
@@ -46,7 +81,7 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
         }));
         recordPluginRef.current = record;
 
-        record.on('record-end', (blob) => {
+        record.on('record-end', (blob: Blob) => {
             setAudioBlob(blob);
         });
 
@@ -55,19 +90,28 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
             wavesurfer.destroy();
         };
     }
-  }, []);
+  }, [hasMicPermission]);
 
   const handleStartRecording = async () => {
+    if (recordPluginRef.current && recordPluginRef.current.isRecording()) {
+      return;
+    }
     if (recordPluginRef.current) {
         setResult(null);
         setAudioBlob(null);
         setIsRecording(true);
-        await recordPluginRef.current.startRecording();
+        try {
+          await recordPluginRef.current.startRecording();
+        } catch (err) {
+          console.error("Error starting recording:", err);
+          setError("Could not start recording. Please check microphone permissions.");
+          setIsRecording(false);
+        }
     }
   };
 
   const handleStopRecording = () => {
-    if (recordPluginRef.current) {
+    if (recordPluginRef.current && recordPluginRef.current.isRecording()) {
         recordPluginRef.current.stopRecording();
         setIsRecording(false);
     }
@@ -155,7 +199,6 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
     );
   };
 
-
   return (
     <div className="space-y-6">
       <Card>
@@ -165,34 +208,50 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
           <CardDescription>{task}</CardDescription>
         </CardHeader>
         <CardContent>
-            <div ref={waveformRef} id="waveform" className="w-full h-24 bg-muted rounded-lg"></div>
-             <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-                {!isRecording ? (
-                <Button onClick={handleStartRecording} disabled={isLoading}>
-                    <Mic className="mr-2 h-4 w-4" />
-                    Start Recording
-                </Button>
-                ) : (
-                <Button onClick={handleStopRecording} variant="destructive">
-                    <StopCircle className="mr-2 h-4 w-4" />
-                    Stop Recording
-                </Button>
-                )}
+          {hasMicPermission === null && <div className="flex items-center justify-center h-24 bg-muted rounded-lg"><Loader2 className="animate-spin" /></div>}
 
-                <Button onClick={handleSubmit} disabled={isLoading || isRecording || !audioBlob} className="w-full sm:w-auto">
-                    {isLoading ? (
-                    <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Evaluating...
-                    </>
-                    ) : (
-                        <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Submit for AI Evaluation
-                        </>
-                    )}
-                </Button>
-            </div>
+          {hasMicPermission === false && (
+            <Alert variant="destructive">
+              <VideoOff className="h-4 w-4" />
+              <AlertTitle>Microphone Access Required</AlertTitle>
+              <AlertDescription>
+                Please enable microphone access in your browser settings to use the recording feature.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {hasMicPermission && (
+            <>
+              <div ref={waveformRef} id="waveform" className="w-full h-24 bg-muted rounded-lg"></div>
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+                  {!isRecording ? (
+                  <Button onClick={handleStartRecording} disabled={isLoading}>
+                      <Mic className="mr-2 h-4 w-4" />
+                      Start Recording
+                  </Button>
+                  ) : (
+                  <Button onClick={handleStopRecording} variant="destructive">
+                      <StopCircle className="mr-2 h-4 w-4" />
+                      Stop Recording
+                  </Button>
+                  )}
+
+                  <Button onClick={handleSubmit} disabled={isLoading || isRecording || !audioBlob} className="w-full sm:w-auto">
+                      {isLoading ? (
+                      <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Evaluating...
+                      </>
+                      ) : (
+                          <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Submit for AI Evaluation
+                          </>
+                      )}
+                  </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
