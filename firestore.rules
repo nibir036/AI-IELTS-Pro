@@ -1,0 +1,134 @@
+/**
+ * @fileoverview Firestore Security Rules for AI-Band-Builder Application
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles, learning paths, and submissions.
+ * Public read access is granted to lessons and mock tests, while write access to these collections is not permitted in this prototype.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profiles. Only the authenticated user can read or write their own profile.
+ * - /lessons/{lessonId}: Stores static curriculum content. Public read access.
+ * - /mockTests/{testId}: Stores mock test definitions. Public read access.
+ * - /users/{userId}/submissions/{submissionId}: Stores user submissions. Only the authenticated user can read or write their own submissions.
+ * - /users/{userId}/learningPaths/{learningPathId}: Stores user-specific learning paths. Only the authenticated user can read or write their own learning paths.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed to protect user privacy.
+ * - Lessons and mockTests can be read by everyone.
+ * - Write access is limited to the user themselves or is disabled.
+ *
+ * Denormalization for Authorization:
+ *  - User-specific data (submissions, learning paths) is stored under the /users/{userId} path, allowing for efficient, path-based authorization.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Checks if the user is signed in.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the requested user ID matches the authenticated user's ID.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the user is the owner of an existing document.
+     * @details Combines ownership check with existence check to prevent operations on non-existent documents.
+     */
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+    }
+
+    match /users/{userId} {
+      /**
+       * @description Manages user profiles.
+       * @path /users/{userId}
+       * @allow (create) User with ID 'user123' can create their profile if authenticated as 'user123'.
+       * @allow (get) User with ID 'user123' can read their profile if authenticated as 'user123'.
+       * @allow (update) User with ID 'user123' can update their profile if authenticated as 'user123'.
+       * @allow (delete) User with ID 'user123' can delete their profile if authenticated as 'user123'.
+       * @deny (create) User with ID 'user456' cannot create a profile for 'user123'.
+       * @deny (get) User with ID 'user456' cannot read the profile of 'user123'.
+       * @principle Enforces document ownership for all operations.
+       */
+      allow get: if isOwner(userId);
+      allow list: if false; // User listing is not permitted.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    match /lessons/{lessonId} {
+      /**
+       * @description Manages static curriculum lessons.
+       * @path /lessons/{lessonId}
+       * @allow (get) Any user can read any lesson.
+       * @allow (list) Any user can list lessons.
+       * @deny (create) No user can create lessons (admin only).
+       * @deny (update) No user can update lessons (admin only).
+       * @deny (delete) No user can delete lessons (admin only).
+       */
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    match /mockTests/{testId} {
+      /**
+       * @description Manages mock test definitions.
+       * @path /mockTests/{testId}
+       * @allow (get) Any user can read any mock test.
+       * @allow (list) Any user can list mock tests.
+       * @deny (create) No user can create mock tests (admin only).
+       * @deny (update) No user can update mock tests (admin only).
+       * @deny (delete) No user can delete mock tests (admin only).
+       */
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    match /users/{userId}/submissions/{submissionId} {
+      /**
+       * @description Manages user submissions.
+       * @path /users/{userId}/submissions/{submissionId}
+       * @allow (create) User with ID 'user123' can create a submission under their profile if authenticated as 'user123'.
+       * @allow (get) User with ID 'user123' can read their submission if authenticated as 'user123'.
+       * @allow (update) User with ID 'user123' can update their submission if authenticated as 'user123'.
+       * @allow (delete) User with ID 'user123' can delete their submission if authenticated as 'user123'.
+       * @deny (create) User with ID 'user456' cannot create a submission for 'user123'.
+       * @deny (get) User with ID 'user456' cannot read the submission of 'user123'.
+       * @principle Enforces document ownership for all operations.
+       */
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+       match /users/{userId}/learningPaths/{learningPathId} {
+          /**
+           * @description Manages user learning paths.
+           * @path /users/{userId}/learningPaths/{learningPathId}
+           * @allow (create) User with ID 'user123' can create a learning path under their profile if authenticated as 'user123'.
+           * @allow (get) User with ID 'user123' can read their learning path if authenticated as 'user123'.
+           * @allow (update) User with ID 'user123' can update their learning path if authenticated as 'user123'.
+           * @allow (delete) User with ID 'user123' can delete their learning path if authenticated as 'user123'.
+           * @deny (create) User with ID 'user456' cannot create a learning path for 'user123'.
+           * @deny (get) User with ID 'user456' cannot read the learning path of 'user123'.
+           * @principle Enforces document ownership for all operations.
+           */
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId);
+          allow update: if isExistingOwner(userId);
+          allow delete: if isExistingOwner(userId);
+       }
+  }
+}
