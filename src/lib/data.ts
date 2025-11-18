@@ -73,8 +73,8 @@ export const mockTests: MockTest[] = [
         taskType: 'Task 2',
         wordCountTarget: 250,
       } as WritingQuestion,
-    }
-  ]
+    ],
+  },
 ];
 
 export const recentSubmissions: Submission[] = [
