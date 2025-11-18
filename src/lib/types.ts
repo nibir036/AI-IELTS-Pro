@@ -39,7 +39,7 @@ export interface Submission {
   testId: DocumentReference | string;
   skill: 'Writing' | 'Speaking' | 'GrammarPractice' | string;
   inputData: string; // Text response or URL to audio
-  aiReport: AiReport | null;
+  aiReport: AiReport | AiSpeakingReport | null;
   scoreBand: number | null;
   timestamp: Date;
 }
@@ -55,6 +55,16 @@ export interface AiReport {
   };
   improvementAreas: ImprovementArea[];
   correctedEssay: string;
+}
+
+export interface AiSpeakingReport {
+  overallFeedback: string;
+  pronunciationFeedback: string;
+  fluencyFeedback: string;
+  coherenceFeedback: string;
+  grammarFeedback: string;
+  vocabularyFeedback: string;
+  scoreBand: number;
 }
 
 export interface CriterionScore {
