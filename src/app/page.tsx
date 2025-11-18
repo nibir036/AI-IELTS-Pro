@@ -45,10 +45,10 @@ export default function Home() {
         </Link>
         <nav className="flex items-center gap-4">
           <Button variant="ghost" asChild>
-            <Link href="/dashboard">Log In</Link>
+            <Link href="/login">Log In</Link>
           </Button>
           <Button asChild>
-            <Link href="/dashboard">Get Started</Link>
+            <Link href="/login">Get Started</Link>
           </Button>
         </nav>
       </header>
@@ -75,7 +75,7 @@ export default function Home() {
             </p>
             <div className="mt-8">
               <Button size="lg" asChild>
-                <Link href="/dashboard">Start Your Free Trial</Link>
+                <Link href="/login">Start Your Free Trial</Link>
               </Button>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function Home() {
                     <CardContent>
                         <p className="text-muted-foreground mb-4">Join hundreds of students who have achieved their dream scores with AI IELTS Pro.</p>
                         <Button className="w-full" size="lg" asChild>
-                            <Link href="/dashboard">Start Learning Now</Link>
+                            <Link href="/login">Start Learning Now</Link>
                         </Button>
                     </CardContent>
                 </Card>

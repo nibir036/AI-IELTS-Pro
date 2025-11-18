@@ -1,16 +1,19 @@
+'use client';
 import { StatsCards } from '@/components/app/dashboard/stats-cards';
 import { LearningPath } from '@/components/app/dashboard/learning-path';
 import { RecentActivity } from '@/components/app/dashboard/recent-activity';
 import { sampleUser } from '@/lib/data';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useFirebase } from '@/firebase';
 
 export default function DashboardPage() {
+    const { user } = useFirebase();
     const progress = (sampleUser.currentBand / sampleUser.targetBand) * 100;
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {sampleUser.email.split('@')[0]}!</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.displayName || 'friend'}!</h1>
             <p className="text-muted-foreground">Here's your progress overview. Keep up the great work!</p>
             
             <StatsCards />
