@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "A focused student studying at a desk with books and a laptop.",
+      "imageUrl": "https://images.unsplash.com/photo-1513258496099-48168024aec0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzdHVkZW50JTIwc3R1ZHlpbmd8ZW58MHx8fHwxNzYzMzk3ODc1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "student studying"
+    },
+    {
+      "id": "feature-1",
+      "description": "A close-up of a person writing in a notebook.",
+      "imageUrl": "https://images.unsplash.com/photo-1758612898716-fa346091b21e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d3JpdGluZyUyMHByYWN0aWNlfGVufDB8fHx8MTc2MzM5ODQwNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "writing practice"
+    },
+    {
+      "id": "feature-2",
+      "description": "A person speaking into a microphone.",
+      "imageUrl": "https://images.unsplash.com/photo-1758691462848-31a39258dbd8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzcGVha2luZyUyMHByYWN0aWNlfGVufDB8fHx8MTc2MzUwNDUyNXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "speaking practice"
+    },
+    {
+      "id": "feature-3",
+      "description": "A chart showing progress and growth.",
+      "imageUrl": "https://images.unsplash.com/photo-1762279389083-abf71f22d338?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwcm9ncmVzcyUyMGNoYXJ0fGVufDB8fHx8MTc2MzQzNDE5MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "progress chart"
+    }
+  ]
 }
