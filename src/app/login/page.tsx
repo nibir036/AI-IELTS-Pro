@@ -3,15 +3,37 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { setDocumentNonBlocking } from '@/firebase';
 
 const provider = new GoogleAuthProvider();
 
+async function createUserProfile(user: User, firestore: any) {
+  const userRef = doc(firestore, 'users', user.uid);
+  const userDoc = await getDoc(userRef);
+
+  if (!userDoc.exists()) {
+    // This is a new user
+    const newUser = {
+      id: user.uid,
+      email: user.email,
+      nativeLanguage: 'English', // Default value
+      currentBand: 5.0, // Default value
+      targetBand: 7.5, // Default value
+      learningPathId: '', // Default value
+      totalPracticeTime: 0, // Default value
+    };
+    // Using non-blocking write
+    setDocumentNonBlocking(userRef, newUser, { merge: false });
+  }
+}
+
 export default function LoginPage() {
-  const { auth, user, isUserLoading } = useFirebase();
+  const { auth, user, isUserLoading, firestore } = useFirebase();
   const router = useRouter();
 
   useEffect(() => {
@@ -22,9 +44,10 @@ export default function LoginPage() {
 
 
   const handleSignIn = async () => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      await createUserProfile(result.user, firestore);
       router.push('/dashboard');
     } catch (error) {
       console.error('Error signing in with Google', error);
