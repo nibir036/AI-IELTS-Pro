@@ -62,6 +62,10 @@ export default function WritingPage() {
       {!isLoading && writingTests && writingTests.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2">
             {writingTests.map(test => {
+                // Defensive check to prevent crash
+                if (!test.questions || test.questions.length === 0) {
+                    return null;
+                }
                 const question = test.questions[0] as WritingQuestion;
                 return (
               <Card key={test.testId} className="flex flex-col">
