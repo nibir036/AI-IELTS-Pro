@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup, User, AuthError } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -30,7 +30,7 @@ async function checkAndCreateUserProfile(user: User, firestore: any): Promise<bo
     };
     // Use non-blocking write here for a faster UI response.
     // The user doesn't need to wait for this to complete.
-    await setDoc(userRef, newUser, { merge: false });
+    setDocumentNonBlocking(userRef, newUser, { merge: false });
     return true; // Indicates a new user was created
   }
   return false; // Indicates an existing user
