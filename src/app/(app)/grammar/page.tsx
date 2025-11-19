@@ -2,40 +2,14 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PenSquare, Loader2 } from 'lucide-react';
+import { PenSquare } from 'lucide-react';
 import Link from 'next/link';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { lessons as allLessons } from '@/lib/data';
 import type { Lesson } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
 
-
-function LessonSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-6 w-6" />
-          <Skeleton className="h-6 w-3/4" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full mt-2" />
-      </CardContent>
-    </Card>
-  );
-}
+const grammarLessons = allLessons.filter(lesson => lesson.type === 'Grammar');
 
 export default function GrammarPage() {
-  const { firestore } = useFirebase();
-
-  const lessonsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'lessons'), where('type', '==', 'Grammar'));
-  }, [firestore]);
-
-  const { data: grammarLessons, isLoading } = useCollection<Lesson>(lessonsQuery);
 
   return (
     <div className="space-y-6">
@@ -44,15 +18,7 @@ export default function GrammarPage() {
         <p className="text-muted-foreground">Strengthen your grammar foundations with these lessons.</p>
       </div>
 
-      {isLoading && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <LessonSkeleton />
-            <LessonSkeleton />
-            <LessonSkeleton />
-        </div>
-      )}
-
-      {!isLoading && grammarLessons && (
+      {grammarLessons && grammarLessons.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {grammarLessons.map(lesson => (
               <Link href={`/lessons/${lesson.id}`} key={lesson.id} className="block">
@@ -70,10 +36,8 @@ export default function GrammarPage() {
               </Link>
             ))}
         </div>
-      )}
-
-      {!isLoading && !grammarLessons?.length && (
-          <p className="text-center text-muted-foreground">No grammar lessons found.</p>
+      ) : (
+          <p className="text-center text-muted-foreground pt-10">No grammar lessons found.</p>
       )}
     </div>
   );

@@ -2,40 +2,14 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lightbulb, Loader2 } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import Link from 'next/link';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { lessons as allLessons } from '@/lib/data';
 import type { Lesson } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
 
-
-function LessonSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-6 w-6" />
-          <Skeleton className="h-6 w-3/4" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full mt-2" />
-      </CardContent>
-    </Card>
-  );
-}
+const tipsLessons = allLessons.filter(lesson => lesson.type === 'Tips');
 
 export default function TipsPage() {
-  const { firestore } = useFirebase();
-
-  const lessonsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'lessons'), where('type', '==', 'Tips'));
-  }, [firestore]);
-
-  const { data: tipsLessons, isLoading } = useCollection<Lesson>(lessonsQuery);
 
   return (
     <div className="space-y-6">
@@ -44,15 +18,7 @@ export default function TipsPage() {
         <p className="text-muted-foreground">Boost your score with these expert tips and strategies.</p>
       </div>
 
-      {isLoading && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <LessonSkeleton />
-            <LessonSkeleton />
-            <LessonSkeleton />
-        </div>
-      )}
-
-      {!isLoading && tipsLessons && (
+       {tipsLessons && tipsLessons.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {tipsLessons.map(lesson => (
               <Link href={`/lessons/${lesson.id}`} key={lesson.id} className="block">
@@ -70,10 +36,8 @@ export default function TipsPage() {
               </Link>
             ))}
         </div>
-      )}
-
-      {!isLoading && !tipsLessons?.length && (
-          <p className="text-center text-muted-foreground">No tips found.</p>
+      ) : (
+          <p className="text-center text-muted-foreground pt-10">No tips found.</p>
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -5,46 +6,13 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowRight, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { mockTests } from '@/lib/data';
 import type { MockTest, WritingQuestion } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
 
-function WritingTestSkeleton() {
-  return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <Skeleton className="h-6 w-32 mb-2" />
-            <Skeleton className="h-5 w-16" />
-          </div>
-          <Skeleton className="h-6 w-6" />
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-5/6" />
-      </CardContent>
-      <CardFooter>
-        <Skeleton className="h-10 w-full" />
-      </CardFooter>
-    </Card>
-  );
-}
-
+const writingTests: MockTest[] = mockTests.filter(test => test.skill === 'Writing');
 
 export default function WritingPage() {
-  const { firestore } = useFirebase();
-
-  const testsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // Query for tests where the skill is 'Writing'
-    return query(collection(firestore, 'mockTests'), where('skill', '==', 'Writing'));
-  }, [firestore]);
-
-  const { data: writingTests, isLoading } = useCollection<MockTest>(testsQuery);
-
+  
   return (
     <div className="space-y-6">
       <div>
@@ -52,17 +20,9 @@ export default function WritingPage() {
         <p className="text-muted-foreground">Hone your essay skills with official-style practice tests.</p>
       </div>
 
-      {isLoading && (
-         <div className="grid gap-6 md:grid-cols-2">
-            <WritingTestSkeleton />
-            <WritingTestSkeleton />
-         </div>
-      )}
-
-      {!isLoading && writingTests && writingTests.length > 0 && (
+      {writingTests && writingTests.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2">
             {writingTests.map(test => {
-                // Defensive check to prevent crash
                 if (!test.questions || test.questions.length === 0) {
                     return null;
                 }
@@ -91,10 +51,18 @@ export default function WritingPage() {
               </Card>
             )})}
         </div>
-      )}
-
-      {!isLoading && (!writingTests || writingTests.length === 0) && (
-        <p className="text-center text-muted-foreground pt-10">No writing tests found.</p>
+      ) : (
+         <Card className="flex flex-col items-center justify-center text-center p-8 border-dashed">
+            <CardHeader>
+                <div className="mx-auto bg-muted rounded-full p-4 w-fit">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <CardTitle className="mt-4">No Writing Tests Found</CardTitle>
+                <CardDescription>
+                    We are currently preparing writing practice tests. Please check back soon!
+                </CardDescription>
+            </CardHeader>
+        </Card>
       )}
     </div>
   );

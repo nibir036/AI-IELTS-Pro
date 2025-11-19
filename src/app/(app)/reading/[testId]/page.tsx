@@ -3,10 +3,10 @@
 
 import { useState } from 'react';
 import { notFound } from 'next/navigation';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { ReadingTest, ReadingQuestion, ReadingQuestionType } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { readingTests } from '@/lib/data';
+import type { ReadingTest, ReadingQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -16,15 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-
-function ReadingTaskSkeleton() {
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Skeleton className="h-[80vh] w-full" />
-            <Skeleton className="h-[80vh] w-full" />
-        </div>
-    );
-}
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type UserAnswers = Record<string, string>;
 
@@ -32,12 +24,7 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
     const { firestore, user } = useFirebase();
     const { toast } = useToast();
 
-    const testQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return doc(firestore, 'readingTests', params.testId);
-    }, [firestore, params.testId]);
-
-    const { data: test, isLoading } = useDoc<ReadingTest>(testQuery);
+    const test = readingTests.find(t => t.id === params.testId);
 
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
@@ -62,32 +49,25 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
         setIsGraded(true);
 
         if (user && firestore) {
-            try {
-                const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
-                await addDoc(submissionRef, {
-                    skill: 'Reading',
-                    testId: test.id,
-                    inputData: JSON.stringify(userAnswers),
-                    scoreBand: finalScore,
-                    timestamp: serverTimestamp(),
-                });
-                toast({
-                    title: "Practice Complete!",
-                    description: `Your reading score of ${finalScore.toFixed(1)} has been saved.`,
-                });
-            } catch (error) {
-                 toast({
-                    variant: 'destructive',
-                    title: "Submission Failed",
-                    description: "Could not save your results.",
-                });
-                console.error("Error saving submission: ", error);
-            }
+            const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
+             const newSubmission = {
+                skill: 'Reading',
+                testId: test.id,
+                inputData: JSON.stringify(userAnswers),
+                scoreBand: finalScore,
+                timestamp: serverTimestamp(),
+            };
+            // Use a non-blocking add, as the user doesn't need to wait for this to complete.
+            addDoc(submissionRef, newSubmission).catch(console.error);
+
+            toast({
+                title: "Practice Complete!",
+                description: `Your reading score of ${finalScore.toFixed(1)} has been saved.`,
+            });
         }
     };
 
-    if (isLoading) return <ReadingTaskSkeleton />;
-    if (!isLoading && !test) notFound();
+    if (!test) notFound();
 
     const progress = (Object.keys(userAnswers).length / test.questions.length) * 100;
 
@@ -191,5 +171,3 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
         </div>
     );
 }
-
-    
