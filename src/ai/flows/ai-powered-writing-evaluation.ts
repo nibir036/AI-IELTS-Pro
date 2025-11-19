@@ -13,7 +13,7 @@ import {z} from 'genkit';
 
 const AiPoweredWritingEvaluationInputSchema = z.object({
   task: z.string().describe('The writing task for the essay.'),
-  studentEssay: z.string().describe('The student\'s essay submission.'),
+  studentEssay: z.string().describe("The student's essay submission."),
 });
 export type AiPoweredWritingEvaluationInput = z.infer<
   typeof AiPoweredWritingEvaluationInputSchema
@@ -77,24 +77,7 @@ Task: {{{task}}}
 
 Student Essay: {{{studentEssay}}}
 
-Output Format:
-\'\'\'json
-{
-  "overallBand": (Number),
-  "feedbackSummary": (String),
-  "criterionScores": {
-    "taskResponse": {"band": (Number), "comment": (String)},
-    "coherenceCohesion": {"band": (Number), "comment": (String)},
-    "lexicalResource": {"band": (Number), "comment": (String)},
-    "grammaticalRangeAccuracy": {"band": (Number), "comment": (String)}
-  },
-  "improvementAreas": [
-    {"type": "Grammar", "rule": "Subordinating conjunctions", "example": "The student should practice using complex sentences with 'although' and 'while'."},
-    {"type": "Vocabulary", "rule": "Nominalization", "example": "Replace verb forms with noun forms: 'It is important to analyze...' -> 'The analysis is important...'."}
-  ],
-  "correctedEssay": (String)
-}
-\'\'\'`,
+Output a JSON object that adheres to the following schema: {{outputSchema}}`,
 });
 
 const aiPoweredWritingEvaluationFlow = ai.defineFlow(
