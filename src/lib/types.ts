@@ -1,8 +1,10 @@
 import type { DocumentReference } from "firebase/firestore";
 
 export interface User {
-  userId: string;
-  email: string;
+  id: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
   nativeLanguage: string;
   currentBand: number;
   targetBand: number;

@@ -1,22 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GraduationCap, Target, Clock, TrendingUp } from 'lucide-react';
-import { sampleUser } from '@/lib/data';
+import type { User } from '@/lib/types';
 
-export function StatsCards() {
+interface StatsCardsProps {
+  user: User;
+}
+
+export function StatsCards({ user }: StatsCardsProps) {
   const stats = [
     {
       title: 'Current Band',
-      value: sampleUser.currentBand.toFixed(1),
+      value: user.currentBand.toFixed(1),
       icon: GraduationCap,
     },
     {
       title: 'Target Band',
-      value: sampleUser.targetBand.toFixed(1),
+      value: user.targetBand.toFixed(1),
       icon: Target,
     },
     {
       title: 'Practice Time',
-      value: `${(sampleUser.totalPracticeTime / 60).toFixed(1)}h`,
+      value: `${(user.totalPracticeTime / 60).toFixed(1)}h`,
       icon: Clock,
     },
     {

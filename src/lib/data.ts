@@ -1,15 +1,5 @@
 import type { User, Lesson, MockTest, Submission, WritingQuestion } from './types';
 
-export const sampleUser: User = {
-  userId: 'sample-user-123',
-  email: 'student@example.com',
-  nativeLanguage: 'Spanish',
-  currentBand: 6.5,
-  targetBand: 8.0,
-  learningPathId: 'path-xyz',
-  totalPracticeTime: 720, // 12 hours
-};
-
 export const lessons: Lesson[] = [
   {
     lessonId: 'Tenses_L1',

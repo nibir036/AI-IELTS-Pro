@@ -3,15 +3,18 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { lessons as allLessons, sampleUser } from '@/lib/data';
+import { lessons as allLessons } from '@/lib/data';
 import Link from 'next/link';
 import { BookOpen, ArrowRight, Loader2 } from 'lucide-react';
 import { generatePersonalizedLearningPath } from '@/ai/flows/personalized-learning-path';
-import type { Lesson } from '@/lib/types';
+import type { Lesson, User } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 
-export function LearningPath() {
-  const { user } = useFirebase();
+interface LearningPathProps {
+  user: User;
+}
+
+export function LearningPath({ user }: LearningPathProps) {
   const [recommendedLessons, setRecommendedLessons] = useState<Lesson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -21,22 +24,18 @@ export function LearningPath() {
 
       setIsLoading(true);
       try {
-        // In a real app, you would fetch the user's profile from Firestore
-        // For now, we use the sampleUser and can supplement with the authenticated user's info
         const input = {
-          currentBand: sampleUser.currentBand,
-          targetBand: sampleUser.targetBand,
-          nativeLanguage: sampleUser.nativeLanguage,
+          currentBand: user.currentBand,
+          targetBand: user.targetBand,
+          nativeLanguage: user.nativeLanguage,
         };
         
         const result = await generatePersonalizedLearningPath(input);
         
-        // Filter the full lesson list to get the lesson objects for the recommended IDs
         const filteredLessons = allLessons.filter(lesson => result.lessonIds.includes(lesson.lessonId));
-        setRecommendedLessons(filteredLessons.slice(0, 3)); // Show top 3
+        setRecommendedLessons(filteredLessons.slice(0, 3));
       } catch (error) {
         console.error("Error generating learning path:", error);
-        // Fallback to a default set of lessons on error
         setRecommendedLessons(allLessons.slice(0, 3));
       } finally {
         setIsLoading(false);
