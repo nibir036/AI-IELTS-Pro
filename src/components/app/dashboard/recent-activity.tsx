@@ -1,10 +1,31 @@
+'use client';
+
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { recentSubmissions } from '@/lib/data';
 import { formatDistanceToNow } from 'date-fns';
+import { useFirebase, useUser } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import type { Submission } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function RecentActivity() {
+  const { firestore } = useFirebase();
+  const { user } = useUser();
+
+  const submissionsQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'users', user.uid, 'submissions'),
+      orderBy('timestamp', 'desc'),
+      limit(5)
+    );
+  }, [firestore, user]);
+
+  const { data: submissions, isLoading } = useCollection<Submission>(submissionsQuery);
+
   return (
     <Card>
       <CardHeader>
@@ -12,30 +33,44 @@ export function RecentActivity() {
         <CardDescription>An overview of your latest practice submissions.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Skill</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Date</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {recentSubmissions.map((submission) => (
-                    <TableRow key={submission.submissionId}>
-                        <TableCell className="font-medium">{submission.skill}</TableCell>
-                        <TableCell>
-                            <Badge variant={submission.scoreBand && submission.scoreBand >= 7.0 ? 'default' : 'secondary'}>
-                                {submission.scoreBand ? submission.scoreBand.toFixed(1) : 'N/A'}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                            {formatDistanceToNow(submission.timestamp, { addSuffix: true })}
-                        </TableCell>
+        {isLoading && (
+            <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+        )}
+        {!isLoading && (!submissions || submissions.length === 0) && (
+            <p className="text-sm text-muted-foreground text-center py-4">No recent activity yet. Complete a practice session to see your results here!</p>
+        )}
+        {submissions && submissions.length > 0 && (
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Skill</TableHead>
+                        <TableHead>Score</TableHead>
+                        <TableHead>Date</TableHead>
                     </TableRow>
-                ))}
-            </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                    {submissions.map((submission) => (
+                        <TableRow key={submission.id}>
+                            <TableCell className="font-medium">{submission.skill}</TableCell>
+                            <TableCell>
+                                {submission.scoreBand != null && (
+                                    <Badge variant={submission.scoreBand >= 7.0 ? 'default' : 'secondary'}>
+                                        {submission.scoreBand.toFixed(1)}
+                                    </Badge>
+                                )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                                {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp as any), { addSuffix: true }) : ''}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        )}
       </CardContent>
     </Card>
   );

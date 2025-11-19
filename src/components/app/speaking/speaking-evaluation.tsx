@@ -2,18 +2,17 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { aiPoweredSpeakingEvaluation } from '@/ai/flows/ai-powered-speaking-evaluation';
-import type { AiSpeakingReport } from '@/lib/types';
+import type { AiPoweredSpeakingEvaluationOutput } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Mic, StopCircle, Sparkles, Send, VideoOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
-interface SpeakingEvaluationProps {
-  task: string;
-}
+import { useFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 
 // Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
 let WaveSurfer: any = null;
@@ -27,11 +26,14 @@ if (typeof window !== 'undefined') {
   });
 }
 
+interface SpeakingEvaluationProps {
+  task: string;
+}
 
 export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [result, setResult] = useState<AiSpeakingReport | null>(null);
+  const [result, setResult] = useState<AiPoweredSpeakingEvaluationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
@@ -39,6 +41,9 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
   const wavesurferRef = useRef<any | null>(null);
   const waveformRef = useRef<HTMLDivElement>(null);
   const recordPluginRef = useRef<any | null>(null);
+
+  const { user, firestore } = useFirebase();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!WaveSurfer || !RecordPlugin) return;
@@ -59,7 +64,7 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
     };
 
     getMicPermission();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (waveformRef.current && hasMicPermission && WaveSurfer && RecordPlugin && !wavesurferRef.current) {
@@ -131,6 +136,10 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
         setError("No audio recorded. Please record your response first.");
         return;
     }
+    if (!user || !firestore) {
+        setError("You must be logged in to submit an evaluation.");
+        return;
+    }
     
     setIsLoading(true);
     setError(null);
@@ -143,9 +152,37 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
         audioDataUri: audioDataUri,
       });
       setResult(response);
+
+      // Save submission to Firestore
+      const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
+      await addDoc(submissionRef, {
+          skill: 'Speaking',
+          testId: 'Speaking Practice',
+          inputData: 'Audio recording', // Don't store the large data URI
+          aiReport: response,
+          scoreBand: response.scoreBand,
+          timestamp: serverTimestamp(),
+      });
+      
+      // Update user's current band score
+      const userRef = doc(firestore, 'users', user.uid);
+      await updateDoc(userRef, {
+        currentBand: response.scoreBand,
+      });
+
+      toast({
+        title: "Evaluation Complete!",
+        description: `Your speaking score of ${response.scoreBand.toFixed(1)} has been saved.`,
+      });
+
     } catch (e) {
       setError("An error occurred during evaluation. Please try again.");
       console.error(e);
+       toast({
+        variant: "destructive",
+        title: "Evaluation Failed",
+        description: "Something went wrong while saving your results.",
+      });
     } finally {
       setIsLoading(false);
     }

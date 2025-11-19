@@ -16,6 +16,10 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+import { useFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+
 const formSchema = z.object({
   essay: z.string().min(100, {
     message: "Essay must be at least 100 characters.",
@@ -32,6 +36,9 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AiPoweredWritingEvaluationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const { user, firestore } = useFirebase();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,10 +62,38 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
         onEvaluationComplete(response);
       } else {
         setResult(response);
+         if (user && firestore) {
+            // Save submission to Firestore
+            const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
+            await addDoc(submissionRef, {
+                skill: 'Writing',
+                testId: task.taskType,
+                inputData: values.essay,
+                aiReport: response,
+                scoreBand: response.overallBand,
+                timestamp: serverTimestamp(),
+            });
+
+             // Update user's current band score
+            const userRef = doc(firestore, 'users', user.uid);
+            await updateDoc(userRef, {
+                currentBand: response.overallBand,
+            });
+
+            toast({
+                title: "Evaluation Complete!",
+                description: `Your writing score of ${response.overallBand.toFixed(1)} has been saved.`,
+            });
+        }
       }
     } catch (e) {
       setError("An error occurred during evaluation. Please try again.");
       console.error(e);
+       toast({
+        variant: "destructive",
+        title: "Evaluation Failed",
+        description: "Something went wrong while saving your results.",
+      });
     } finally {
       setIsLoading(false);
     }

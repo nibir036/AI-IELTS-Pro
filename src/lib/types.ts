@@ -1,4 +1,4 @@
-import type { DocumentReference } from "firebase/firestore";
+import type { DocumentReference, Timestamp } from "firebase/firestore";
 
 export interface User {
   id: string;
@@ -36,17 +36,17 @@ export interface WritingQuestion {
 }
 
 export interface Submission {
-  submissionId: string;
+  id: string;
   userId: DocumentReference | string;
   testId: DocumentReference | string;
   skill: 'Writing' | 'Speaking' | 'GrammarPractice' | string;
   inputData: string; // Text response or URL to audio
-  aiReport: AiReport | AiSpeakingReport | null;
+  aiReport: AiPoweredWritingEvaluationOutput | AiPoweredSpeakingEvaluationOutput | null;
   scoreBand: number | null;
-  timestamp: Date;
+  timestamp: Timestamp | Date;
 }
 
-export interface AiReport {
+export interface AiPoweredWritingEvaluationOutput {
   overallBand: number;
   feedbackSummary: string;
   criterionScores: {
@@ -59,7 +59,7 @@ export interface AiReport {
   correctedEssay: string;
 }
 
-export interface AiSpeakingReport {
+export interface AiPoweredSpeakingEvaluationOutput {
   overallFeedback: string;
   pronunciationFeedback: string;
   fluencyFeedback: string;
