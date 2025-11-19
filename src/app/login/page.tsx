@@ -3,12 +3,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, User, AuthError } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { setDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 const provider = new GoogleAuthProvider();
 
@@ -35,6 +36,7 @@ async function createUserProfile(user: User, firestore: any) {
 export default function LoginPage() {
   const { auth, user, isUserLoading, firestore } = useFirebase();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -50,7 +52,17 @@ export default function LoginPage() {
       await createUserProfile(result.user, firestore);
       router.push('/dashboard');
     } catch (error) {
-      console.error('Error signing in with Google', error);
+      const authError = error as AuthError;
+      // Don't show an error if the user closes the popup
+      if (authError.code === 'auth/popup-closed-by-user') {
+        return;
+      }
+      console.error('Error signing in with Google', authError);
+      toast({
+        variant: 'destructive',
+        title: 'Sign-in Failed',
+        description: authError.message || 'An unexpected error occurred. Please try again.',
+      });
     }
   };
   
