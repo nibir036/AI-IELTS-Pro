@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
-import { useFirebase, useUser } from '@/firebase';
+import { useFirebase, useUser, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import type { Submission } from '@/lib/types';
@@ -15,7 +15,7 @@ export function RecentActivity() {
   const { firestore } = useFirebase();
   const { user } = useUser();
 
-  const submissionsQuery = useMemo(() => {
+  const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(
       collection(firestore, 'users', user.uid, 'submissions'),
@@ -64,7 +64,7 @@ export function RecentActivity() {
                                 )}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                                {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp as any), { addSuffix: true }) : ''}
+                                {submission.timestamp ? formatDistanceToNow(new Date((submission.timestamp as any).seconds * 1000), { addSuffix: true }) : ''}
                             </TableCell>
                         </TableRow>
                     ))}

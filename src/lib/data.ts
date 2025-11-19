@@ -66,37 +66,3 @@ export const mockTests: MockTest[] = [
     ],
   },
 ];
-
-export const recentSubmissions: Submission[] = [
-    {
-        submissionId: 'sub-001',
-        userId: 'user-abc',
-        testId: 'IELTS_Writing_001',
-        skill: 'Writing',
-        inputData: 'The essay text here...',
-        aiReport: {
-            overallBand: 7.0,
-            feedbackSummary: 'A well-structured essay with good arguments, but some grammatical errors and repetitive vocabulary.',
-            criterionScores: {
-                taskResponse: { band: 7.5, comment: 'You addressed all parts of the task effectively.' },
-                coherenceCohesion: { band: 7.0, comment: 'Good use of cohesive devices, though paragraphing could be improved.' },
-                lexicalResource: { band: 6.5, comment: 'Vocabulary is adequate but lacks range. Try to use more varied and precise language.' },
-                grammaticalRangeAccuracy: { band: 6.5, comment: 'Some errors in complex sentences and article usage.' }
-            },
-            improvementAreas: [],
-            correctedEssay: ''
-        },
-        scoreBand: 7.0,
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
-    },
-    {
-        submissionId: 'sub-002',
-        userId: 'user-abc',
-        testId: 'IELTS_Speaking_001',
-        skill: 'Speaking',
-        inputData: 'audio/url.mp3',
-        aiReport: null,
-        scoreBand: 7.5,
-        timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) // 5 days ago
-    }
-]
