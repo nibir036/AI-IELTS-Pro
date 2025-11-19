@@ -44,7 +44,7 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
 
     const lessonQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'lessons'), where('lessonId', '==', params.lessonId), limit(1));
+        return query(collection(firestore, 'lessons'), where('id', '==', params.lessonId), limit(1));
     }, [firestore, params.lessonId]);
 
     const { data: lessons, isLoading } = useCollection<Lesson>(lessonQuery);

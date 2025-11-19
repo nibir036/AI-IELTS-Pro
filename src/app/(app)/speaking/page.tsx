@@ -51,7 +51,7 @@ export default function SpeakingPage() {
       {!isLoading && speakingPrompts && (
         <div className="space-y-4">
           {speakingPrompts.map(prompt => (
-            <SpeakingPromptCard key={prompt.lessonId} prompt={prompt} />
+            <SpeakingPromptCard key={prompt.id} prompt={prompt} />
           ))}
         </div>
       )}

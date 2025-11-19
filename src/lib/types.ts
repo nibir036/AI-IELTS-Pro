@@ -14,7 +14,7 @@ export interface User {
 }
 
 export interface Lesson {
-  lessonId: string;
+  id: string; // Changed from lessonId
   type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening' | 'Speaking';
   title: string;
   level: 'Basic' | 'Intermediate' | 'Advanced' | string; // Or band level
@@ -23,14 +23,14 @@ export interface Lesson {
 }
 
 export interface MockTest {
-  testId: string;
+  id: string; // Changed from testId
   testType: 'IELTS-Academic' | 'PTE' | 'IELTS-General';
   skill: 'Writing' | 'Speaking' | 'Reading' | 'Listening';
   questions: Array<Record<string, any>>;
 }
 
 export interface ReadingTest {
-    testId: string;
+    id: string; // Changed from testId
     title: string;
     skill: 'Reading';
     passage: string;
@@ -108,5 +108,3 @@ export interface PredictTargetDateOutput {
     predictedDate: string;
     reasoning: string;
 }
-
-    

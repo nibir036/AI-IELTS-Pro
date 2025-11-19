@@ -66,7 +66,7 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
                 const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
                 await addDoc(submissionRef, {
                     skill: 'Reading',
-                    testId: test.testId,
+                    testId: test.id,
                     inputData: JSON.stringify(userAnswers),
                     scoreBand: finalScore,
                     timestamp: serverTimestamp(),

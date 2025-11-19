@@ -29,7 +29,7 @@ export default function WritingTaskPage({ params }: { params: { testId: string }
 
     const testQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'mockTests'), where('testId', '==', params.testId), limit(1));
+        return query(collection(firestore, 'mockTests'), where('id', '==', params.testId), limit(1));
     }, [firestore, params.testId]);
 
     const { data: tests, isLoading } = useCollection<MockTest>(testQuery);

@@ -35,7 +35,7 @@ export function LearningPath({ user }: LearningPathProps) {
 
         if (result.lessonIds && result.lessonIds.length > 0) {
             const lessonsRef = collection(firestore, 'lessons');
-            const q = query(lessonsRef, where('lessonId', 'in', result.lessonIds));
+            const q = query(lessonsRef, where('id', 'in', result.lessonIds));
             const querySnapshot = await getDocs(q);
             const fetchedLessons = querySnapshot.docs.map(doc => doc.data() as Lesson);
             setRecommendedLessons(fetchedLessons.slice(0, 3));
@@ -73,7 +73,7 @@ export function LearningPath({ user }: LearningPathProps) {
         ) : (
           <div className="space-y-4">
             {recommendedLessons.map((lesson) => (
-                <div key={lesson.lessonId} className="flex items-center justify-between rounded-lg border p-3">
+                <div key={lesson.id} className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center gap-4">
                         <div className="rounded-md bg-muted p-2">
                            <BookOpen className="h-6 w-6 text-muted-foreground" />
@@ -84,7 +84,7 @@ export function LearningPath({ user }: LearningPathProps) {
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/lessons/${lesson.lessonId}`}>
+                        <Link href={`/lessons/${lesson.id}`}>
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </Button>

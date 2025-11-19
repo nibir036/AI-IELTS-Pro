@@ -55,7 +55,7 @@ export default function TipsPage() {
       {!isLoading && tipsLessons && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {tipsLessons.map(lesson => (
-              <Link href={`/lessons/${lesson.lessonId}`} key={lesson.lessonId} className="block">
+              <Link href={`/lessons/${lesson.id}`} key={lesson.id} className="block">
                 <Card className="h-full transition-colors hover:border-primary">
                   <CardHeader>
                     <div className="flex items-center gap-3">

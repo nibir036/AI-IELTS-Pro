@@ -68,7 +68,7 @@ export default function WritingPage() {
                 }
                 const question = test.questions[0] as WritingQuestion;
                 return (
-              <Card key={test.testId} className="flex flex-col">
+              <Card key={test.id} className="flex flex-col">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
@@ -83,7 +83,7 @@ export default function WritingPage() {
                 </CardContent>
                 <CardFooter>
                     <Button asChild className="w-full">
-                        <Link href={`/writing/${test.testId}`}>
+                        <Link href={`/writing/${test.id}`}>
                             Start Practice <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                     </Button>

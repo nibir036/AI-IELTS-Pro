@@ -60,7 +60,7 @@ export default function ReadingPage() {
       {!isLoading && readingTests && readingTests.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2">
             {readingTests.map(test => (
-              <Card key={test.testId} className="flex flex-col">
+              <Card key={test.id} className="flex flex-col">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle className="mb-1">{test.title}</CardTitle>
@@ -73,7 +73,7 @@ export default function ReadingPage() {
                 </CardContent>
                 <CardFooter>
                     <Button asChild className="w-full">
-                        <Link href={`/reading/${test.testId}`}>
+                        <Link href={`/reading/${test.id}`}>
                             Start Practice <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                     </Button>

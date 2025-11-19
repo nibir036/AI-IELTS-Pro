@@ -2,7 +2,7 @@
 {
   "mockTests": [
     {
-      "testId": "IELTS_Writing_001",
+      "id": "IELTS_Writing_001",
       "testType": "IELTS-Academic",
       "skill": "Writing",
       "questions": [
@@ -15,7 +15,7 @@
       ]
     },
     {
-      "testId": "IELTS_Writing_002",
+      "id": "IELTS_Writing_002",
       "testType": "IELTS-Academic",
       "skill": "Writing",
       "questions": [
@@ -28,7 +28,7 @@
       ]
     },
     {
-      "testId": "IELTS_Writing_003",
+      "id": "IELTS_Writing_003",
       "testType": "IELTS-General",
       "skill": "Writing",
       "questions": [
@@ -41,7 +41,7 @@
       ]
     },
     {
-      "testId": "IELTS_Writing_004",
+      "id": "IELTS_Writing_004",
       "testType": "IELTS-Academic",
       "skill": "Writing",
       "questions": [

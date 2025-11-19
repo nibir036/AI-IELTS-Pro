@@ -48,7 +48,7 @@ export function LearningPath({ user }: LearningPathProps) {
           const fetchedLessons: Lesson[] = [];
           for (const chunk of lessonChunks) {
                if (chunk.length === 0) continue;
-               const q = query(lessonsRef, where('lessonId', 'in', chunk));
+               const q = query(lessonsRef, where('id', 'in', chunk));
                const querySnapshot = await getDocs(q);
                querySnapshot.forEach(doc => {
                   fetchedLessons.push(doc.data() as Lesson);
@@ -109,7 +109,7 @@ export function LearningPath({ user }: LearningPathProps) {
         ) : (
           <div className="space-y-4">
             {recommendedLessons.length > 0 ? recommendedLessons.map((lesson) => (
-                <div key={lesson.lessonId} className="flex items-center justify-between rounded-lg border p-3">
+                <div key={lesson.id} className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center gap-4">
                         <div className="rounded-md bg-muted p-2">
                            <BookOpen className="h-6 w-6 text-muted-foreground" />
@@ -120,7 +120,7 @@ export function LearningPath({ user }: LearningPathProps) {
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/lessons/${lesson.lessonId}`}>
+                        <Link href={`/lessons/${lesson.id}`}>
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </Button>

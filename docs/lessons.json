@@ -2,91 +2,91 @@
 {
   "lessons": [
     {
-      "lessonId": "GRAMMAR_001",
+      "id": "GRAMMAR_001",
       "type": "Grammar",
       "title": "Present Simple vs. Present Continuous",
       "level": "Basic",
       "content_en": "The Present Simple is used for habits, routines, and facts (e.g., 'I drink coffee every morning.'). The Present Continuous is for actions happening now or around the current time (e.g., 'I am drinking coffee right now.')."
     },
     {
-      "lessonId": "GRAMMAR_002",
+      "id": "GRAMMAR_002",
       "type": "Grammar",
       "title": "Articles: A/An vs. The",
       "level": "Basic",
       "content_en": "Use 'a/an' for general, non-specific nouns (e.g., 'I saw a dog.'). Use 'the' for specific nouns that have already been mentioned or are unique (e.g., 'The dog was friendly.')."
     },
     {
-      "lessonId": "GRAMMAR_003",
+      "id": "GRAMMAR_003",
       "type": "Grammar",
       "title": "Past Simple Tense",
       "level": "Intermediate",
       "content_en": "The Past Simple is used to talk about completed actions in the past. For regular verbs, add '-ed' (e.g., 'walked', 'played'). Many common verbs are irregular (e.g., 'went', 'saw', 'ate'). Example: 'Yesterday, I visited my grandparents.'"
     },
     {
-      "lessonId": "VOCAB_001",
+      "id": "VOCAB_001",
       "type": "Vocabulary",
       "title": "Technology Vocabulary",
       "level": "Intermediate",
       "content_en": "Essential words for discussing technology: innovative, cutting-edge, user-friendly, obsolete, digital native, automation, artificial intelligence. Try using them in sentences about how technology affects society."
     },
     {
-      "lessonId": "VOCAB_002",
+      "id": "VOCAB_002",
       "type": "Vocabulary",
       "title": "Environment Vocabulary",
       "level": "Intermediate",
       "content_en": "Key terms for environmental topics: sustainability, biodiversity, renewable energy, carbon footprint, conservation, pollution, climate change. These are crucial for Writing Task 2 and Speaking Part 3."
     },
     {
-      "lessonId": "VOCAB_003",
+      "id": "VOCAB_003",
       "type": "Vocabulary",
       "title": "Adjectives for Describing Places",
       "level": "Basic",
       "content_en": "Expand your descriptions with words like: bustling (busy), tranquil (calm), picturesque (beautiful), historic, modern, vibrant (full of life), deserted (empty)."
     },
     {
-      "lessonId": "TIPS_001",
+      "id": "TIPS_001",
       "type": "Tips",
       "title": "Time Management in the Reading Test",
       "level": "All Levels",
       "content_en": "Do not spend more than 20 minutes on each reading passage. If you are stuck on a question, make an educated guess and move on. You can always come back later if you have time. Skim the questions before reading the passage to know what to look for."
     },
     {
-      "lessonId": "TIPS_002",
+      "id": "TIPS_002",
       "type": "Tips",
       "title": "Paraphrasing in Writing Task 2",
       "level": "Intermediate",
       "content_en": "Never copy the question in your introduction. You must paraphrase it using synonyms and different sentence structures. For example, 'Some people believe that...' can be changed to 'It is argued by some that...'. This demonstrates your vocabulary and grammar range."
     },
     {
-      "lessonId": "TIPS_003",
+      "id": "TIPS_003",
       "type": "Tips",
       "title": "Extending Your Answers in Speaking Part 3",
       "level": "Intermediate",
       "content_en": "Don't give short answers. Use the 'A.R.E.A.' method: Answer the question directly. Give a Reason for your answer. Provide an Example to support your point. Suggest an Alternative or opposite view. This creates a well-developed, fluent response."
     },
     {
-      "lessonId": "SPEAKING_001",
+      "id": "SPEAKING_001",
       "type": "Speaking",
       "title": "Hometown",
       "level": "Part 1",
       "content_en": "Let's talk about your hometown. What kind of place is it? What's the most interesting part of your town? What kind of jobs do the people in your hometown do?"
     },
     {
-      "lessonId": "SPEAKING_002",
+      "id": "SPEAKING_002",
       "type": "Speaking",
       "title": "A Memorable Holiday",
       "level": "Part 2",
       "content_en": "Describe a memorable holiday you have had. You should say: where you went, who you were with, what you did, and explain why it was so memorable for you."
     },
     {
-      "lessonId": "SPEAKING_003",
+      "id": "SPEAKING_003",
       "type": "Speaking",
       "title": "Advertising",
       "level": "Part 3",
       "content_en": "Let's discuss advertising. What makes an advertisement effective? Do you think advertising manipulates people? What are the rules about advertising to children?"
     },
     {
-        "lessonId": "SPEAKING_004",
+        "id": "SPEAKING_004",
         "type": "Speaking",
         "title": "Daily Routine",
         "level": "Part 1",
