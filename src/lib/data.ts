@@ -65,4 +65,30 @@ export const mockTests: MockTest[] = [
       } as WritingQuestion,
     ],
   },
+  {
+    testId: 'IELTS_Writing_003',
+    testType: 'IELTS-General',
+    skill: 'Writing',
+    questions: [
+        {
+            task: 2,
+            topic: 'Some people think that it is better to choose a job for the enjoyment rather than for a high salary. To what extent do you agree or disagree?',
+            taskType: 'Task 2',
+            wordCountTarget: 250,
+        } as WritingQuestion,
+    ]
+  },
+  {
+      testId: 'IELTS_Writing_004',
+      testType: 'IELTS-Academic',
+      skill: 'Writing',
+      questions: [
+          {
+              task: 2,
+              topic: 'Some people believe that technology has made our lives more complex and stressful, while others think it has simplified our lives. Discuss both views and give your own opinion.',
+              taskType: 'Task 2',
+              wordCountTarget: 250,
+          } as WritingQuestion,
+      ]
+  }
 ];
