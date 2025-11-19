@@ -1,3 +1,4 @@
+
 import type { DocumentReference, Timestamp } from "firebase/firestore";
 
 export interface User {
@@ -26,6 +27,24 @@ export interface MockTest {
   testType: 'IELTS-Academic' | 'PTE' | 'IELTS-General';
   skill: 'Writing' | 'Speaking' | 'Reading' | 'Listening';
   questions: Array<Record<string, any>>;
+}
+
+export interface ReadingTest {
+    testId: string;
+    title: string;
+    skill: 'Reading';
+    passage: string;
+    questions: ReadingQuestion[];
+}
+
+export type ReadingQuestionType = 'multiple-choice' | 'true-false-not-given';
+
+export interface ReadingQuestion {
+    id: string;
+    question: string;
+    type: ReadingQuestionType;
+    options?: string[];
+    answer: string;
 }
 
 export interface WritingQuestion {
@@ -89,3 +108,5 @@ export interface PredictTargetDateOutput {
     predictedDate: string;
     reasoning: string;
 }
+
+    

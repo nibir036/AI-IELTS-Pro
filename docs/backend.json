@@ -127,6 +127,52 @@
         "questions"
       ]
     },
+    "ReadingTest": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "ReadingTest",
+        "type": "object",
+        "description": "Represents a reading test with passages and questions.",
+        "properties": {
+            "testId": {
+                "type": "string",
+                "description": "Unique identifier for the reading test."
+            },
+            "title": {
+                "type": "string",
+                "description": "Title of the reading test."
+            },
+             "skill": {
+                "type": "string",
+                "enum": ["Reading"]
+            },
+            "passage": {
+                "type": "string",
+                "description": "The full text of the reading passage."
+            },
+            "questions": {
+                "type": "array",
+                "description": "An array of questions for the passage.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "question": {"type": "string"},
+                        "type": {
+                            "type": "string",
+                            "enum": ["multiple-choice", "true-false-not-given"]
+                        },
+                        "options": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "answer": {"type": "string"}
+                    },
+                    "required": ["id", "question", "type", "answer"]
+                }
+            }
+        },
+        "required": ["testId", "title", "skill", "passage", "questions"]
+    },
     "Submission": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Submission",
@@ -232,6 +278,12 @@
         }
       ]
     },
+    "/readingTests/{testId}": {
+        "schema": {
+            "$ref": "#/entities/ReadingTest"
+        },
+        "description": "Stores reading practice tests. Write access is restricted to admins."
+    },
     "/users/{userId}/submissions/{submissionId}": {
       "schema": {
         "$ref": "#/entities/Submission"
@@ -246,3 +298,5 @@
     }
   }
 }
+
+    

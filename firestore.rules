@@ -32,6 +32,11 @@ service cloud.firestore {
       allow create, update, delete: if false; // Admin only
     }
 
+    match /readingTests/{testId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if false; // Admin only
+    }
+
     match /users/{userId}/submissions/{submissionId} {
       allow read, list, create, update, delete: if isOwner(userId);
     }
@@ -41,3 +46,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

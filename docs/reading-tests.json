@@ -1,0 +1,106 @@
+
+{
+  "readingTests": [
+    {
+      "testId": "R_AC_001",
+      "title": "The Rise of Urban Farming",
+      "skill": "Reading",
+      "passage": "Urban farming, the practice of cultivating, processing, and distributing food in or around urban areas, is experiencing a global renaissance. From rooftop gardens in New York City to vertical farms in Singapore, this movement is transforming cityscapes and challenging traditional food supply chains. The primary driver is a growing desire for fresh, locally-sourced produce, coupled with concerns about food security, carbon emissions from long-distance transport, and the environmental impact of industrial agriculture. \n\nThere are various models of urban farming. Community gardens allow residents to collectively grow produce on shared land, fostering social cohesion and providing educational opportunities. Commercial urban farms, often utilizing advanced technologies like hydroponics (growing plants in nutrient-rich water) and aeroponics (growing plants with roots suspended in the air), aim for high yields in small spaces. These high-tech farms can operate year-round, independent of weather conditions, producing crops like leafy greens and herbs with remarkable efficiency and minimal water usage compared to conventional farming.\n\nHowever, urban farming is not without its challenges. High initial setup costs, particularly for technology-intensive vertical farms, can be a significant barrier. Access to suitable land or rooftop space in dense cities is another major hurdle. Furthermore, critics argue that urban farms cannot realistically replace the vast output of rural agriculture and are limited to producing a narrow range of high-value crops. Despite these limitations, proponents argue that its value lies not in replacing traditional farming, but in supplementing it, increasing urban resilience, and reconnecting city dwellers with their food.",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "What is the main motivation behind the growth of urban farming?",
+          "type": "multiple-choice",
+          "options": [
+            "A desire for cities to become completely self-sufficient.",
+            "A demand for local food and concerns about the environment.",
+            "The availability of new farming technologies.",
+            "To reduce the cost of produce for urban consumers."
+          ],
+          "answer": "A demand for local food and concerns about the environment."
+        },
+        {
+          "id": "q2",
+          "question": "Hydroponic farms use significantly more water than conventional farms.",
+          "type": "true-false-not-given",
+          "options": ["True", "False", "Not Given"],
+          "answer": "False"
+        },
+        {
+          "id": "q3",
+          "question": "Community gardens are primarily focused on commercial profit.",
+          "type": "true-false-not-given",
+          "options": ["True", "False", "Not Given"],
+          "answer": "False"
+        },
+        {
+          "id": "q4",
+          "question": "Urban farms can grow all types of crops that rural farms can.",
+          "type": "true-false-not-given",
+          "options": ["True", "False", "Not Given"],
+          "answer": "False"
+        },
+        {
+          "id": "q5",
+          "question": "Which technology involves growing plants with their roots in the air?",
+          "type": "multiple-choice",
+          "options": [
+            "Vertical Farming",
+            "Aeroponics",
+            "Hydroponics",
+            "Industrial Agriculture"
+          ],
+          "answer": "Aeroponics"
+        }
+      ]
+    },
+    {
+        "testId": "R_AC_002",
+        "title": "The Psychology of Colour",
+        "skill": "Reading",
+        "passage": "Colour is a powerful communication tool and can be used to signal action, influence mood, and even influence physiological reactions. Certain colours have been associated with increased blood pressure, increased metabolism, and eyestrain. So how exactly does colour work? How is it that the colour of a room can influence our mood? \n\nThe effect of colour is not entirely universal. Perceptions of colour are somewhat subjective, but there are colour effects that have universal meaning. Colours in the red area of the colour spectrum are known as warm colours and include red, orange, and yellow. These warm colours evoke emotions ranging from feelings of warmth and comfort to feelings of anger and hostility. On the other hand, colours on the blue side of the spectrum are known as cool colours and include blue, purple, and green. These colours are often described as calm, but can also call to mind feelings of sadness or indifference.\n\nCompanies use colour to influence consumer perceptions of their products. For example, the colour blue is often associated with trustworthiness and reliability, which is why many financial institutions use it in their branding. Green is linked to nature and health, making it a popular choice for organic and eco-friendly products. Red creates a sense of urgency, which is why it's often used for clearance sales. Understanding the psychological effects of colour is a critical asset for marketers, artists, and designers, enabling them to create more impactful and persuasive work.",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "The perception of colour is identical for everyone.",
+            "type": "true-false-not-given",
+            "options": ["True", "False", "Not Given"],
+            "answer": "False"
+          },
+          {
+            "id": "q2",
+            "question": "Which of the following is considered a 'cool' colour?",
+            "type": "multiple-choice",
+            "options": [
+                "Yellow",
+                "Red",
+                "Green",
+                "Orange"
+            ],
+            "answer": "Green"
+          },
+          {
+            "id": "q3",
+            "question": "Why do many banks use the colour blue?",
+            "type": "multiple-choice",
+            "options": [
+                "It creates a sense of urgency.",
+                "It is associated with nature and health.",
+                "It evokes feelings of calmness.",
+                "It is associated with dependability."
+            ],
+            "answer": "It is associated with dependability."
+          },
+           {
+            "id": "q4",
+            "question": "The text states that red is the best colour for marketing all products.",
+            "type": "true-false-not-given",
+            "options": ["True", "False", "Not Given"],
+            "answer": "False"
+          }
+        ]
+      }
+  ]
+}
+
+    
