@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +8,7 @@ import Link from 'next/link';
 import { BookOpen, ArrowRight, Loader2 } from 'lucide-react';
 import type { Lesson, User, LearningPath as LearningPathType } from '@/lib/types';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
 interface LearningPathProps {
   user: User;
@@ -33,30 +34,22 @@ export function LearningPath({ user }: LearningPathProps) {
       }
       
       setIsLoading(true);
-      const { lessonIds } = learningPath;
+      // We only need the first 3 lessons for the dashboard preview.
+      const lessonIdsToFetch = learningPath.lessonIds.slice(0, 3);
 
-      if (lessonIds.length > 0) {
+      if (lessonIdsToFetch.length > 0) {
         try {
-          const lessonsRef = collection(firestore, 'lessons');
-          // Firestore 'in' queries are limited to 30 elements.
-          // We chunk the array to handle more than 30 IDs if necessary.
-          const lessonChunks: string[][] = [];
-          for (let i = 0; i < lessonIds.length; i += 30) {
-            lessonChunks.push(lessonIds.slice(i, i + 30));
-          }
-          
           const fetchedLessons: Lesson[] = [];
-          for (const chunk of lessonChunks) {
-               if (chunk.length === 0) continue;
-               const q = query(lessonsRef, where('id', 'in', chunk));
-               const querySnapshot = await getDocs(q);
-               querySnapshot.forEach(doc => {
-                  fetchedLessons.push(doc.data() as Lesson);
-               });
+          // Fetch each lesson document individually by its ID.
+          // This avoids the need for a composite index on the 'lessons' collection.
+          for (const lessonId of lessonIdsToFetch) {
+            const lessonRef = doc(firestore, 'lessons', lessonId);
+            const lessonSnap = await getDoc(lessonRef);
+            if (lessonSnap.exists()) {
+              fetchedLessons.push(lessonSnap.data() as Lesson);
+            }
           }
-
-          // We'll show up to 3 recommended lessons on the dashboard
-          setRecommendedLessons(fetchedLessons.slice(0, 3));
+          setRecommendedLessons(fetchedLessons);
         } catch (error) {
           console.error("Error fetching lessons for learning path:", error);
           setRecommendedLessons([]);
