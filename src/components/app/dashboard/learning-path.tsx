@@ -8,7 +8,8 @@ import Link from 'next/link';
 import { BookOpen, ArrowRight, Loader2 } from 'lucide-react';
 import type { Lesson, User, LearningPath as LearningPathType } from '@/lib/types';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
+import { lessons as allLessons } from '@/lib/data';
 
 interface LearningPathProps {
   user: User;
@@ -27,8 +28,8 @@ export function LearningPath({ user }: LearningPathProps) {
   const { data: learningPath, isLoading: isPathLoading } = useDoc<LearningPathType>(learningPathRef);
 
   useEffect(() => {
-    async function fetchLessons() {
-      if (!learningPath || !learningPath.lessonIds || !firestore) {
+    function filterLessons() {
+      if (!learningPath || !learningPath.lessonIds) {
         setIsLoading(false);
         return;
       }
@@ -39,19 +40,10 @@ export function LearningPath({ user }: LearningPathProps) {
 
       if (lessonIdsToFetch.length > 0) {
         try {
-          const fetchedLessons: Lesson[] = [];
-          // Fetch each lesson document individually by its ID.
-          // This avoids the need for a composite index on the 'lessons' collection.
-          for (const lessonId of lessonIdsToFetch) {
-            const lessonRef = doc(firestore, 'lessons', lessonId);
-            const lessonSnap = await getDoc(lessonRef);
-            if (lessonSnap.exists()) {
-              fetchedLessons.push(lessonSnap.data() as Lesson);
-            }
-          }
+          const fetchedLessons = allLessons.filter(lesson => lessonIdsToFetch.includes(lesson.id));
           setRecommendedLessons(fetchedLessons);
         } catch (error) {
-          console.error("Error fetching lessons for learning path:", error);
+          console.error("Error filtering lessons for learning path:", error);
           setRecommendedLessons([]);
         } finally {
           setIsLoading(false);
@@ -63,9 +55,9 @@ export function LearningPath({ user }: LearningPathProps) {
     }
 
     if (!isPathLoading) {
-      fetchLessons();
+      filterLessons();
     }
-  }, [learningPath, isPathLoading, firestore]);
+  }, [learningPath, isPathLoading]);
 
   const finalLoadingState = isLoading || isPathLoading;
 
