@@ -24,9 +24,11 @@ const formSchema = z.object({
 
 interface WritingEvaluationProps {
   task: WritingQuestion;
+  onEvaluationComplete?: (result: AiPoweredWritingEvaluationOutput) => void;
+  isDiagnosticTest?: boolean;
 }
 
-export function WritingEvaluation({ task }: WritingEvaluationProps) {
+export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest = false }: WritingEvaluationProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AiPoweredWritingEvaluationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,12 @@ export function WritingEvaluation({ task }: WritingEvaluationProps) {
         task: task.topic,
         studentEssay: values.essay,
       });
-      setResult(response);
+
+      if (onEvaluationComplete) {
+        onEvaluationComplete(response);
+      } else {
+        setResult(response);
+      }
     } catch (e) {
       setError("An error occurred during evaluation. Please try again.");
       console.error(e);
@@ -137,10 +144,16 @@ export function WritingEvaluation({ task }: WritingEvaluationProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <Badge variant="outline" className="w-fit">{task.taskType}</Badge>
+          <Badge variant="outline" className="w-fit">{isDiagnosticTest ? 'Diagnostic Test' : task.taskType}</Badge>
           <CardTitle className="pt-2">{task.topic}</CardTitle>
-          <CardDescription>You should spend about 40 minutes on this task. Write at least {task.wordCountTarget} words.</CardDescription>
+          <CardDescription>
+            {isDiagnosticTest
+                ? "Write at least 150 words. This will be used to determine your starting band score."
+                : `You should spend about 40 minutes on this task. Write at least ${task.wordCountTarget} words.`
+            }
+            </CardDescription>
         </CardHeader>
+        { !isDiagnosticTest && <CardContent><p>Hello</p></CardContent>}
       </Card>
 
       <Form {...form}>
@@ -163,12 +176,12 @@ export function WritingEvaluation({ task }: WritingEvaluationProps) {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Evaluating...
+                {isDiagnosticTest ? 'Analyzing...' : 'Evaluating...'}
               </>
             ) : (
                 <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Submit for AI Evaluation
+                {isDiagnosticTest ? 'Submit and Get My Score' : 'Submit for AI Evaluation'}
                 </>
             )}
           </Button>
@@ -185,7 +198,7 @@ export function WritingEvaluation({ task }: WritingEvaluationProps) {
         </div>
       )}
 
-      {result && renderResults()}
+      {result && !onEvaluationComplete && renderResults()}
     </div>
   );
 }

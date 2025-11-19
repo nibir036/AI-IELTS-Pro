@@ -17,19 +17,17 @@ async function checkAndCreateUserProfile(user: User, firestore: any): Promise<bo
   const userDoc = await getDoc(userRef);
 
   if (!userDoc.exists()) {
-    // This is a new user
     const newUser = {
       id: user.uid,
       email: user.email,
       displayName: user.displayName,
       photoURL: user.photoURL,
-      nativeLanguage: 'English', // Default value, to be updated in onboarding
-      currentBand: 5.0,        // Default value, to be updated in onboarding
-      targetBand: 7.5,         // Default value, to be updated in onboarding
+      nativeLanguage: 'English', // Default value
+      currentBand: 5.0,        // Default value, to be updated by diagnostic test
+      targetBand: 7.5,         // Default value
       learningPathId: '',
       totalPracticeTime: 0,
     };
-    // Use non-blocking write for performance
     setDocumentNonBlocking(userRef, newUser, { merge: false });
     return true; // Indicates a new user was created
   }
@@ -42,7 +40,6 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Redirect logged-in users away from the login page
     if (!isUserLoading && user) {
       router.push('/dashboard');
     }
@@ -55,8 +52,8 @@ export default function LoginPage() {
       const isNewUser = await checkAndCreateUserProfile(result.user, firestore);
 
       if (isNewUser) {
-        // Redirect new users to the onboarding page
-        router.push('/onboarding');
+        // Redirect new users to the welcome page for the diagnostic test
+        router.push('/welcome');
       } else {
         // Redirect existing users to the dashboard
         router.push('/dashboard');
@@ -76,7 +73,6 @@ export default function LoginPage() {
   };
   
   if (isUserLoading || user) {
-    // Show a loading indicator or null while checking auth state or redirecting
     return (
         <div className="flex min-h-screen items-center justify-center">
             <p>Loading...</p>
