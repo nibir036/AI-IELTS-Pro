@@ -1,3 +1,4 @@
+
 'use client';
 
 import { WritingEvaluation } from "@/components/app/writing/writing-evaluation";
