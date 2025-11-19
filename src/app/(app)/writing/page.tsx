@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -7,9 +6,10 @@ import Link from 'next/link';
 import { ArrowRight, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import type { MockTest, WritingQuestion } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useMemo } from 'react';
 
 function WritingTestSkeleton() {
   return (
@@ -40,10 +40,16 @@ export default function WritingPage() {
 
   const testsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'mockTests'), where('skill', '==', 'Writing'));
+    // Fetch all mock tests, we will filter by skill on the client
+    return query(collection(firestore, 'mockTests'));
   }, [firestore]);
 
-  const { data: writingTests, isLoading } = useCollection<MockTest>(testsQuery);
+  const { data: allTests, isLoading } = useCollection<MockTest>(testsQuery);
+
+  const writingTests = useMemo(() => {
+    if (!allTests) return [];
+    return allTests.filter(test => test.skill === 'Writing');
+  }, [allTests]);
 
   return (
     <div className="space-y-6">
@@ -59,7 +65,7 @@ export default function WritingPage() {
          </div>
       )}
 
-      {!isLoading && writingTests && (
+      {!isLoading && writingTests && writingTests.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2">
             {writingTests.map(test => {
                 const question = test.questions[0] as WritingQuestion;
@@ -89,7 +95,7 @@ export default function WritingPage() {
         </div>
       )}
 
-      {!isLoading && !writingTests?.length && (
+      {!isLoading && (!writingTests || writingTests.length === 0) && (
         <p className="text-center text-muted-foreground pt-10">No writing tests found.</p>
       )}
     </div>

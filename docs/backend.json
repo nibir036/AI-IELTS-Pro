@@ -108,6 +108,10 @@
           "type": "string",
           "description": "Type of test (e.g., IELTS-Academic, PTE, IELTS-General)."
         },
+        "skill": {
+            "type": "string",
+            "description": "The skill being tested (e.g., Writing, Speaking)."
+        },
         "questions": {
           "type": "array",
           "description": "Array of question objects.",
@@ -119,6 +123,7 @@
       "required": [
         "id",
         "testType",
+        "skill",
         "questions"
       ]
     },
@@ -219,7 +224,13 @@
       "schema": {
         "$ref": "#/entities/MockTest"
       },
-      "description": "Stores mock test definitions. Write access is restricted to admins."
+      "description": "Stores mock test definitions. Write access is restricted to admins.",
+      "queries": [
+        {
+          "type": "collection",
+          "where": [["skill", "==", "Writing"]]
+        }
+      ]
     },
     "/users/{userId}/submissions/{submissionId}": {
       "schema": {
