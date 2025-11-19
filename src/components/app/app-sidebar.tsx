@@ -13,6 +13,7 @@ import {
   GraduationCap,
   BookMarked,
   LogOut,
+  Lightbulb,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -31,6 +32,7 @@ const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/grammar', label: 'Grammar', icon: PenSquare },
   { href: '/vocabulary', label: 'Vocabulary', icon: BookMarked },
+  { href: '/tips', label: 'Tips', icon: Lightbulb },
   { href: '/writing', label: 'Writing', icon: FileText },
   { href: '/speaking', label: 'Speaking', icon: Speech },
   { href: '/reading', label: 'Reading', icon: BookOpen },

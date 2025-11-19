@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -70,7 +71,7 @@ export function LearningPath({ user }: LearningPathProps) {
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/${lesson.type.toLowerCase()}`}>
+                        <Link href={`/lessons/${lesson.lessonId}`}>
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </Button>
