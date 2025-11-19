@@ -78,7 +78,7 @@ Task: {{{task}}}
 Student Essay: {{{studentEssay}}}
 
 Output Format:
-```json
+\'\'\'json
 {
   "overallBand": (Number),
   "feedbackSummary": (String),
@@ -94,7 +94,7 @@ Output Format:
   ],
   "correctedEssay": (String)
 }
-````,
+\'\'\'`,
 });
 
 const aiPoweredWritingEvaluationFlow = ai.defineFlow(
