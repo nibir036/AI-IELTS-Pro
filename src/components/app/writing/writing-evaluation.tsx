@@ -106,8 +106,8 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
             <CardHeader>
                 <div className="flex flex-col-reverse sm:flex-row justify-between items-start gap-4">
                     <div>
-                        <CardTitle className="text-2xl flex items-center gap-2"><Sparkles className="text-accent" /> AI Evaluation Result</CardTitle>
-                        <CardDescription>Here's your detailed feedback.</CardDescription>
+                        <CardTitle className="text-2xl flex items-center gap-2"><Sparkles className="text-accent" /> Here's Your Analysis! You're doing great.</CardTitle>
+                        <CardDescription>Every essay you write is a step towards success. Keep up the great work!</CardDescription>
                     </div>
                     <div className="text-center w-full sm:w-auto rounded-lg bg-muted p-4">
                         <p className="text-sm text-muted-foreground">Overall Band</p>
@@ -228,7 +228,7 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
         <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 mt-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="font-semibold">Our AI is analyzing your essay...</p>
-            <p className="text-sm text-muted-foreground">This may take a moment. Please wait.</p>
+            <p className="text-sm text-muted-foreground">Success is built on practice like this. Please wait.</p>
         </div>
       )}
 

@@ -195,8 +195,8 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
             <CardHeader>
                 <div className="flex flex-col-reverse sm:flex-row justify-between items-start gap-4">
                     <div>
-                        <CardTitle className="text-2xl flex items-center gap-2"><Sparkles className="text-accent" /> AI Evaluation Result</CardTitle>
-                        <CardDescription>Here's your detailed feedback for your speaking performance.</CardDescription>
+                        <CardTitle className="text-2xl flex items-center gap-2"><Sparkles className="text-accent" /> Here's Your Analysis! You're doing great.</CardTitle>
+                        <CardDescription>Detailed feedback for your speaking performance. Every practice is a step forward.</CardDescription>
                     </div>
                     <div className="text-center w-full sm:w-auto rounded-lg bg-muted p-4">
                         <p className="text-sm text-muted-foreground">Estimated Band</p>
@@ -298,7 +298,7 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
         <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 mt-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="font-semibold">Our AI is analyzing your response...</p>
-            <p className="text-sm text-muted-foreground">This may take a moment. Please wait.</p>
+            <p className="text-sm text-muted-foreground">Success is built on practice like this. Please wait.</p>
         </div>
       )}
 

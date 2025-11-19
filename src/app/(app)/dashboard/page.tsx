@@ -17,9 +17,9 @@ export default function DashboardPage() {
     const progress = user.currentBand > 0 ? (user.currentBand / user.targetBand) * 100 : 0;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in-50">
             <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.displayName || 'friend'}!</h1>
-            <p className="text-muted-foreground">Here's your progress overview. Keep up the great work!</p>
+            <p className="text-muted-foreground">Let's conquer your goals today. Here's your progress overview.</p>
             
             <StatsCards user={user} />
 
@@ -38,7 +38,7 @@ export default function DashboardPage() {
                                 <span className="font-bold text-primary">Target: {user.targetBand.toFixed(1)}</span>
                             </div>
                             <Progress value={progress} />
-                            { user.currentBand > 0 && <p className="text-center text-xs text-muted-foreground mt-2">{progress.toFixed(0)}% to your goal</p> }
+                            { user.currentBand > 0 && <p className="text-center text-xs text-muted-foreground mt-2">{progress.toFixed(0)}% of the way to your goal. Keep going!</p> }
                         </CardContent>
                     </Card>
                     <RecentActivity />
