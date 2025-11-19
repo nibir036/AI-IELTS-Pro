@@ -26,6 +26,13 @@ export function LearningPath({ user }: LearningPathProps) {
 
       setIsLoading(true);
       try {
+        if (user.currentBand === 0) {
+            // User hasn't taken diagnostic, don't generate a path
+            setRecommendedLessons([]);
+            setIsLoading(false);
+            return;
+        }
+
         const input = {
           currentBand: user.currentBand,
           targetBand: user.targetBand,
@@ -36,11 +43,23 @@ export function LearningPath({ user }: LearningPathProps) {
 
         if (result.lessonIds && result.lessonIds.length > 0) {
             const lessonsRef = collection(firestore, 'lessons');
-            // Firestore 'in' queries are limited to 10 elements. If you expect more, you'll need multiple queries.
-            // For this UI, we'll just query for the IDs we get.
-            const q = query(lessonsRef, where('lessonId', 'in', result.lessonIds));
-            const querySnapshot = await getDocs(q);
-            const fetchedLessons = querySnapshot.docs.map(doc => doc.data() as Lesson);
+            // Firestore 'in' queries are limited to 30 elements.
+            // We chunk the array to handle more than 30 IDs if necessary.
+            const lessonChunks: string[][] = [];
+            for (let i = 0; i < result.lessonIds.length; i += 30) {
+                lessonChunks.push(result.lessonIds.slice(i, i + 30));
+            }
+            
+            const fetchedLessons: Lesson[] = [];
+            for (const chunk of lessonChunks) {
+                 if(chunk.length === 0) continue;
+                 const q = query(lessonsRef, where('lessonId', 'in', chunk));
+                 const querySnapshot = await getDocs(q);
+                 querySnapshot.forEach(doc => {
+                    fetchedLessons.push(doc.data() as Lesson);
+                 });
+            }
+
             // We'll show up to 3 recommended lessons on the dashboard
             setRecommendedLessons(fetchedLessons.slice(0, 3));
         } else {
@@ -64,6 +83,25 @@ export function LearningPath({ user }: LearningPathProps) {
     fetchLearningPath();
   }, [user, firestore]);
 
+  if (user.currentBand === 0 && !isLoading) {
+      return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Your Personalized Learning Path</CardTitle>
+                <CardDescription>Complete your diagnostic test to get started!</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="text-center text-muted-foreground py-10">
+                    <p className="mb-4">Your AI-powered learning path will appear here once you have an initial band score.</p>
+                    <Button asChild>
+                        <Link href="/diagnostic-test">Take Diagnostic Test</Link>
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+      )
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -77,7 +115,7 @@ export function LearningPath({ user }: LearningPathProps) {
             </div>
         ) : (
           <div className="space-y-4">
-            {recommendedLessons.map((lesson) => (
+            {recommendedLessons.length > 0 ? recommendedLessons.map((lesson) => (
                 <div key={lesson.lessonId} className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center gap-4">
                         <div className="rounded-md bg-muted p-2">
@@ -94,7 +132,11 @@ export function LearningPath({ user }: LearningPathProps) {
                         </Link>
                     </Button>
                 </div>
-            ))}
+            )) : (
+                <div className="text-center text-muted-foreground py-10">
+                    <p>No recommendations right now. Explore lessons on your own!</p>
+                </div>
+            )}
           </div>
         )}
       </CardContent>

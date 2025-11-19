@@ -25,7 +25,7 @@ export function StatsCards({ user }: StatsCardsProps) {
     },
     {
       title: 'Progress',
-      value: '+0.5',
+      value: '+0.0',
       description: 'Last 30 days',
       icon: TrendingUp,
     },
@@ -41,7 +41,7 @@ export function StatsCards({ user }: StatsCardsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stat.value}</div>
-            {stat.description && <p className="text-xs text-muted-foreground">{stat.description}</p>}
+            {stat.description && user.currentBand > 0 && <p className="text-xs text-muted-foreground">{stat.description}</p>}
           </CardContent>
         </Card>
       ))}
