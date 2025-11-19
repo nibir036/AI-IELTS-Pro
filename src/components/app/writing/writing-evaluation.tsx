@@ -153,7 +153,6 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
             }
             </CardDescription>
         </CardHeader>
-        { !isDiagnosticTest && <CardContent><p>Hello</p></CardContent>}
       </Card>
 
       <Form {...form}>

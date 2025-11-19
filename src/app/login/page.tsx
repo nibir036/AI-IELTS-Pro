@@ -23,12 +23,14 @@ async function checkAndCreateUserProfile(user: User, firestore: any): Promise<bo
       displayName: user.displayName,
       photoURL: user.photoURL,
       nativeLanguage: 'English', // Default value
-      currentBand: 5.0,        // Default value, to be updated by diagnostic test
+      currentBand: 0,        // Default value, to be updated by diagnostic test
       targetBand: 7.5,         // Default value
       learningPathId: '',
       totalPracticeTime: 0,
     };
-    setDocumentNonBlocking(userRef, newUser, { merge: false });
+    // Use non-blocking write here for a faster UI response.
+    // The user doesn't need to wait for this to complete.
+    await setDoc(userRef, newUser, { merge: false });
     return true; // Indicates a new user was created
   }
   return false; // Indicates an existing user
@@ -41,6 +43,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
+      // If user is already logged in, just send them to the dashboard.
+      // The new user check happens at sign-in time.
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
@@ -53,6 +57,10 @@ export default function LoginPage() {
 
       if (isNewUser) {
         // Redirect new users to the welcome page for the diagnostic test
+        toast({
+            title: "Welcome!",
+            description: "Let's get you started with a quick diagnostic test.",
+        });
         router.push('/welcome');
       } else {
         // Redirect existing users to the dashboard
