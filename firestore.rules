@@ -20,21 +20,23 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
 
+    // Curriculum content is public for any signed-in user
     match /lessons/{lessonId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if false; // Admin only
+      allow create, update, delete: if false; // Admin only for writes
     }
 
     match /mockTests/{testId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if false; // Admin only
+      allow create, update, delete: if false; // Admin only for writes
     }
 
     match /readingTests/{testId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if false; // Admin only
+      allow create, update, delete: if false; // Admin only for writes
     }
 
+    // User-specific data is restricted to the owner
     match /users/{userId}/submissions/{submissionId} {
       allow read, list, create, update, delete: if isOwner(userId);
     }
