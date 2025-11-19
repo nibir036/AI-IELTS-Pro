@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import Link from 'next/link';
 import { BookOpen, ArrowRight, Loader2 } from 'lucide-react';
 import { generatePersonalizedLearningPath } from '@/ai/flows/personalized-learning-path';
 import type { Lesson, User } from '@/lib/types';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface LearningPathProps {
@@ -36,21 +35,17 @@ export function LearningPath({ user }: LearningPathProps) {
 
         if (result.lessonIds && result.lessonIds.length > 0) {
             const lessonsRef = collection(firestore, 'lessons');
-            // Firestore 'in' queries are limited to 10 elements. If you expect more, you'll need multiple queries.
-            // For this UI, we'll just query for the IDs we get.
             const q = query(lessonsRef, where('lessonId', 'in', result.lessonIds));
             const querySnapshot = await getDocs(q);
             const fetchedLessons = querySnapshot.docs.map(doc => doc.data() as Lesson);
-            // We'll show up to 3 recommended lessons on the dashboard
             setRecommendedLessons(fetchedLessons.slice(0, 3));
         } else {
-            // Handle case where AI returns no lesson IDs
             setRecommendedLessons([]);
         }
 
       } catch (error) {
         console.error("Error generating learning path:", error);
-        // As a fallback, show some generic lessons if the AI fails
+        // Fallback to showing some generic lessons if AI fails
         const lessonsRef = collection(firestore, 'lessons');
         const fallbackQuery = query(lessonsRef, where('level', '==', 'Intermediate'));
         const querySnapshot = await getDocs(fallbackQuery);
@@ -101,3 +96,5 @@ export function LearningPath({ user }: LearningPathProps) {
     </Card>
   );
 }
+
+    

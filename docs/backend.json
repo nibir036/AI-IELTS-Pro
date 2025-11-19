@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -60,7 +61,7 @@
       "type": "object",
       "description": "Represents a static curriculum lesson within the AI-Band-Builder application.",
       "properties": {
-        "id": {
+        "lessonId": {
           "type": "string",
           "description": "Unique identifier for the lesson entity."
         },
@@ -86,12 +87,11 @@
         }
       },
       "required": [
-        "id",
+        "lessonId",
         "type",
         "title",
         "level",
-        "content_en",
-        "content_native"
+        "content_en"
       ]
     },
     "MockTest": {
@@ -203,96 +203,37 @@
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profile data.  Access is restricted to the user themselves.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The Firebase Auth UID of the user."
-            }
-          ]
-        }
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
       },
-      {
-        "path": "/lessons/{lessonId}",
-        "definition": {
-          "entityName": "Lesson",
-          "schema": {
-            "$ref": "#/backend/entities/Lesson"
-          },
-          "description": "Stores static curriculum content. Write access is restricted to admins.",
-          "params": [
-            {
-              "name": "lessonId",
-              "description": "Unique identifier for the lesson."
-            }
-          ]
-        }
+      "description": "Stores user profile data. Access is restricted to the user themselves."
+    },
+    "/lessons/{lessonId}": {
+      "schema": {
+        "$ref": "#/entities/Lesson"
       },
-      {
-        "path": "/mockTests/{testId}",
-        "definition": {
-          "entityName": "MockTest",
-          "schema": {
-            "$ref": "#/backend/entities/MockTest"
-          },
-          "description": "Stores mock test definitions. Write access is restricted to admins.",
-          "params": [
-            {
-              "name": "testId",
-              "description": "Unique identifier for the mock test."
-            }
-          ]
-        }
+      "description": "Stores static curriculum content. Write access is restricted to admins."
+    },
+    "/mockTests/{testId}": {
+      "schema": {
+        "$ref": "#/entities/MockTest"
       },
-      {
-        "path": "/users/{userId}/submissions/{submissionId}",
-        "definition": {
-          "entityName": "Submission",
-          "schema": {
-            "$ref": "#/backend/entities/Submission"
-          },
-          "description": "Stores user submissions and AI results. Access is restricted to the user themselves.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The Firebase Auth UID of the user."
-            },
-            {
-              "name": "submissionId",
-              "description": "Unique identifier for the submission."
-            }
-          ]
-        }
+      "description": "Stores mock test definitions. Write access is restricted to admins."
+    },
+    "/users/{userId}/submissions/{submissionId}": {
+      "schema": {
+        "$ref": "#/entities/Submission"
       },
-      {
-        "path": "/users/{userId}/learningPaths/{learningPathId}",
-        "definition": {
-          "entityName": "LearningPath",
-          "schema": {
-            "$ref": "#/backend/entities/LearningPath"
-          },
-          "description": "Stores customized learning paths for users. Access is restricted to the user themselves.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The Firebase Auth UID of the user."
-            },
-            {
-              "name": "learningPathId",
-              "description": "Unique identifier for the learning path."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore data structure is designed to support the AI-Band-Builder application, focusing on scalability, security, and ease of querying. It adheres to the principles of Authorization Independence (denormalization), Structural Segregation (homogeneous security posture), and Access Modeling (standardized patterns).  \n\n*   **/users/{userId}**: Stores user profiles.  This collection is path-based and inherently private, enabling simple security rules based on `request.auth.uid == userId`.  \n*   **/lessons/{lessonId}**: Contains static curriculum content. These documents are generally readable, and security rules can control write access based on admin roles (DBAC via existence checks).\n*   **/mockTests/{testId}**: Defines mock tests. Similar to lessons, read access can be public or restricted, with write access controlled by admin roles.\n*   **/users/{userId}/submissions/{submissionId}**: Stores user submissions and AI results.  This is a subcollection of users which follows path-based ownership. This provides a secure and scalable way to manage submissions, enabling efficient querying for user progress.  It also allows for simple and robust security rules.\n\n**Authorization Independence:** The structure avoids hierarchical authorization dependencies by using path-based ownership for user-specific data (e.g., `/users/{userId}/submissions/{submissionId}`). There is no reliance on `get()` calls to parent documents for authorization.\n\n**QAPs (Rules are not Filters):** The structure enables secure `list` operations by segregating data based on ownership (users and submissions). For listing submissions, the query is scoped to a specific user's subcollection, preventing the need for filtering based on user ID within the rules.\n\nThis design promotes clarity and maintainability, crucial for long-term development and debugging."
+      "description": "Stores user submissions and AI results. Access is restricted to the user themselves."
+    },
+    "/users/{userId}/learningPaths/{learningPathId}": {
+      "schema": {
+        "$ref": "#/entities/LearningPath"
+      },
+      "description": "Stores customized learning paths for users. Access is restricted to the user themselves."
+    }
   }
 }
+
+    

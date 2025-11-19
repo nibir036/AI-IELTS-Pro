@@ -1,42 +1,7 @@
 import type { User, Lesson, MockTest, Submission, WritingQuestion } from './types';
 
-export const lessons: Lesson[] = [
-  {
-    lessonId: 'Tenses_L1',
-    type: 'Grammar',
-    title: 'Mastering Present Tenses',
-    level: 'Basic',
-    content_en: 'This lesson covers the simple present, present continuous, and present perfect tenses...',
-  },
-  {
-    lessonId: 'AcademicVocab_L3',
-    type: 'Vocabulary',
-    title: 'Academic Vocabulary for Essays',
-    level: 'Advanced',
-    content_en: 'Learn key vocabulary for writing high-scoring academic essays...',
-  },
-  {
-    lessonId: 'Tips_L2',
-    type: 'Tips',
-    title: 'IELTS Speaking Part 2 Strategy',
-    level: 'Intermediate',
-    content_en: 'A guide to structuring your 2-minute talk in the speaking test...',
-  },
-  {
-    lessonId: 'Grammar_L2',
-    type: 'Grammar',
-    title: 'Conditionals and Hypotheticals',
-    level: 'Intermediate',
-    content_en: 'Understand the use of zero, first, second, and third conditionals...'
-  },
-  {
-    lessonId: 'Vocab_L1',
-    type: 'Vocabulary',
-    title: 'Common Phrasal Verbs',
-    level: 'Basic',
-    content_en: 'Learn and practice 20 common phrasal verbs used in daily conversation.'
-  }
-];
+// This file is now primarily for mock test data.
+// Lesson data will be fetched from Firestore.
 
 export const mockTests: MockTest[] = [
   {
@@ -92,3 +57,5 @@ export const mockTests: MockTest[] = [
       ]
   }
 ];
+
+    

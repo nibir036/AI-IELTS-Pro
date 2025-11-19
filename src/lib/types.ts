@@ -79,3 +79,5 @@ export interface ImprovementArea {
   rule: string;
   example: string;
 }
+
+    
