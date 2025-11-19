@@ -1,19 +1,64 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { lessons } from '@/lib/data';
+import { lessons as allLessons, sampleUser } from '@/lib/data';
 import Link from 'next/link';
-import { BookOpen, ArrowRight } from 'lucide-react';
+import { BookOpen, ArrowRight, Loader2 } from 'lucide-react';
+import { generatePersonalizedLearningPath } from '@/ai/flows/personalized-learning-path';
+import type { Lesson } from '@/lib/types';
+import { useFirebase } from '@/firebase';
 
 export function LearningPath() {
-    const recommendedLessons = lessons.slice(0, 3);
+  const { user } = useFirebase();
+  const [recommendedLessons, setRecommendedLessons] = useState<Lesson[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLearningPath() {
+      if (!user) return;
+
+      setIsLoading(true);
+      try {
+        // In a real app, you would fetch the user's profile from Firestore
+        // For now, we use the sampleUser and can supplement with the authenticated user's info
+        const input = {
+          currentBand: sampleUser.currentBand,
+          targetBand: sampleUser.targetBand,
+          nativeLanguage: sampleUser.nativeLanguage,
+        };
+        
+        const result = await generatePersonalizedLearningPath(input);
+        
+        // Filter the full lesson list to get the lesson objects for the recommended IDs
+        const filteredLessons = allLessons.filter(lesson => result.lessonIds.includes(lesson.lessonId));
+        setRecommendedLessons(filteredLessons.slice(0, 3)); // Show top 3
+      } catch (error) {
+        console.error("Error generating learning path:", error);
+        // Fallback to a default set of lessons on error
+        setRecommendedLessons(allLessons.slice(0, 3));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchLearningPath();
+  }, [user]);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Your Personalized Learning Path</CardTitle>
-        <CardDescription>Recommended lessons to help you reach your target band score.</CardDescription>
+        <CardDescription>AI-recommended lessons to help you reach your target band score.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        ) : (
+          <div className="space-y-4">
             {recommendedLessons.map((lesson) => (
                 <div key={lesson.lessonId} className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center gap-4">
@@ -32,7 +77,8 @@ export function LearningPath() {
                     </Button>
                 </div>
             ))}
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
