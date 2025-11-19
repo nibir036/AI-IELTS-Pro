@@ -6,10 +6,9 @@ import Link from 'next/link';
 import { ArrowRight, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { MockTest, WritingQuestion } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useMemo } from 'react';
 
 function WritingTestSkeleton() {
   return (
@@ -40,16 +39,11 @@ export default function WritingPage() {
 
   const testsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Fetch all mock tests, we will filter by skill on the client
-    return query(collection(firestore, 'mockTests'));
+    // Query for tests where the skill is 'Writing'
+    return query(collection(firestore, 'mockTests'), where('skill', '==', 'Writing'));
   }, [firestore]);
 
-  const { data: allTests, isLoading } = useCollection<MockTest>(testsQuery);
-
-  const writingTests = useMemo(() => {
-    if (!allTests) return [];
-    return allTests.filter(test => test.skill === 'Writing');
-  }, [allTests]);
+  const { data: writingTests, isLoading } = useCollection<MockTest>(testsQuery);
 
   return (
     <div className="space-y-6">
