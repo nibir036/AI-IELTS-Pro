@@ -14,7 +14,7 @@ export interface User {
 
 export interface Lesson {
   lessonId: string;
-  type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening';
+  type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening' | 'Speaking';
   title: string;
   level: 'Basic' | 'Intermediate' | 'Advanced' | string; // Or band level
   content_en: string;
