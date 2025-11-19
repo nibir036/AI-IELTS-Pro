@@ -84,3 +84,8 @@ export interface ImprovementArea {
   rule: string;
   example: string;
 }
+
+export interface PredictTargetDateOutput {
+    predictedDate: string;
+    reasoning: string;
+}

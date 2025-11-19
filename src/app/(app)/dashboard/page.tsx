@@ -2,6 +2,7 @@
 import { StatsCards } from '@/components/app/dashboard/stats-cards';
 import { LearningPath } from '@/components/app/dashboard/learning-path';
 import { RecentActivity } from '@/components/app/dashboard/recent-activity';
+import { PredictedDateCard } from '@/components/app/dashboard/predicted-date-card';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -41,6 +42,7 @@ export default function DashboardPage() {
                             { user.currentBand > 0 && <p className="text-center text-xs text-muted-foreground mt-2">{progress.toFixed(0)}% of the way to your goal. Keep going!</p> }
                         </CardContent>
                     </Card>
+                    <PredictedDateCard user={user} />
                     <RecentActivity />
                 </div>
             </div>
