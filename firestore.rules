@@ -26,8 +26,7 @@ service cloud.firestore {
     }
 
     match /mockTests/{testId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && request.query.where.skill == 'Writing';
+      allow get, list: if isSignedIn();
       allow create, update, delete: if false; // Admin only
     }
 
