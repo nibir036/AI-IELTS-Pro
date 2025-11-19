@@ -5,15 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup, User, AuthError } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { setDocumentNonBlocking } from '@/firebase';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
 const provider = new GoogleAuthProvider();
 
-async function createUserProfile(user: User, firestore: any) {
+async function checkAndCreateUserProfile(user: User, firestore: any): Promise<boolean> {
   const userRef = doc(firestore, 'users', user.uid);
   const userDoc = await getDoc(userRef);
 
@@ -22,15 +21,19 @@ async function createUserProfile(user: User, firestore: any) {
     const newUser = {
       id: user.uid,
       email: user.email,
-      nativeLanguage: 'English', // Default value
-      currentBand: 5.0, // Default value
-      targetBand: 7.5, // Default value
-      learningPathId: '', // Default value
-      totalPracticeTime: 0, // Default value
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      nativeLanguage: 'English', // Default value, to be updated in onboarding
+      currentBand: 5.0,        // Default value, to be updated in onboarding
+      targetBand: 7.5,         // Default value, to be updated in onboarding
+      learningPathId: '',
+      totalPracticeTime: 0,
     };
-    // Using non-blocking write
+    // Use non-blocking write for performance
     setDocumentNonBlocking(userRef, newUser, { merge: false });
+    return true; // Indicates a new user was created
   }
+  return false; // Indicates an existing user
 }
 
 export default function LoginPage() {
@@ -39,23 +42,29 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Redirect logged-in users away from the login page
     if (!isUserLoading && user) {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
 
-
   const handleSignIn = async () => {
     if (!auth || !firestore) return;
     try {
       const result = await signInWithPopup(auth, provider);
-      await createUserProfile(result.user, firestore);
-      router.push('/dashboard');
+      const isNewUser = await checkAndCreateUserProfile(result.user, firestore);
+
+      if (isNewUser) {
+        // Redirect new users to the onboarding page
+        router.push('/onboarding');
+      } else {
+        // Redirect existing users to the dashboard
+        router.push('/dashboard');
+      }
     } catch (error) {
       const authError = error as AuthError;
-      // Don't show an error if the user closes the popup
       if (authError.code === 'auth/popup-closed-by-user') {
-        return;
+        return; // Silently ignore popup closed error
       }
       console.error('Error signing in with Google', authError);
       toast({
@@ -67,11 +76,12 @@ export default function LoginPage() {
   };
   
   if (isUserLoading || user) {
+    // Show a loading indicator or null while checking auth state or redirecting
     return (
         <div className="flex min-h-screen items-center justify-center">
             <p>Loading...</p>
         </div>
-    )
+    );
   }
 
   return (
@@ -92,9 +102,13 @@ export default function LoginPage() {
           <CardDescription>Sign in to continue to your personalized learning dashboard.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" onClick={handleSignIn}>
-            <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-76.2 76.2C307.4 102.5 279.7 90 248 90c-88.3 0-160 71.7-160 160s71.7 160 160 160c92.6 0 145-67.2 150.8-102.3H248v-96h239.2c.5 12.3.8 24.8.8 37.8z"></path></svg>
-            Sign in with Google
+          <Button className="w-full" onClick={handleSignIn} disabled={isUserLoading}>
+             {isUserLoading ? 'Loading...' : (
+                <>
+                    <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-76.2 76.2C307.4 102.5 279.7 90 248 90c-88.3 0-160 71.7-160 160s71.7 160 160 160c92.6 0 145-67.2 150.8-102.3H248v-96h239.2c.5 12.3.8 24.8.8 37.8z"></path></svg>
+                    Sign in with Google
+                </>
+             )}
           </Button>
         </CardContent>
       </Card>

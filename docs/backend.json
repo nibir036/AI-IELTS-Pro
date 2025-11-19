@@ -16,6 +16,15 @@
           "description": "User's email address.",
           "format": "email"
         },
+        "displayName": {
+          "type": "string",
+          "description": "User's display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "URL of the user's profile picture.",
+          "format": "uri"
+        },
         "nativeLanguage": {
           "type": "string",
           "description": "User's native language for multilingual support."
@@ -42,9 +51,7 @@
         "email",
         "nativeLanguage",
         "currentBand",
-        "targetBand",
-        "learningPathId",
-        "totalPracticeTime"
+        "targetBand"
       ]
     },
     "Lesson": {
