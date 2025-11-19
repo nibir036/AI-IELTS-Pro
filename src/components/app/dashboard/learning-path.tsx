@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,10 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { BookOpen, ArrowRight, Loader2 } from 'lucide-react';
-import { generatePersonalizedLearningPath } from '@/ai/flows/personalized-learning-path';
-import type { Lesson, User } from '@/lib/types';
-import { useFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import type { Lesson, User, LearningPath as LearningPathType } from '@/lib/types';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getDocs, doc } from 'firebase/firestore';
 
 interface LearningPathProps {
   user: User;
@@ -20,70 +18,65 @@ export function LearningPath({ user }: LearningPathProps) {
   const [recommendedLessons, setRecommendedLessons] = useState<Lesson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const learningPathRef = useMemoFirebase(() => {
+      if (!firestore || !user?.learningPathId || typeof user.learningPathId !== 'string') return null;
+      return doc(firestore, 'users', user.id, 'learningPaths', user.learningPathId);
+  }, [firestore, user?.id, user?.learningPathId]);
+
+  const { data: learningPath, isLoading: isPathLoading } = useDoc<LearningPathType>(learningPathRef);
+
   useEffect(() => {
-    async function fetchLearningPath() {
-      if (!user || !firestore) return;
-
+    async function fetchLessons() {
+      if (!learningPath || !learningPath.lessonIds || !firestore) {
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
-      try {
-        if (user.currentBand === 0) {
-            // User hasn't taken diagnostic, don't generate a path
-            setRecommendedLessons([]);
-            setIsLoading(false);
-            return;
+      const { lessonIds } = learningPath;
+
+      if (lessonIds.length > 0) {
+        try {
+          const lessonsRef = collection(firestore, 'lessons');
+          // Firestore 'in' queries are limited to 30 elements.
+          // We chunk the array to handle more than 30 IDs if necessary.
+          const lessonChunks: string[][] = [];
+          for (let i = 0; i < lessonIds.length; i += 30) {
+            lessonChunks.push(lessonIds.slice(i, i + 30));
+          }
+          
+          const fetchedLessons: Lesson[] = [];
+          for (const chunk of lessonChunks) {
+               if (chunk.length === 0) continue;
+               const q = query(lessonsRef, where('lessonId', 'in', chunk));
+               const querySnapshot = await getDocs(q);
+               querySnapshot.forEach(doc => {
+                  fetchedLessons.push(doc.data() as Lesson);
+               });
+          }
+
+          // We'll show up to 3 recommended lessons on the dashboard
+          setRecommendedLessons(fetchedLessons.slice(0, 3));
+        } catch (error) {
+          console.error("Error fetching lessons for learning path:", error);
+          setRecommendedLessons([]);
+        } finally {
+          setIsLoading(false);
         }
-
-        const input = {
-          currentBand: user.currentBand,
-          targetBand: user.targetBand,
-          nativeLanguage: user.nativeLanguage,
-        };
-        
-        const result = await generatePersonalizedLearningPath(input);
-
-        if (result.lessonIds && result.lessonIds.length > 0) {
-            const lessonsRef = collection(firestore, 'lessons');
-            // Firestore 'in' queries are limited to 30 elements.
-            // We chunk the array to handle more than 30 IDs if necessary.
-            const lessonChunks: string[][] = [];
-            for (let i = 0; i < result.lessonIds.length; i += 30) {
-                lessonChunks.push(result.lessonIds.slice(i, i + 30));
-            }
-            
-            const fetchedLessons: Lesson[] = [];
-            for (const chunk of lessonChunks) {
-                 if(chunk.length === 0) continue;
-                 const q = query(lessonsRef, where('lessonId', 'in', chunk));
-                 const querySnapshot = await getDocs(q);
-                 querySnapshot.forEach(doc => {
-                    fetchedLessons.push(doc.data() as Lesson);
-                 });
-            }
-
-            // We'll show up to 3 recommended lessons on the dashboard
-            setRecommendedLessons(fetchedLessons.slice(0, 3));
-        } else {
-            // Handle case where AI returns no lesson IDs
-            setRecommendedLessons([]);
-        }
-
-      } catch (error) {
-        console.error("Error generating learning path:", error);
-        // As a fallback, show some generic lessons if the AI fails
-        const lessonsRef = collection(firestore, 'lessons');
-        const fallbackQuery = query(lessonsRef, where('level', '==', 'Intermediate'));
-        const querySnapshot = await getDocs(fallbackQuery);
-        const fallbackLessons = querySnapshot.docs.map(doc => doc.data() as Lesson);
-        setRecommendedLessons(fallbackLessons.slice(0, 3));
-      } finally {
+      } else {
+        setRecommendedLessons([]);
         setIsLoading(false);
       }
     }
 
-    fetchLearningPath();
-  }, [user, firestore]);
+    if (!isPathLoading) {
+      fetchLessons();
+    }
+  }, [learningPath, isPathLoading, firestore]);
 
-  if (user.currentBand === 0 && !isLoading) {
+  const finalLoadingState = isLoading || isPathLoading;
+
+  if (!user?.learningPathId && !finalLoadingState) {
       return (
         <Card>
             <CardHeader>
@@ -109,7 +102,7 @@ export function LearningPath({ user }: LearningPathProps) {
         <CardDescription>AI-recommended lessons to help you reach your target band score.</CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {finalLoadingState ? (
             <div className="flex justify-center items-center h-40">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
@@ -134,7 +127,7 @@ export function LearningPath({ user }: LearningPathProps) {
                 </div>
             )) : (
                 <div className="text-center text-muted-foreground py-10">
-                    <p>No recommendations right now. Explore lessons on your own!</p>
+                    <p>Your learning path is empty. Explore lessons on your own!</p>
                 </div>
             )}
           </div>

@@ -8,7 +8,7 @@ export interface User {
   nativeLanguage: string;
   currentBand: number;
   targetBand: number;
-  learningPathId: DocumentReference | string;
+  learningPathId: string; // Changed from DocumentReference to string
   totalPracticeTime: number; // in minutes
 }
 
@@ -46,6 +46,11 @@ export interface Submission {
   timestamp: Timestamp | Date;
 }
 
+export interface LearningPath {
+  id: string;
+  lessonIds: string[];
+}
+
 export interface AiPoweredWritingEvaluationOutput {
   overallBand: number;
   feedbackSummary: string;
@@ -79,5 +84,3 @@ export interface ImprovementArea {
   rule: string;
   example: string;
 }
-
-    

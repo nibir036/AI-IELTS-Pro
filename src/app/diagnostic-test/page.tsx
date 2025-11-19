@@ -3,10 +3,11 @@
 import { WritingEvaluation } from "@/components/app/writing/writing-evaluation";
 import { AuthGuard } from "@/components/app/auth-guard";
 import { useFirebase } from "@/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, addDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import type { AiPoweredWritingEvaluationOutput } from "@/lib/types";
+import { generatePersonalizedLearningPath } from "@/ai/flows/personalized-learning-path";
 
 const diagnosticTask = {
   task: 2,
@@ -32,9 +33,29 @@ export default function DiagnosticTestPage() {
         }
 
         try {
+            // 1. Update user's current band score
             const userRef = doc(firestore, 'users', user.uid);
             await updateDoc(userRef, {
                 currentBand: result.overallBand,
+            });
+
+            // 2. Generate the personalized learning path
+            const learningPathResult = await generatePersonalizedLearningPath({
+                currentBand: result.overallBand,
+                targetBand: 7.5, // Assuming a default target band for now
+                nativeLanguage: 'English' // Assuming a default native language
+            });
+
+            // 3. Save the learning path to Firestore
+            const learningPathsRef = collection(firestore, 'users', user.uid, 'learningPaths');
+            const newLearningPathDoc = await addDoc(learningPathsRef, {
+                lessonIds: learningPathResult.lessonIds,
+                createdAt: new Date(),
+            });
+
+            // 4. Update user profile with the new learning path ID
+            await updateDoc(userRef, {
+                learningPathId: newLearningPathDoc.id,
             });
 
             toast({
@@ -42,15 +63,15 @@ export default function DiagnosticTestPage() {
                 description: `Your estimated band score is ${result.overallBand.toFixed(1)}. Your learning path is ready!`,
             });
             
-            // Redirect to dashboard where the new path will be generated
+            // 5. Redirect to dashboard
             router.push('/dashboard');
 
         } catch (error) {
-            console.error("Error updating user profile with band score:", error);
+            console.error("Error in diagnostic test completion process:", error);
             toast({
                 variant: "destructive",
                 title: "Update Failed",
-                description: "Could not save your band score. Please try again.",
+                description: "An error occurred while creating your learning path. Please try again.",
             });
         }
     };
