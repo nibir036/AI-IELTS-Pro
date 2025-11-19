@@ -3,11 +3,12 @@
 import { WritingEvaluation } from "@/components/app/writing/writing-evaluation";
 import { AuthGuard } from "@/components/app/auth-guard";
 import { useFirebase } from "@/firebase";
-import { doc, updateDoc, collection, addDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import type { AiPoweredWritingEvaluationOutput } from "@/lib/types";
 import { generatePersonalizedLearningPath } from "@/ai/flows/personalized-learning-path";
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 const diagnosticTask = {
   task: 2,
@@ -17,12 +18,13 @@ const diagnosticTask = {
 };
 
 export default function DiagnosticTestPage() {
-    const { user, firestore } = useFirebase();
+    const { user: authUser, firestore } = useFirebase();
+    const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
 
     const handleEvaluationComplete = async (result: AiPoweredWritingEvaluationOutput) => {
-        if (!user || !firestore) {
+        if (!authUser || !firestore || !userProfile) {
             toast({
                 variant: "destructive",
                 title: "Error",
@@ -34,26 +36,37 @@ export default function DiagnosticTestPage() {
 
         try {
             // 1. Update user's current band score
-            const userRef = doc(firestore, 'users', user.uid);
+            const userRef = doc(firestore, 'users', authUser.uid);
             await updateDoc(userRef, {
                 currentBand: result.overallBand,
             });
 
-            // 2. Generate the personalized learning path
+            // 2. Save the submission
+            const submissionRef = collection(firestore, 'users', authUser.uid, 'submissions');
+             await addDoc(submissionRef, {
+                skill: 'Writing',
+                testId: 'Diagnostic Test',
+                inputData: "Diagnostic essay submission",
+                aiReport: result,
+                scoreBand: result.overallBand,
+                timestamp: serverTimestamp(),
+            });
+
+            // 3. Generate the personalized learning path
             const learningPathResult = await generatePersonalizedLearningPath({
                 currentBand: result.overallBand,
-                targetBand: 7.5, // Assuming a default target band for now
-                nativeLanguage: 'English' // Assuming a default native language
+                targetBand: userProfile.targetBand, 
+                nativeLanguage: userProfile.nativeLanguage,
             });
 
-            // 3. Save the learning path to Firestore
-            const learningPathsRef = collection(firestore, 'users', user.uid, 'learningPaths');
+            // 4. Save the learning path to Firestore
+            const learningPathsRef = collection(firestore, 'users', authUser.uid, 'learningPaths');
             const newLearningPathDoc = await addDoc(learningPathsRef, {
                 lessonIds: learningPathResult.lessonIds,
-                createdAt: new Date(),
+                createdAt: serverTimestamp(),
             });
 
-            // 4. Update user profile with the new learning path ID
+            // 5. Update user profile with the new learning path ID
             await updateDoc(userRef, {
                 learningPathId: newLearningPathDoc.id,
             });
@@ -63,7 +76,7 @@ export default function DiagnosticTestPage() {
                 description: `Your estimated band score is ${result.overallBand.toFixed(1)}. Your learning path is ready!`,
             });
             
-            // 5. Redirect to dashboard
+            // 6. Redirect to dashboard
             router.push('/dashboard');
 
         } catch (error) {

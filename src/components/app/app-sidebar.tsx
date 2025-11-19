@@ -14,6 +14,7 @@ import {
   BookMarked,
   LogOut,
   Lightbulb,
+  Settings,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -23,6 +24,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   useSidebar,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useFirebase } from '@/firebase';
@@ -84,7 +86,7 @@ export function AppSidebar() {
         ))}
       </SidebarMenu>
       <SidebarFooter className="p-2 flex flex-col gap-2">
-        <div className="flex items-center gap-3 rounded-md p-2 hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:size-8">
+         <div className="flex items-center gap-3 rounded-md p-2 hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:size-8">
           <Avatar className="h-8 w-8">
             <AvatarImage src={user?.photoURL || ''} />
             <AvatarFallback>{user?.displayName?.charAt(0) || user?.email?.charAt(0)}</AvatarFallback>
@@ -94,10 +96,28 @@ export function AppSidebar() {
             <p className="text-xs text-muted-foreground">{user?.email}</p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0">
-            <LogOut className="h-4 w-4" />
-            <span className="group-data-[collapsible=icon]:hidden ml-2">Sign Out</span>
-        </Button>
+
+        <SidebarSeparator />
+
+        <SidebarMenu className="p-0">
+             <SidebarMenuItem>
+                <Link href="/settings" onClick={() => setOpenMobile(false)}>
+                    <SidebarMenuButton
+                        isActive={pathname.startsWith('/settings')}
+                        tooltip={{ children: 'Settings' }}
+                    >
+                        <Settings />
+                        <span>Settings</span>
+                    </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleSignOut} tooltip={{ children: 'Sign Out' }} variant="ghost" className="w-full justify-start">
+                     <LogOut />
+                     <span>Sign Out</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
