@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -20,6 +21,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useFirebase } from '@/firebase';
@@ -39,6 +41,7 @@ const links = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, auth } = useFirebase();
+  const { setOpenMobile } = useSidebar();
 
   const handleSignOut = async () => {
     if (auth) {
@@ -66,7 +69,7 @@ export function AppSidebar() {
       <SidebarMenu className="flex-1 p-2">
         {links.map((link) => (
           <SidebarMenuItem key={link.href}>
-            <Link href={link.href}>
+            <Link href={link.href} onClick={() => setOpenMobile(false)}>
               <SidebarMenuButton
                 isActive={pathname.startsWith(link.href)}
                 tooltip={{ children: link.label }}
