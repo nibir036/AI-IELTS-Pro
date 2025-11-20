@@ -16,8 +16,10 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 import { useFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const formSchema = z.object({
   essay: z.string().min(100, {
@@ -27,16 +29,18 @@ const formSchema = z.object({
 
 interface WritingEvaluationProps {
   task: WritingQuestion;
+  testId: string;
   onEvaluationComplete?: (result: AiPoweredWritingEvaluationOutput) => void;
   isDiagnosticTest?: boolean;
 }
 
-export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest = false }: WritingEvaluationProps) {
+export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagnosticTest = false }: WritingEvaluationProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AiPoweredWritingEvaluationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { user, firestore } = useFirebase();
+  const { user: authUser, firestore } = useFirebase();
+  const { user: userProfile } = useUserProfile();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -51,6 +55,12 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
     setError(null);
     setResult(null);
 
+    if (!authUser || !firestore || !userProfile) {
+      setError("You must be logged in to submit an evaluation.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await aiPoweredWritingEvaluation({
         task: task.topic,
@@ -61,37 +71,37 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
         onEvaluationComplete(response);
       } else {
         setResult(response);
-         if (user && firestore) {
-            // Save submission to Firestore
-            const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
-            await addDoc(submissionRef, {
-                skill: 'Writing',
-                testId: task.taskType,
-                inputData: values.essay,
-                aiReport: response,
-                scoreBand: response.overallBand,
-                timestamp: serverTimestamp(),
-            });
+        
+        const submissionRef = doc(collection(firestore, 'users', authUser.uid, 'submissions'));
+        setDocumentNonBlocking(submissionRef, {
+            skill: 'Writing',
+            testId: testId,
+            inputData: values.essay,
+            aiReport: response,
+            scoreBand: response.overallBand,
+            timestamp: serverTimestamp(),
+        });
+        
+        const newTotalSubmissions = (userProfile.totalPracticeTime / 20 || 0) + 1;
+        const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + response.overallBand) / newTotalSubmissions;
 
-             // Update user's current band score
-            const userRef = doc(firestore, 'users', user.uid);
-            await updateDoc(userRef, {
-                currentBand: response.overallBand,
-            });
+        const userRef = doc(firestore, 'users', authUser.uid);
+        updateDocumentNonBlocking(userRef, {
+            currentBand: newAverageBand,
+            totalPracticeTime: increment(20) // Assume 20 mins for a writing task
+        });
 
-            toast({
-                title: "Evaluation Complete!",
-                description: `Your writing score of ${response.overallBand.toFixed(1)} has been saved.`,
-            });
-        }
+        toast({
+            title: "Evaluation Complete!",
+            description: `Your writing score of ${response.overallBand.toFixed(1)} has been saved.`,
+        });
       }
     } catch (e: any) {
       console.error(e);
-      if (e.message?.includes('503') || e.message?.includes('overloaded')) {
-        setError("The AI service is currently overloaded. Please wait a moment and try submitting again.");
-      } else {
-        setError("An error occurred during evaluation. Please try again.");
-      }
+      const errorMessage = e.message?.includes('503') || e.message?.includes('overloaded')
+        ? "The AI service is currently overloaded. Please wait a moment and try submitting again."
+        : "An error occurred during evaluation. Please try again.";
+      setError(errorMessage);
        toast({
         variant: "destructive",
         title: "Evaluation Failed",
