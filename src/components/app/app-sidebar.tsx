@@ -6,15 +6,11 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   PenSquare,
-  Speech,
-  BookOpen,
-  Headphones,
-  FileText,
-  GraduationCap,
   BookMarked,
   LogOut,
   Lightbulb,
   Settings,
+  GraduationCap
 } from 'lucide-react';
 import {
   Sidebar,
@@ -32,14 +28,10 @@ import { Button } from '../ui/button';
 
 const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/mock-tests', label: 'Practice Tests', icon: GraduationCap },
   { href: '/grammar', label: 'Grammar', icon: PenSquare },
   { href: '/vocabulary', label: 'Vocabulary', icon: BookMarked },
   { href: '/tips', label: 'Tips', icon: Lightbulb },
-  { href: '/writing', label: 'Writing', icon: FileText },
-  { href: '/speaking', label: 'Speaking', icon: Speech },
-  { href: '/reading', label: 'Reading', icon: BookOpen },
-  { href: '/listening', label: 'Listening', icon: Headphones },
-  { href: '/mock-tests', label: 'Mock Tests', icon: GraduationCap },
 ];
 
 export function AppSidebar() {
