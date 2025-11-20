@@ -11,7 +11,8 @@ import {
   Lightbulb,
   Settings,
   GraduationCap,
-  Search
+  Search,
+  Shield,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -34,6 +35,10 @@ const links = [
   { href: '/grammar', label: 'Grammar', icon: PenSquare },
   { href: '/vocabulary', label: 'Vocabulary', icon: BookMarked },
   { href: '/tips', label: 'Tips', icon: Lightbulb },
+];
+
+const adminLinks = [
+    { href: '/admin', label: 'Admin', icon: Shield },
 ];
 
 export function AppSidebar() {
@@ -105,6 +110,19 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                 </Link>
             </SidebarMenuItem>
+            {adminLinks.map((link) => (
+              <SidebarMenuItem key={link.href}>
+                <Link href={link.href} onClick={() => setOpenMobile(false)}>
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith(link.href)}
+                    tooltip={{ children: link.label }}
+                  >
+                    <link.icon />
+                    <span>{link.label}</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            ))}
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleSignOut} tooltip={{ children: 'Sign Out' }} variant="ghost" className="w-full justify-start">
                      <LogOut />
