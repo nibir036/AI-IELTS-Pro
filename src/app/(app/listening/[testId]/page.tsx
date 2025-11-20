@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useCallback, use } from 'react';
@@ -28,14 +29,8 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type WaveSurfer from 'wavesurfer.js';
 
-
-let WaveSurfer: any = null;
-if (typeof window !== 'undefined') {
-  import('wavesurfer.js').then(module => {
-    WaveSurfer = module.default;
-  });
-}
 
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
@@ -51,7 +46,7 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     const test = listeningTests.find(t => t.id === testId);
 
     const waveformRef = useRef<HTMLDivElement>(null);
-    const wavesurferRef = useRef<any | null>(null);
+    const wavesurferRef = useRef<WaveSurfer | null>(null);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [hasPlayed, setHasPlayed] = useState(false);
@@ -63,12 +58,22 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     const [explanations, setExplanations] = useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
 
+    // State to hold the dynamically imported WaveSurfer module
+    const [WaveSurferModule, setWaveSurferModule] = useState<any>(null);
 
     useEffect(() => {
-        if (!WaveSurfer || !waveformRef.current || !test?.audioUrl) return;
+        // Dynamically import WaveSurfer on the client side
+        import('wavesurfer.js').then(module => {
+            setWaveSurferModule(module.default);
+        });
+    }, []);
+
+
+    useEffect(() => {
+        if (!WaveSurferModule || !waveformRef.current || !test?.audioUrl) return;
         if(wavesurferRef.current) return;
 
-        const wavesurfer = WaveSurfer.create({
+        const wavesurfer = WaveSurferModule.create({
             container: waveformRef.current,
             waveColor: 'hsl(var(--muted-foreground))',
             progressColor: 'hsl(var(--primary))',
@@ -91,7 +96,7 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         wavesurfer.on('finish', () => setIsPlaying(false));
         
         return () => wavesurfer.destroy();
-    }, [test?.audioUrl]);
+    }, [WaveSurferModule, test?.audioUrl]);
 
     const handlePlayPause = () => {
         if (wavesurferRef.current) {
