@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function RecentActivity() {
   const { firestore } = useFirebase();
   const { user } = useUser();
+  const router = useRouter();
 
   const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -26,11 +28,15 @@ export function RecentActivity() {
 
   const { data: submissions, isLoading } = useCollection<Submission>(submissionsQuery);
 
+  const handleRowClick = (submissionId: string) => {
+    router.push(`/submissions/${submissionId}`);
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Recent Activity</CardTitle>
-        <CardDescription>An overview of your latest practice submissions.</CardDescription>
+        <CardDescription>An overview of your latest practice submissions. Click to review.</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading && (
@@ -54,7 +60,7 @@ export function RecentActivity() {
                 </TableHeader>
                 <TableBody>
                     {submissions.map((submission) => (
-                        <TableRow key={submission.id}>
+                        <TableRow key={submission.id} onClick={() => handleRowClick(submission.id)} className="cursor-pointer">
                             <TableCell className="font-medium">{submission.skill}</TableCell>
                             <TableCell>
                                 {submission.scoreBand != null && (
