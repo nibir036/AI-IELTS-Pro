@@ -5,15 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import { processContentIntoLesson } from '@/ai/flows/content-factory-flow';
+import { processContentIntoLesson, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 
 export default function AdminPage() {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<ProcessContentOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { firestore } = useFirebase();
@@ -36,13 +38,13 @@ export default function AdminPage() {
       const aiResult = await processContentIntoLesson({ rawText: inputText });
       setResult(aiResult);
       
-      // Save the result to Firestore
+      // Save the result to Firestore without awaiting, using the non-blocking helper
       const lessonsCollection = collection(firestore, 'lessons');
-      await addDoc(lessonsCollection, aiResult);
+      addDocumentNonBlocking(lessonsCollection, aiResult);
 
       toast({
-        title: "Lesson Saved!",
-        description: "The new lesson has been generated and saved to the database.",
+        title: "Lesson Generated!",
+        description: "The new lesson has been generated and is being saved to the database.",
       });
 
     } catch (err: any) {
