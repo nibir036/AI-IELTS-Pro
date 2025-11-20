@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -31,7 +32,8 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
 
   useEffect(() => {
     async function fetchPrediction() {
-      if (submissionsLoading || !submissions || !user) {
+      if (submissionsLoading || !submissions || !user || user.currentBand === 0) {
+        setIsLoading(false);
         return;
       }
 
@@ -40,7 +42,7 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
         const submissionSummary = submissions.map(s => ({
           skill: s.skill,
           scoreBand: s.scoreBand,
-          timestamp: (s.timestamp as any).toDate(), // Convert Firestore Timestamp to JS Date
+          timestamp: (s.timestamp as any).toDate().toISOString(), // Convert Firestore Timestamp to ISO String
         }));
 
         const result = await predictTargetDate({
@@ -59,6 +61,22 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
 
     fetchPrediction();
   }, [submissions, submissionsLoading, user]);
+
+  if (user.currentBand === 0) {
+    return (
+       <Card>
+        <CardHeader>
+            <CardTitle>Target Date Prediction</CardTitle>
+            <CardDescription>Your estimated date to reach band {user.targetBand}.</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+             <p className="text-sm text-muted-foreground h-24 flex items-center justify-center">
+                Complete your diagnostic test to get a prediction.
+            </p>
+        </CardContent>
+       </Card>
+    )
+  }
 
   return (
     <Card>

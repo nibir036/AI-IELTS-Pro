@@ -17,7 +17,7 @@ import { Submission } from '@/lib/types';
 const SubmissionSummarySchema = z.object({
   skill: z.string(),
   scoreBand: z.number().nullable(),
-  timestamp: z.date(),
+  timestamp: z.string().datetime(),
 });
 
 const PredictTargetDateInputSchema = z.object({
