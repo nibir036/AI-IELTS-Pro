@@ -49,7 +49,7 @@ export default function VocabularyPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{lesson.explanation ? lesson.explanation.substring(0, 100) + '...' : ''}</p>
+                  <p className="text-sm text-muted-foreground">{lesson.content_en ? lesson.content_en.substring(0, 100) + '...' : ''}</p>
                 </CardContent>
               </Card>
             </Link>
