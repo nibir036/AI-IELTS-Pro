@@ -47,7 +47,7 @@ export default function AdminPage() {
 
     } catch (err: any) {
       console.error("Error processing content:", err);
-      const errorMessage = err.message?.includes('overloaded') 
+      const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
         ? "The AI service is currently overloaded. Please try again in a moment."
         : "An error occurred while processing the content.";
       setError(errorMessage);
