@@ -1,0 +1,55 @@
+
+{
+  "listeningTests": [
+    {
+      "id": "L_GEN_001",
+      "title": "Conversation about a Local Library",
+      "skill": "Listening",
+      "audioUrl": "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_1.mp3",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "What is the main reason for the man's visit to the library?",
+          "type": "multiple-choice",
+          "options": [
+            "To borrow some books.",
+            "To use the computer.",
+            "To join the library.",
+            "To ask for directions."
+          ],
+          "answer": "To join the library."
+        },
+        {
+          "id": "q2",
+          "question": "The library is closed on ________ morning.",
+          "type": "fill-in-the-blank",
+          "answer": "Sunday"
+        },
+        {
+          "id": "q3",
+          "question": "How many books can a member borrow at one time?",
+          "type": "multiple-choice",
+          "options": [
+            "Four",
+            "Six",
+            "Eight",
+            "Ten"
+          ],
+          "answer": "Eight"
+        },
+        {
+          "id": "q4",
+          "question": "The man needs to provide a ________ to prove his address.",
+          "type": "fill-in-the-blank",
+          "answer": "utility bill"
+        },
+        {
+          "id": "q5",
+          "question": "The library's late fee per book, per day is ________.",
+          "type": "fill-in-the-blank",
+          "answer": "25 cents"
+        }
+      ]
+    }
+  ]
+}

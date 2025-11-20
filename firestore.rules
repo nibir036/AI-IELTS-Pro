@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -32,6 +33,11 @@ service cloud.firestore {
     }
 
     match /readingTests/{testId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if false; // Admin only for writes
+    }
+
+    match /listeningTests/{testId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if false; // Admin only for writes
     }

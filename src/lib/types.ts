@@ -14,7 +14,7 @@ export interface User {
 }
 
 export interface Lesson {
-  id: string; // Changed from lessonId
+  id: string;
   type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening' | 'Speaking';
   title: string;
   level: 'Basic' | 'Intermediate' | 'Advanced' | string; // Or band level
@@ -23,14 +23,14 @@ export interface Lesson {
 }
 
 export interface MockTest {
-  id: string; // Changed from testId
+  id: string;
   testType: 'IELTS-Academic' | 'PTE' | 'IELTS-General';
   skill: 'Writing' | 'Speaking' | 'Reading' | 'Listening';
   questions: Array<Record<string, any>>;
 }
 
 export interface ReadingTest {
-    id: string; // Changed from testId
+    id: string;
     title: string;
     skill: 'Reading';
     passage: string;
@@ -43,6 +43,24 @@ export interface ReadingQuestion {
     id: string;
     question: string;
     type: ReadingQuestionType;
+    options?: string[];
+    answer: string;
+}
+
+export interface ListeningTest {
+    id: string;
+    title: string;
+    skill: 'Listening';
+    audioUrl: string;
+    questions: ListeningQuestion[];
+}
+
+export type ListeningQuestionType = 'multiple-choice' | 'fill-in-the-blank';
+
+export interface ListeningQuestion {
+    id: string;
+    question: string;
+    type: ListeningQuestionType;
     options?: string[];
     answer: string;
 }
