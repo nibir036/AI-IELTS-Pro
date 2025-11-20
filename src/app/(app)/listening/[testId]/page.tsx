@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
@@ -41,13 +42,14 @@ type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
 
-export default function ListeningTaskPage({ params }: { params: { testId: string } }) {
+export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
+    const { testId } = use(params);
 
-    const test = listeningTests.find(t => t.id === params.testId);
+    const test = listeningTests.find(t => t.id === testId);
 
     const waveformRef = useRef<HTMLDivElement>(null);
     const wavesurferRef = useRef<any | null>(null);
@@ -403,3 +405,5 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
         </div>
     );
 }
+
+    

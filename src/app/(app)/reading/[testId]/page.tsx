@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { notFound } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
@@ -24,13 +25,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
-export default function ReadingTaskPage({ params }: { params: { testId: string } }) {
+export default function ReadingTaskPage({ params }: { params: Promise<{ testId: string }> }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
     const { toast } = useToast();
     const startTimeRef = useRef<Date | null>(null);
+    const { testId } = use(params);
 
-    const test = readingTests.find(t => t.id === params.testId);
+    const test = readingTests.find(t => t.id === testId);
 
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
@@ -266,3 +268,5 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
         </>
     );
 }
+
+    

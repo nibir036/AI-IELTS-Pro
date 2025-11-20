@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useParams } from 'next/navigation';
+import { use } from 'react';
 import { doc } from 'firebase/firestore';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import type { Submission, AiPoweredWritingEvaluationOutput, AiPoweredSpeakingEvaluationOutput, ReadingTest, ListeningTest, ReadingQuestion, ListeningQuestion } from '@/lib/types';
@@ -107,9 +108,8 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
 }
 
 
-export default function SubmissionPage() {
-  const params = useParams();
-  const submissionId = params.submissionId as string;
+export default function SubmissionPage({ params }: { params: Promise<{ submissionId: string }> }) {
+  const { submissionId } = use(params);
   const { firestore, user } = useFirebase();
 
   const submissionRef = useMemoFirebase(() => {
@@ -240,3 +240,5 @@ function SubmissionSkeleton() {
     </div>
   );
 }
+
+    

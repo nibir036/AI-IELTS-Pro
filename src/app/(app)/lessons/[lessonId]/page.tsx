@@ -1,6 +1,6 @@
 
 'use client';
-
+import { use } from 'react';
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,10 @@ import { BookOpen } from "lucide-react";
 import { lessons } from '@/lib/data';
 import type { Lesson } from '@/lib/types';
 
-export default function LessonPage({ params }: { params: { lessonId: string } }) {
+export default function LessonPage({ params }: { params: Promise<{ lessonId: string }> }) {
     
-    const lesson = lessons.find(l => l.id === params.lessonId);
+    const { lessonId } = use(params);
+    const lesson = lessons.find(l => l.id === lessonId);
 
     if (!lesson) {
         notFound();
@@ -40,3 +41,5 @@ export default function LessonPage({ params }: { params: { lessonId: string } })
         </div>
     );
 }
+
+    
