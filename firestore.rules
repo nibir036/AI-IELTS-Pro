@@ -21,10 +21,10 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
 
-    // Curriculum content is public for any signed-in user
+    // Allow any signed-in user to manage curriculum content.
+    // This allows the admin "Content Factory" to add new lessons.
     match /lessons/{lessonId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if false; // Admin only for writes
+      allow read, list, create, update, delete: if isSignedIn();
     }
 
     match /mockTests/{testId} {
