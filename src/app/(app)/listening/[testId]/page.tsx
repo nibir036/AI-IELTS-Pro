@@ -59,7 +59,7 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
 
     // State to hold the dynamically imported WaveSurfer module
-    const [WaveSurferModule, setWaveSurferModule] = useState<any>(null);
+    const [waveSurferModule, setWaveSurferModule] = useState<any>(null);
 
     useEffect(() => {
         // Dynamically import WaveSurfer on the client side
@@ -70,10 +70,10 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
 
 
     useEffect(() => {
-        if (!WaveSurferModule || !waveformRef.current || !test?.audioUrl) return;
+        if (!waveSurferModule || !waveformRef.current || !test?.audioUrl) return;
         if(wavesurferRef.current) return;
 
-        const wavesurfer = WaveSurferModule.create({
+        const wavesurfer = waveSurferModule.create({
             container: waveformRef.current,
             waveColor: 'hsl(var(--muted-foreground))',
             progressColor: 'hsl(var(--primary))',
@@ -96,7 +96,7 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         wavesurfer.on('finish', () => setIsPlaying(false));
         
         return () => wavesurfer.destroy();
-    }, [WaveSurferModule, test?.audioUrl]);
+    }, [waveSurferModule, test?.audioUrl]);
 
     const handlePlayPause = () => {
         if (wavesurferRef.current) {
@@ -409,3 +409,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         </div>
     );
 }
+
+    
