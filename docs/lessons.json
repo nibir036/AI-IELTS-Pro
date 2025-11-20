@@ -23,6 +23,13 @@
       "content_en": "The Past Simple is used to talk about completed actions in the past. For regular verbs, add '-ed' (e.g., 'walked', 'played'). Many common verbs are irregular (e.g., 'went', 'saw', 'ate'). Example: 'Yesterday, I visited my grandparents.'"
     },
     {
+      "id": "GRAMMAR_004",
+      "type": "Grammar",
+      "title": "Relative Clauses",
+      "level": "Intermediate",
+      "content_en": "Relative clauses add extra information to a sentence. They are introduced by relative pronouns like 'who', 'which', 'that', 'whose', and 'where'. For example: 'The man who lives next door is a doctor.' Defining clauses give essential information, while non-defining clauses give extra, non-essential information and are separated by commas."
+    },
+    {
       "id": "VOCAB_001",
       "type": "Vocabulary",
       "title": "Technology Vocabulary",
@@ -42,6 +49,13 @@
       "title": "Adjectives for Describing Places",
       "level": "Basic",
       "content_en": "Expand your descriptions with words like: bustling (busy), tranquil (calm), picturesque (beautiful), historic, modern, vibrant (full of life), deserted (empty)."
+    },
+    {
+      "id": "VOCAB_004",
+      "type": "Vocabulary",
+      "title": "Education Vocabulary",
+      "level": "Advanced",
+      "content_en": "For discussions about education, use words like: curriculum, pedagogy, tertiary education, lifelong learning, rote learning, critical thinking, and standardized testing. Example: 'Some argue that modern pedagogy should focus more on critical thinking than on rote learning.'"
     },
     {
       "id": "TIPS_001",
@@ -65,6 +79,13 @@
       "content_en": "Don't give short answers. Use the 'A.R.E.A.' method: Answer the question directly. Give a Reason for your answer. Provide an Example to support your point. Suggest an Alternative or opposite view. This creates a well-developed, fluent response."
     },
     {
+      "id": "TIPS_004",
+      "type": "Tips",
+      "title": "Identifying Keywords in Listening",
+      "level": "All Levels",
+      "content_en": "Before the audio starts, quickly read the questions and underline the keywords. These are usually nouns, verbs, or adjectives that contain the main ideas. Listening for these specific words and their synonyms will help you locate the answers more easily."
+    },
+    {
       "id": "SPEAKING_001",
       "type": "Speaking",
       "title": "Hometown",
@@ -86,11 +107,18 @@
       "content_en": "Let's discuss advertising. What makes an advertisement effective? Do you think advertising manipulates people? What are the rules about advertising to children?"
     },
     {
-        "id": "SPEAKING_004",
-        "type": "Speaking",
-        "title": "Daily Routine",
-        "level": "Part 1",
-        "content_en": "Tell me about your typical daily routine. What is your favorite part of the day? How do you like to relax in the evenings?"
+      "id": "SPEAKING_004",
+      "type": "Speaking",
+      "title": "Daily Routine",
+      "level": "Part 1",
+      "content_en": "Tell me about your typical daily routine. What is your favorite part of the day? How do you like to relax in the evenings?"
+    },
+    {
+      "id": "SPEAKING_005",
+      "type": "Speaking",
+      "title": "A Skill You Learned",
+      "level": "Part 2",
+      "content_en": "Describe a skill you learned that you found difficult. You should say: what the skill was, why you decided to learn it, how you learned it, and explain why you found it difficult."
     }
   ]
 }

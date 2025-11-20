@@ -1,3 +1,4 @@
+
 {
   "listeningTests": [
     {
@@ -50,7 +51,63 @@
           "answer": "25 cents"
         }
       ]
+    },
+    {
+      "id": "L_AC_002",
+      "title": "University Course Registration",
+      "skill": "Listening",
+      "audioUrl": "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_2.mp3",
+      "transcript": "Tutor: Hi Anna, come in and take a seat. \nStudent: Thanks. \nTutor: So, you've come to discuss your course choices for next semester? \nStudent: Yes, that's right. I'm a bit unsure about what to take. I'm in my second year of Environmental Science. \nTutor: Okay, let's have a look at the options. There are a few core modules you have to take. There's 'Global Ecosystems' and 'Data Analysis for Scientists'. \nStudent: Right, I've already noted those down. It's the optional modules I'm not sure about. \nTutor: There are four main choices. You can do 'Oceanography', 'Urban Greening', 'Conservation Biology', or 'Environmental Policy'. You need to choose two. \nStudent: 'Oceanography' sounds interesting, but I'm not very strong in marine biology. \nTutor: It is quite specialized. It involves a lot of chemistry and physics, which some students find challenging. What about 'Urban Greening'? \nStudent: I was looking at that. It seems very practical. Does it involve any fieldwork? \nTutor: Yes, it does. There's a project component where you have to design a green space for a local community area. It's very popular. Last year's project was at the City Hospital. \nStudent: Oh, that sounds great. I think I'll definitely take that one. Now I need one more. \nTutor: 'Conservation Biology' is a good choice if you're interested in wildlife and habitat protection. It's more theoretical. \nStudent: And 'Environmental Policy'? What does that cover? \nTutor: That's more about the laws and regulations concerning the environment. It involves a lot of reading and essay writing. It's good for students who might want to work in government or for an NGO. The assessment is a 4,000-word essay. \nStudent: Hmm, I'm more interested in the practical science side than policy. I think I'll go with 'Conservation Biology'. \nTutor: Excellent choices. 'Urban Greening' and 'Conservation Biology' will give you a good balance of practical and theoretical knowledge. Just remember that 'Urban Greening' has a group presentation as part of the assessment. \nStudent: A group presentation? Okay, I'll keep that in mind. Thanks for your help. \nTutor: You're welcome. Just fill out the form online by the end of Friday.",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "What is the student's major?",
+          "type": "multiple-choice",
+          "options": [
+            "Marine Biology",
+            "Environmental Science",
+            "Urban Planning",
+            "Public Policy"
+          ],
+          "answer": "Environmental Science"
+        },
+        {
+          "id": "q2",
+          "question": "The student must choose ________ optional modules.",
+          "type": "fill-in-the-blank",
+          "answer": "two"
+        },
+        {
+          "id": "q3",
+          "question": "The 'Urban Greening' module includes a project at the local ________ last year.",
+          "type": "fill-in-the-blank",
+          "answer": "City Hospital"
+        },
+        {
+          "id": "q4",
+          "question": "What is the main assessment for the 'Environmental Policy' module?",
+          "type": "multiple-choice",
+          "options": [
+            "An exam",
+            "A group presentation",
+            "A 4,000-word essay",
+            "A lab report"
+          ],
+          "answer": "A 4,000-word essay"
+        },
+        {
+          "id": "q5",
+          "question": "Which two optional modules does the student decide to take?",
+          "type": "multiple-choice",
+          "options": [
+            "Oceanography and Conservation Biology",
+            "Urban Greening and Environmental Policy",
+            "Oceanography and Urban Greening",
+            "Urban Greening and Conservation Biology"
+          ],
+          "answer": "Urban Greening and Conservation Biology"
+        }
+      ]
     }
   ]
 }
-    

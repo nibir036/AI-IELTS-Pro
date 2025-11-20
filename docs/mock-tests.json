@@ -45,12 +45,38 @@
       "testType": "IELTS-Academic",
       "skill": "Writing",
       "questions": [
-          {
-              "task": 2,
-              "topic": "Some people believe that technology has made our lives more complex and stressful, while others think it has simplified our lives. Discuss both views and give your own opinion.",
-              "taskType": "Task 2",
-              "wordCountTarget": 250
-          }
+        {
+            "task": 2,
+            "topic": "Some people believe that technology has made our lives more complex and stressful, while others think it has simplified our lives. Discuss both views and give your own opinion.",
+            "taskType": "Task 2",
+            "wordCountTarget": 250
+        }
+      ]
+    },
+    {
+      "id": "IELTS_Writing_005",
+      "testType": "IELTS-Academic",
+      "skill": "Writing",
+      "questions": [
+        {
+          "task": 2,
+          "topic": "Success is often measured by wealth and material possessions. To what extent do you agree or disagree with this statement?",
+          "taskType": "Task 2",
+          "wordCountTarget": 250
+        }
+      ]
+    },
+    {
+      "id": "IELTS_Writing_006",
+      "testType": "IELTS-General",
+      "skill": "Writing",
+      "questions": [
+        {
+          "task": 2,
+          "topic": "Many people nowadays are choosing to live alone. What are the reasons for this trend, and do you think this is a positive or negative development?",
+          "taskType": "Task 2",
+          "wordCountTarget": 250
+        }
       ]
     }
   ]

@@ -55,50 +55,123 @@
       ]
     },
     {
-        "id": "R_AC_002",
-        "title": "The Psychology of Colour",
-        "skill": "Reading",
-        "passage": "Colour is a powerful communication tool and can be used to signal action, influence mood, and even influence physiological reactions. Certain colours have been associated with increased blood pressure, increased metabolism, and eyestrain. So how exactly does colour work? How is it that the colour of a room can influence our mood? \n\nThe effect of colour is not entirely universal. Perceptions of colour are somewhat subjective, but there are colour effects that have universal meaning. Colours in the red area of the colour spectrum are known as warm colours and include red, orange, and yellow. These warm colours evoke emotions ranging from feelings of warmth and comfort to feelings of anger and hostility. On the other hand, colours on the blue side of the spectrum are known as cool colours and include blue, purple, and green. These colours are often described as calm, but can also call to mind feelings of sadness or indifference.\n\nCompanies use colour to influence consumer perceptions of their products. For example, the colour blue is often associated with trustworthiness and reliability, which is why many financial institutions use it in their branding. Green is linked to nature and health, making it a popular choice for organic and eco-friendly products. Red creates a sense of urgency, which is why it's often used for clearance sales. Understanding the psychological effects of colour is a critical asset for marketers, artists, and designers, enabling them to create more impactful and persuasive work.",
-        "questions": [
-          {
-            "id": "q1",
-            "question": "The perception of colour is identical for everyone.",
-            "type": "true-false-not-given",
-            "options": ["True", "False", "Not Given"],
-            "answer": "False"
-          },
-          {
-            "id": "q2",
-            "question": "Which of the following is considered a 'cool' colour?",
-            "type": "multiple-choice",
-            "options": [
-                "Yellow",
-                "Red",
-                "Green",
-                "Orange"
-            ],
-            "answer": "Green"
-          },
-          {
-            "id": "q3",
-            "question": "Why do many banks use the colour blue?",
-            "type": "multiple-choice",
-            "options": [
-                "It creates a sense of urgency.",
-                "It is associated with nature and health.",
-                "It evokes feelings of calmness.",
-                "It is associated with dependability."
-            ],
-            "answer": "It is associated with dependability."
-          },
-           {
-            "id": "q4",
-            "question": "The text states that red is the best colour for marketing all products.",
-            "type": "true-false-not-given",
-            "options": ["True", "False", "Not Given"],
-            "answer": "False"
-          }
-        ]
-      }
+      "id": "R_AC_002",
+      "title": "The Psychology of Colour",
+      "skill": "Reading",
+      "passage": "Colour is a powerful communication tool and can be used to signal action, influence mood, and even influence physiological reactions. Certain colours have been associated with increased blood pressure, increased metabolism, and eyestrain. So how exactly does colour work? How is it that the colour of a room can influence our mood? \n\nThe effect of colour is not entirely universal. Perceptions of colour are somewhat subjective, but there are colour effects that have universal meaning. Colours in the red area of the colour spectrum are known as warm colours and include red, orange, and yellow. These warm colours evoke emotions ranging from feelings of warmth and comfort to feelings of anger and hostility. On the other hand, colours on the blue side of the spectrum are known as cool colours and include blue, purple, and green. These colours are often described as calm, but can also call to mind feelings of sadness or indifference.\n\nCompanies use colour to influence consumer perceptions of their products. For example, the colour blue is often associated with trustworthiness and reliability, which is why many financial institutions use it in their branding. Green is linked to nature and health, making it a popular choice for organic and eco-friendly products. Red creates a sense of urgency, which is why it's often used for clearance sales. Understanding the psychological effects of colour is a critical asset for marketers, artists, and designers, enabling them to create more impactful and persuasive work.",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "The perception of colour is identical for everyone.",
+          "type": "true-false-not-given",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": "False"
+        },
+        {
+          "id": "q2",
+          "question": "Which of the following is considered a 'cool' colour?",
+          "type": "multiple-choice",
+          "options": [
+            "Yellow",
+            "Red",
+            "Green",
+            "Orange"
+          ],
+          "answer": "Green"
+        },
+        {
+          "id": "q3",
+          "question": "Why do many banks use the colour blue?",
+          "type": "multiple-choice",
+          "options": [
+            "It creates a sense of urgency.",
+            "It is associated with nature and health.",
+            "It evokes feelings of calmness.",
+            "It is associated with dependability."
+          ],
+          "answer": "It is associated with dependability."
+        },
+        {
+          "id": "q4",
+          "question": "The text states that red is the best colour for marketing all products.",
+          "type": "true-false-not-given",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": "False"
+        }
+      ]
+    },
+    {
+      "id": "R_AC_003",
+      "title": "The History of the Bicycle",
+      "skill": "Reading",
+      "passage": "The bicycle is such a common feature of modern life that we rarely stop to consider its origins. The earliest contraption that resembled a bicycle was the 'dandy horse,' invented by German Baron Karl von Drais in 1817. It was made of wood and had no pedals; the rider would push their feet against the ground to move forward. It was a clumsy and impractical machine, but it was the first step towards personal transportation that did not rely on animals.\n\nIt wasn't until the 1860s in France that pedals were added to the front wheel, creating the 'vélocipède' or 'boneshaker.' This name was well-deserved, as the combination of stiff iron frames and wooden wheels made for an incredibly uncomfortable ride on cobblestone streets. A major innovation came with the 'high-wheeler' or 'penny-farthing' in the 1870s, which featured a huge front wheel to increase the distance covered with each pedal rotation. While faster, these machines were dangerous and required a great deal of athleticism to mount and ride.\n\nThe breakthrough that led to the modern bicycle was the 'safety bicycle,' developed in the 1880s. It featured two wheels of equal size, a chain-driven rear wheel, and pneumatic (air-filled) tires. This design was far more stable, comfortable, and efficient. It made cycling accessible to a much wider audience, including women, for whom cycling became a symbol of newfound freedom and mobility. The safety bicycle's fundamental design has remained largely unchanged for over a century, a testament to its effectiveness.",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "The 'dandy horse' had pedals on its front wheel.",
+          "type": "true-false-not-given",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": "False"
+        },
+        {
+          "id": "q2",
+          "question": "What was the main disadvantage of the 'vélocipède'?",
+          "type": "multiple-choice",
+          "options": [
+            "It was very slow.",
+            "It was difficult to steer.",
+            "It provided an uncomfortable ride.",
+            "It was made of wood."
+          ],
+          "answer": "It provided an uncomfortable ride."
+        },
+        {
+          "id": "q3",
+          "question": "The penny-farthing was safer to ride than the 'vélocipède'.",
+          "type": "true-false-not-given",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": "False"
+        },
+        {
+          "id": "q4",
+          "question": "What was a key feature of the 'safety bicycle'?",
+          "type": "multiple-choice",
+          "options": [
+            "A very large front wheel",
+            "A wooden frame",
+            "A chain-driven rear wheel",
+            "Solid rubber tires"
+          ],
+          "answer": "A chain-driven rear wheel"
+        },
+        {
+          "id": "q5",
+          "question": "The introduction of the safety bicycle had social implications for women.",
+          "type": "true-false-not-given",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": "True"
+        }
+      ]
+    }
   ]
 }
