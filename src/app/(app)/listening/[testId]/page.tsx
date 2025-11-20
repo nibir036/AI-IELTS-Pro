@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb, List, Headphones } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ import {
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 let WaveSurfer: any = null;
@@ -64,6 +65,7 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
 
     useEffect(() => {
         if (!WaveSurfer || !waveformRef.current || !test?.audioUrl) return;
+        if(wavesurferRef.current) return;
 
         const wavesurfer = WaveSurfer.create({
             container: waveformRef.current,
@@ -278,7 +280,7 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
                 <Progress value={progress} />
                 <p className="text-xs text-muted-foreground text-center mt-1">{Object.keys(userAnswers).length} of {test.questions.length} answered</p>
             </div>
-            <ScrollArea className="h-[calc(100vh-28rem)] pr-4">
+            <ScrollArea className="h-[calc(100vh-28rem)] lg:h-full pr-4">
                 <div className="space-y-4">
                     {test.questions.map(renderQuestion)}
                 </div>
@@ -286,67 +288,118 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
         </>
     )
 
+    const QuestionsCard = () => (
+        <Card className="flex flex-col h-full">
+            <CardHeader>
+                <CardTitle>Questions</CardTitle>
+                {!isGraded && <CardDescription>Answer all questions before submitting.</CardDescription>}
+                {isGraded && <CardDescription>Review your results below.</CardDescription>}
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden">
+                { isGraded ? <GradedView /> : <UngradedView /> }
+            </CardContent>
+            {!isGraded && (
+                <CardFooter>
+                    <Button 
+                        className="w-full" 
+                        onClick={handleSubmit} 
+                        disabled={Object.keys(userAnswers).length !== test.questions.length}
+                    >
+                        Submit & Grade
+                    </Button>
+                </CardFooter>
+            )}
+        </Card>
+    )
+
     return (
         <div className="space-y-6">
-             <Card>
-                <CardHeader>
-                    <CardTitle>{test.title}</CardTitle>
-                    <CardDescription>Listen to the audio. You will only hear it once. Answer the questions as you listen.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div ref={waveformRef} className="w-full h-24 bg-muted rounded-lg" />
-                     {!isPlayerReady ? (
-                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                            <Loader2 className="h-4 w-4 animate-spin"/>
-                            <p>Loading audio player...</p>
-                        </div>
-                    ): (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                 <Button onClick={(e) => { if(hasPlayed) { e.preventDefault(); } }} disabled={isPlaying || hasPlayed} className="w-full sm:w-auto">
-                                    {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
-                                    {hasPlayed ? 'Audio can only be played once' : isPlaying ? 'Playing...' : 'Play Audio'}
-                                </Button>
-                            </AlertDialogTrigger>
-                             <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Start the listening test?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    In an real IELTS test, the audio is played only once. Click "Play" to start the test. You will not be able to pause or replay the audio.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogAction onClick={handlePlayPause}>Play</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
-                </CardContent>
-            </Card>
-            <div className="grid grid-cols-1 gap-6">
-                <Card className="flex flex-col">
+            <div className="block lg:hidden">
+                 <Tabs defaultValue="audio" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="audio"><Headphones className="mr-2"/> Audio</TabsTrigger>
+                        <TabsTrigger value="questions"><List className="mr-2"/> Questions</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="audio">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{test.title}</CardTitle>
+                                <CardDescription>Listen to the audio. You will only hear it once. Answer the questions as you listen.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div ref={waveformRef} className="w-full h-24 bg-muted rounded-lg" />
+                                 {!isPlayerReady ? (
+                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin"/>
+                                        <p>Loading audio player...</p>
+                                    </div>
+                                ): (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                             <Button onClick={(e) => { if(hasPlayed) { e.preventDefault(); } }} disabled={isPlaying || hasPlayed} className="w-full sm:w-auto">
+                                                {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
+                                                {hasPlayed ? 'Audio can only be played once' : isPlaying ? 'Playing...' : 'Play Audio'}
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                         <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Start the listening test?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                In an real IELTS test, the audio is played only once. Click "Play" to start the test. You will not be able to pause or replay the audio.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogAction onClick={handlePlayPause}>Play</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                     <TabsContent value="questions">
+                        <QuestionsCard />
+                     </TabsContent>
+                </Tabs>
+            </div>
+            <div className="hidden lg:grid grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
+                <Card>
                     <CardHeader>
-                        <CardTitle>Questions</CardTitle>
-                        {!isGraded && <CardDescription>Answer all questions before submitting.</CardDescription>}
-                        {isGraded && <CardDescription>Review your results below.</CardDescription>}
+                        <CardTitle>{test.title}</CardTitle>
+                        <CardDescription>Listen to the audio. You will only hear it once. Answer the questions as you listen.</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-hidden">
-                        { isGraded ? <GradedView /> : <UngradedView /> }
+                    <CardContent className="space-y-4">
+                        <div ref={waveformRef} className="w-full h-24 bg-muted rounded-lg" />
+                        {!isPlayerReady ? (
+                            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin"/>
+                                <p>Loading audio player...</p>
+                            </div>
+                        ): (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button onClick={(e) => { if(hasPlayed) { e.preventDefault(); } }} disabled={isPlaying || hasPlayed} className="w-full sm:w-auto">
+                                        {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
+                                        {hasPlayed ? 'Audio can only be played once' : isPlaying ? 'Playing...' : 'Play Audio'}
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Start the listening test?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        In an real IELTS test, the audio is played only once. Click "Play" to start the test. You will not be able to pause or replay the audio.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogAction onClick={handlePlayPause}>Play</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
                     </CardContent>
-                    {!isGraded && (
-                        <CardFooter>
-                            <Button 
-                                className="w-full" 
-                                onClick={handleSubmit} 
-                                disabled={Object.keys(userAnswers).length !== test.questions.length}
-                            >
-                                Submit & Grade
-                            </Button>
-                        </CardFooter>
-                    )}
                 </Card>
+                <QuestionsCard />
             </div>
         </div>
     );
 }
-    

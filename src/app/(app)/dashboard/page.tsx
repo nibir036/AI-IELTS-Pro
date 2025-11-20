@@ -1,4 +1,3 @@
-
 'use client';
 import { StatsCards } from '@/components/app/dashboard/stats-cards';
 import { LearningPath } from '@/components/app/dashboard/learning-path';
@@ -25,11 +24,14 @@ export default function DashboardPage() {
             
             <StatsCards user={user} />
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
+            <div className="grid gap-6 lg:grid-cols-5">
+                <div className="lg:col-span-3 space-y-6">
                     <LearningPath user={user} />
+                    <div className="block lg:hidden">
+                        <RecentActivity />
+                    </div>
                 </div>
-                <div className="space-y-6">
+                <div className="lg:col-span-2 space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Progress to Target</CardTitle>
@@ -48,7 +50,9 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                     <PredictedDateCard user={user} />
-                    <RecentActivity />
+                    <div className="hidden lg:block">
+                        <RecentActivity />
+                    </div>
                 </div>
             </div>
         </div>
@@ -68,8 +72,8 @@ function DashboardSkeleton() {
                 <Card><CardHeader><Skeleton className="h-5 w-2/3" /></CardHeader><CardContent><Skeleton className="h-8 w-1/2" /></CardContent></Card>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
+            <div className="grid gap-6 lg:grid-cols-5">
+                <div className="lg:col-span-3">
                     <Card>
                         <CardHeader>
                             <Skeleton className="h-6 w-1/2" />
@@ -82,7 +86,7 @@ function DashboardSkeleton() {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="space-y-6">
+                <div className="lg:col-span-2 space-y-6">
                     <Card>
                         <CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader>
                         <CardContent className="flex justify-center items-center">

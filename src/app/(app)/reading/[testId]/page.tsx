@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, XCircle, ChevronRight, HelpCircle, Lightbulb, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, HelpCircle, Lightbulb, Loader2, BookOpen, List } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,8 @@ import Link from 'next/link';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
@@ -170,72 +172,97 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
         );
     };
 
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
-            <Card className="flex flex-col">
-                <CardHeader>
-                    <CardTitle>{test.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-hidden">
-                    <ScrollArea className="h-full pr-4">
-                        <p className="prose dark:prose-invert max-w-none text-foreground/80 whitespace-pre-line">
-                           {test.passage}
-                        </p>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-            <Card className="flex flex-col">
-                <CardHeader>
-                    <CardTitle>Questions</CardTitle>
-                    {!isGraded && <CardDescription>Answer all questions before submitting.</CardDescription>}
-                    {isGraded && <CardDescription>Review your results below.</CardDescription>}
-                </CardHeader>
-                <CardContent className="flex-1 overflow-hidden">
-                    {!isGraded ? (
-                        <>
-                         <div className="mb-4">
-                             <Progress value={progress} />
-                             <p className="text-xs text-muted-foreground text-center mt-1">{Object.keys(userAnswers).length} of {test.questions.length} answered</p>
-                         </div>
-                        <ScrollArea className="h-full pr-4">
+    const PassageCard = () => (
+        <Card className="flex flex-col h-full">
+            <CardHeader>
+                <CardTitle>{test.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full pr-4">
+                    <p className="prose dark:prose-invert max-w-none text-foreground/80 whitespace-pre-line">
+                        {test.passage}
+                    </p>
+                </ScrollArea>
+            </CardContent>
+        </Card>
+    );
+
+    const QuestionsCard = () => (
+        <Card className="flex flex-col h-full">
+            <CardHeader>
+                <CardTitle>Questions</CardTitle>
+                {!isGraded && <CardDescription>Answer all questions before submitting.</CardDescription>}
+                {isGraded && <CardDescription>Review your results below.</CardDescription>}
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden">
+                {!isGraded ? (
+                    <>
+                        <div className="mb-4">
+                            <Progress value={progress} />
+                            <p className="text-xs text-muted-foreground text-center mt-1">{Object.keys(userAnswers).length} of {test.questions.length} answered</p>
+                        </div>
+                        <ScrollArea className="h-[calc(100vh-25rem)] lg:h-full pr-4">
                             <div className="space-y-4">
                                 {test.questions.map(renderQuestion)}
                             </div>
                         </ScrollArea>
-                        </>
-                    ) : (
-                        <div className="flex flex-col h-full">
-                            <div className="flex flex-col items-center justify-center text-center bg-muted rounded-lg p-6 mb-4">
-                               <CardTitle className="text-xl">Practice Complete!</CardTitle>
-                               <p className="text-muted-foreground mt-2">You scored</p>
-                               <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
-                               <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
-                                <Button asChild className="mt-6">
-                                   <Link href="/dashboard">
-                                      Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
-                                   </Link>
-                               </Button>
-                            </div>
-                            <ScrollArea className="h-full pr-4 mt-2">
-                                <div className="space-y-4">
-                                    {test.questions.map(renderQuestion)}
-                                </div>
-                            </ScrollArea>
+                    </>
+                ) : (
+                    <div className="flex flex-col h-full">
+                        <div className="flex flex-col items-center justify-center text-center bg-muted rounded-lg p-6 mb-4">
+                            <CardTitle className="text-xl">Practice Complete!</CardTitle>
+                            <p className="text-muted-foreground mt-2">You scored</p>
+                            <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
+                            <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
+                            <Button asChild className="mt-6">
+                                <Link href="/dashboard">
+                                    Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+                                </Link>
+                            </Button>
                         </div>
-                    )}
-                </CardContent>
-                {!isGraded && (
-                    <CardFooter>
-                        <Button 
-                            className="w-full" 
-                            onClick={handleSubmit} 
-                            disabled={Object.keys(userAnswers).length !== test.questions.length}
-                        >
-                            Submit & Grade
-                        </Button>
-                    </CardFooter>
+                        <ScrollArea className="h-full pr-4 mt-2">
+                            <div className="space-y-4">
+                                {test.questions.map(renderQuestion)}
+                            </div>
+                        </ScrollArea>
+                    </div>
                 )}
-            </Card>
-        </div>
+            </CardContent>
+            {!isGraded && (
+                <CardFooter>
+                    <Button
+                        className="w-full"
+                        onClick={handleSubmit}
+                        disabled={Object.keys(userAnswers).length !== test.questions.length}
+                    >
+                        Submit & Grade
+                    </Button>
+                </CardFooter>
+            )}
+        </Card>
+    );
+
+    return (
+        <>
+            <div className="block lg:hidden">
+                <Tabs defaultValue="passage" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="passage"><BookOpen className="mr-2"/> Passage</TabsTrigger>
+                        <TabsTrigger value="questions"><List className="mr-2"/> Questions</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="passage">
+                        <PassageCard />
+                    </TabsContent>
+                    <TabsContent value="questions">
+                        <QuestionsCard />
+                    </TabsContent>
+                </Tabs>
+            </div>
+
+            <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
+                <PassageCard />
+                <QuestionsCard />
+            </div>
+        </>
     );
 }

@@ -126,7 +126,7 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
               <FormItem>
                 <Textarea
                   placeholder="Start writing your essay here..."
-                  className="min-h-[400px] text-base"
+                  className="min-h-[300px] md:min-h-[400px] text-base"
                   {...field}
                 />
                 <FormMessage />
