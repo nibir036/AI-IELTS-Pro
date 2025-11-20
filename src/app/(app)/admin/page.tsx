@@ -5,31 +5,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
+import { processContentIntoLesson } from '@/ai/flows/content-factory-flow';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminPage() {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleProcess = async () => {
-    // Placeholder for AI processing logic
     setIsProcessing(true);
     setError(null);
     setResult(null);
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
     
-    // Dummy data for now
-    const dummyResult = {
-      title: "Sample Processed Title",
-      explanation: "This is a sample explanation generated from the input text. It summarizes the core concepts.",
-      practiceQuestions: [
-        { question: "What is the main idea?", type: "multiple-choice", answer: "The main idea." },
-        { question: "Fill in the blank: ______.", type: "fill-in-the-blank", answer: "Blank" },
-      ]
-    };
-    setResult(dummyResult);
-    setIsProcessing(false);
+    try {
+      const aiResult = await processContentIntoLesson({ rawText: inputText });
+      setResult(aiResult);
+      toast({
+        title: "Content Processed!",
+        description: "The AI has successfully structured the lesson content.",
+      });
+    } catch (err: any) {
+      console.error("Error processing content:", err);
+      const errorMessage = err.message?.includes('overloaded') 
+        ? "The AI service is currently overloaded. Please try again in a moment."
+        : "An error occurred while processing the content.";
+      setError(errorMessage);
+       toast({
+        variant: 'destructive',
+        title: "Processing Failed",
+        description: errorMessage,
+      });
+    } finally {
+        setIsProcessing(false);
+    }
   };
 
   return (
