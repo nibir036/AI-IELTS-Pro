@@ -1,4 +1,3 @@
-
 {
   "listeningTests": [
     {
@@ -6,6 +5,7 @@
       "title": "Conversation about a Local Library",
       "skill": "Listening",
       "audioUrl": "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_1.mp3",
+      "transcript": "Librarian: Good morning, City Central Library. How can I help you? \nMan: Hello, I'd like to join the library. \nLibrarian: Okay. First of all, let me get some details from you. Can I have your name? \nMan: Yes, it's Martin. \nLibrarian: And your surname? \nMan: It's Cox. C-O-X. \nLibrarian: Right. And your address? \nMan: Apartment 1, 72 Black Street, Highbridge. \nLibrarian: Black Street... like the colour? \nMan: Yes. \nLibrarian: And Highbridge is the town? \nMan: Yes. \nLibrarian: Okay, and postcode? \nMan: It's HB5 8RJ. \nLibrarian: Right. And can I have your date of birth, please? \nMan: 12th of July, 1988. \nLibrarian: And your telephone number? \nMan: My home number is 9982 7361. \nLibrarian: Okay... and now I need to see some identification. Do you have a driving licence or a passport? \nMan: I'm afraid I don't have either with me. \nLibrarian: That's okay. I'll need to see some other kind of identification. Do you have a utility bill with your name and address on it? \nMan: Yes, I do. Here's my electricity bill. \nLibrarian: Thank you. That's fine. So, your membership card will be ready in a few minutes. I just need to explain a few things about the library. You can borrow up to eight items at a time. That's books, CDs, or videos. You must have your membership card with you when you want to borrow items. \nMan: I see. And what about the opening hours? \nLibrarian: The library is open from 9 am to 5 pm from Monday to Saturday. We are closed on Sunday morning, but open in the afternoon from 1 pm to 4 pm. \nMan: Okay. And how long can I borrow items for? \nLibrarian: Books can be borrowed for three weeks. CDs and videos for one week. You can renew items if they haven't been requested by another member. You can do this by phone or online. \nMan: What happens if I return items late? \nLibrarian: There's a late fee of 25 cents per book per day. \nMan: Okay. Thank you. \nLibrarian: Here is your membership card. You can use it right away. \nMan: Great. Thank you very much.",
       "questions": [
         {
           "id": "q1",
@@ -53,3 +53,4 @@
     }
   ]
 }
+    

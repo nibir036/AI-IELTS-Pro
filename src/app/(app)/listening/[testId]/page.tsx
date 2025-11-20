@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -23,9 +23,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 
 let WaveSurfer: any = null;
 if (typeof window !== 'undefined') {
@@ -35,6 +35,8 @@ if (typeof window !== 'undefined') {
 }
 
 type UserAnswers = Record<string, string>;
+type AnswerExplanations = Record<string, string>;
+
 
 export default function ListeningTaskPage({ params }: { params: { testId: string } }) {
     const { firestore, user: authUser } = useFirebase();
@@ -54,6 +56,9 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
     const [score, setScore] = useState(0);
+    const [explanations, setExplanations] = useState<AnswerExplanations>({});
+    const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
+
 
     useEffect(() => {
         if (!WaveSurfer || !waveformRef.current || !test?.audioUrl) return;
@@ -143,6 +148,39 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
                 description: `Your listening score of ${finalScore.toFixed(1)} has been saved.`,
             });
         }
+        
+        // Generate explanations for incorrect answers
+        if (test.transcript) {
+            const incorrectAnswers = test.questions.filter(q => {
+                const userAnswer = userAnswers[q.id]?.trim().toLowerCase();
+                const correctAnswer = q.answer.toLowerCase();
+                return userAnswer !== correctAnswer;
+            });
+
+            if (incorrectAnswers.length > 0) {
+                setIsGeneratingExplanations(true);
+                const explanationPromises = incorrectAnswers.map(q => 
+                    generateTestCorrectionExplanation({
+                        context: test.transcript!,
+                        question: q.question,
+                        userAnswer: userAnswers[q.id] || "No answer",
+                        correctAnswer: q.answer
+                    }).then(result => ({ id: q.id, explanation: result.explanation }))
+                      .catch(err => {
+                        console.error("Error generating explanation for question", q.id, err);
+                        return { id: q.id, explanation: "Could not generate explanation at this time."};
+                      })
+                );
+
+                const results = await Promise.all(explanationPromises);
+                const newExplanations: AnswerExplanations = {};
+                results.forEach(res => {
+                    newExplanations[res.id] = res.explanation;
+                });
+                setExplanations(newExplanations);
+                setIsGeneratingExplanations(false);
+            }
+        }
     };
 
     if (!test) notFound();
@@ -156,6 +194,7 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
              ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
              : userAnswer === question.answer
         ) : undefined;
+        const explanation = explanations[question.id];
 
         const getOptionClass = (option: string) => {
             if (!isGraded) return '';
@@ -194,9 +233,58 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
                         )}
                     </div>
                 )}
+                
+                 {isGraded && !isCorrect && (
+                    <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                           <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            {isGeneratingExplanations && !explanation ? (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <Loader2 className="h-3 w-3 animate-spin"/>
+                                    <span>Generating explanation...</span>
+                                </div>
+                            ) : (
+                                <p className="text-xs">{explanation}</p>
+                            )}
+                        </div>
+                    </div>
+                )}
             </Card>
         );
     };
+
+    const GradedView = () => (
+         <div className="flex flex-col h-full">
+            <div className="flex flex-col items-center justify-center text-center bg-muted rounded-lg p-6 mb-4">
+                <CardTitle className="text-xl">Practice Complete!</CardTitle>
+                <p className="text-muted-foreground mt-2">You scored</p>
+                <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
+                <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
+                <Button onClick={() => router.push('/dashboard')} className="mt-6">
+                    Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+            </div>
+            <ScrollArea className="h-full pr-4 mt-2">
+                <div className="space-y-4">
+                    {test.questions.map(renderQuestion)}
+                </div>
+            </ScrollArea>
+        </div>
+    )
+
+    const UngradedView = () => (
+         <>
+            <div className="mb-4">
+                <Progress value={progress} />
+                <p className="text-xs text-muted-foreground text-center mt-1">{Object.keys(userAnswers).length} of {test.questions.length} answered</p>
+            </div>
+            <ScrollArea className="h-[calc(100vh-28rem)] pr-4">
+                <div className="space-y-4">
+                    {test.questions.map(renderQuestion)}
+                </div>
+            </ScrollArea>
+        </>
+    )
 
     return (
         <div className="space-y-6">
@@ -243,29 +331,7 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
                         {isGraded && <CardDescription>Review your results below.</CardDescription>}
                     </CardHeader>
                     <CardContent className="flex-1 overflow-hidden">
-                        {!isGraded ? (
-                            <>
-                            <div className="mb-4">
-                                <Progress value={progress} />
-                                <p className="text-xs text-muted-foreground text-center mt-1">{Object.keys(userAnswers).length} of {test.questions.length} answered</p>
-                            </div>
-                            <ScrollArea className="h-[50vh] pr-4">
-                                <div className="space-y-4">
-                                    {test.questions.map(renderQuestion)}
-                                </div>
-                            </ScrollArea>
-                            </>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-center bg-muted rounded-lg p-6">
-                            <CardTitle className="text-xl">Practice Complete!</CardTitle>
-                            <p className="text-muted-foreground mt-2">You scored</p>
-                            <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
-                            <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
-                                <Button onClick={() => router.push('/dashboard')} className="mt-6">
-                                Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
-                            </Button>
-                            </div>
-                        )}
+                        { isGraded ? <GradedView /> : <UngradedView /> }
                     </CardContent>
                     {!isGraded && (
                         <CardFooter>
@@ -283,3 +349,4 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
         </div>
     );
 }
+    

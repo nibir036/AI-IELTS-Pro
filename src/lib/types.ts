@@ -1,4 +1,3 @@
-
 import type { DocumentReference, Timestamp } from "firebase/firestore";
 
 export interface User {
@@ -52,6 +51,7 @@ export interface ListeningTest {
     title: string;
     skill: 'Listening';
     audioUrl: string;
+    transcript?: string; // Added optional transcript
     questions: ListeningQuestion[];
 }
 
@@ -126,3 +126,4 @@ export interface PredictTargetDateOutput {
     predictedDate: string;
     reasoning: string;
 }
+    
