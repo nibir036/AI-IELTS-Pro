@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -10,15 +11,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, XCircle, ChevronRight, HelpCircle } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, HelpCircle, Lightbulb, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 
 
 type UserAnswers = Record<string, string>;
+type AnswerExplanations = Record<string, string>;
 
 export default function ReadingTaskPage({ params }: { params: { testId: string } }) {
     const { firestore, user: authUser } = useFirebase();
@@ -31,6 +35,8 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
     const [score, setScore] = useState(0);
+    const [explanations, setExplanations] = useState<AnswerExplanations>({});
+    const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
 
     useEffect(() => {
         startTimeRef.current = new Date();
@@ -57,32 +63,51 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
         if (authUser && firestore && userProfile) {
             const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
             
-            // Non-blocking write for submission
-            const submissionRef = collection(firestore, 'users', authUser.uid, 'submissions');
-             addDoc(submissionRef, {
+            const submissionRef = doc(collection(firestore, 'users', authUser.uid, 'submissions'));
+            setDocumentNonBlocking(submissionRef, {
                 skill: 'Reading',
                 testId: test.id,
-                inputData: JSON.stringify(userAnswers), // Save the actual answers
-                aiReport: null, // No AI report for this test type yet
+                inputData: JSON.stringify(userAnswers),
+                aiReport: null,
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
-            }).catch(console.error);
+            });
 
-            // Non-blocking write for user profile update
             const userRef = doc(firestore, 'users', authUser.uid);
-            // A simple averaging for the current band score
-            const newTotalSubmissions = (userProfile.totalPracticeTime / 20 || 0) + 1; // Assuming avg 20 mins per session before
+            const newTotalSubmissions = (userProfile.totalPracticeTime / 20 || 0) + 1;
             const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + finalScore) / newTotalSubmissions;
 
-            updateDoc(userRef, {
-                totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 20), // Assume at least 20 mins for a reading test
+            updateDocumentNonBlocking(userRef, {
+                totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 20),
                 currentBand: newAverageBand
-            }).catch(console.error);
+            });
 
             toast({
                 title: "Practice Complete!",
                 description: `Your reading score of ${finalScore.toFixed(1)} has been saved.`,
             });
+        }
+
+        // Generate explanations for incorrect answers
+        const incorrectAnswers = test.questions.filter(q => userAnswers[q.id] !== q.answer);
+        if (incorrectAnswers.length > 0) {
+            setIsGeneratingExplanations(true);
+            const explanationPromises = incorrectAnswers.map(q => 
+                generateTestCorrectionExplanation({
+                    context: test.passage,
+                    question: q.question,
+                    userAnswer: userAnswers[q.id],
+                    correctAnswer: q.answer
+                }).then(result => ({ id: q.id, explanation: result.explanation }))
+            );
+
+            const results = await Promise.all(explanationPromises);
+            const newExplanations: AnswerExplanations = {};
+            results.forEach(res => {
+                newExplanations[res.id] = res.explanation;
+            });
+            setExplanations(newExplanations);
+            setIsGeneratingExplanations(false);
         }
     };
 
@@ -93,6 +118,7 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
     const renderQuestion = (question: ReadingQuestion) => {
         const userAnswer = userAnswers[question.id];
         const isCorrect = isGraded ? userAnswer === question.answer : undefined;
+        const explanation = explanations[question.id];
 
         const getOptionClass = (option: string) => {
             if (!isGraded) return '';
@@ -125,7 +151,20 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
                     ))}
                 </RadioGroup>
                  {isGraded && !isCorrect && (
-                    <p className="text-xs text-green-600 mt-2">Correct answer: {question.answer}</p>
+                    <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                        <p className="text-xs font-semibold text-green-600 mb-1">Correct answer: {question.answer}</p>
+                        <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                           <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            {isGeneratingExplanations && !explanation ? (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <Loader2 className="h-3 w-3 animate-spin"/>
+                                    <span>Generating explanation...</span>
+                                </div>
+                            ) : (
+                                <p className="text-xs">{explanation}</p>
+                            )}
+                        </div>
+                    </div>
                 )}
             </Card>
         );
@@ -165,16 +204,23 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
                         </ScrollArea>
                         </>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center bg-muted rounded-lg">
-                           <CardTitle className="text-xl">Practice Complete!</CardTitle>
-                           <p className="text-muted-foreground mt-2">You scored</p>
-                           <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
-                           <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
-                            <Button asChild className="mt-6">
-                               <Link href="/dashboard">
-                                  Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
-                               </Link>
-                           </Button>
+                        <div className="flex flex-col h-full">
+                            <div className="flex flex-col items-center justify-center text-center bg-muted rounded-lg p-6 mb-4">
+                               <CardTitle className="text-xl">Practice Complete!</CardTitle>
+                               <p className="text-muted-foreground mt-2">You scored</p>
+                               <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
+                               <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
+                                <Button asChild className="mt-6">
+                                   <Link href="/dashboard">
+                                      Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+                                   </Link>
+                               </Button>
+                            </div>
+                            <ScrollArea className="h-full pr-4 mt-2">
+                                <div className="space-y-4">
+                                    {test.questions.map(renderQuestion)}
+                                </div>
+                            </ScrollArea>
                         </div>
                     )}
                 </CardContent>
