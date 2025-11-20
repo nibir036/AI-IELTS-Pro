@@ -1,13 +1,12 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { notFound } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { readingTests } from '@/lib/data';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -16,19 +15,26 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUserProfile } from '@/hooks/use-user-profile';
+
 
 type UserAnswers = Record<string, string>;
 
 export default function ReadingTaskPage({ params }: { params: { testId: string } }) {
-    const { firestore, user } = useFirebase();
+    const { firestore, user: authUser } = useFirebase();
+    const { user: userProfile } = useUserProfile();
     const { toast } = useToast();
+    const startTimeRef = useRef<Date | null>(null);
 
     const test = readingTests.find(t => t.id === params.testId);
 
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
     const [score, setScore] = useState(0);
+
+    useEffect(() => {
+        startTimeRef.current = new Date();
+    }, []);
 
     const handleAnswerChange = (questionId: string, answer: string) => {
         if (isGraded) return;
@@ -48,17 +54,30 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
         setScore(finalScore);
         setIsGraded(true);
 
-        if (user && firestore) {
-            const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
-             const newSubmission = {
+        if (authUser && firestore && userProfile) {
+            const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
+            
+            // Non-blocking write for submission
+            const submissionRef = collection(firestore, 'users', authUser.uid, 'submissions');
+             addDoc(submissionRef, {
                 skill: 'Reading',
                 testId: test.id,
-                inputData: JSON.stringify(userAnswers),
+                inputData: JSON.stringify(userAnswers), // Save the actual answers
+                aiReport: null, // No AI report for this test type yet
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
-            };
-            // Use a non-blocking add, as the user doesn't need to wait for this to complete.
-            addDoc(submissionRef, newSubmission).catch(console.error);
+            }).catch(console.error);
+
+            // Non-blocking write for user profile update
+            const userRef = doc(firestore, 'users', authUser.uid);
+            // A simple averaging for the current band score
+            const newTotalSubmissions = (userProfile.totalPracticeTime / 20 || 0) + 1; // Assuming avg 20 mins per session before
+            const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + finalScore) / newTotalSubmissions;
+
+            updateDoc(userRef, {
+                totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 20), // Assume at least 20 mins for a reading test
+                currentBand: newAverageBand
+            }).catch(console.error);
 
             toast({
                 title: "Practice Complete!",
@@ -105,6 +124,9 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
                         </div>
                     ))}
                 </RadioGroup>
+                 {isGraded && !isCorrect && (
+                    <p className="text-xs text-green-600 mt-2">Correct answer: {question.answer}</p>
+                )}
             </Card>
         );
     };

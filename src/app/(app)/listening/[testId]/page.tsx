@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { listeningTests } from '@/lib/data';
 import type { ListeningTest, ListeningQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -26,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 let WaveSurfer: any = null;
 if (typeof window !== 'undefined') {
@@ -37,7 +37,8 @@ if (typeof window !== 'undefined') {
 type UserAnswers = Record<string, string>;
 
 export default function ListeningTaskPage({ params }: { params: { testId: string } }) {
-    const { firestore, user } = useFirebase();
+    const { firestore, user: authUser } = useFirebase();
+    const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -48,6 +49,7 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [hasPlayed, setHasPlayed] = useState(false);
+    const startTimeRef = useRef<Date | null>(null);
 
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
@@ -69,7 +71,12 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
         wavesurferRef.current = wavesurfer;
 
         wavesurfer.on('ready', () => setIsPlayerReady(true));
-        wavesurfer.on('play', () => setIsPlaying(true));
+        wavesurfer.on('play', () => {
+            setIsPlaying(true);
+            if (!startTimeRef.current) {
+                startTimeRef.current = new Date();
+            }
+        });
         wavesurfer.on('pause', () => setIsPlaying(false));
         wavesurfer.on('finish', () => setIsPlaying(false));
         
@@ -93,7 +100,6 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
 
         let correctCount = 0;
         test.questions.forEach(q => {
-            // Case-insensitive and trim whitespace for fill-in-the-blank
             if (q.type === 'fill-in-the-blank') {
                 if (userAnswers[q.id]?.trim().toLowerCase() === q.answer.toLowerCase()) {
                     correctCount++;
@@ -108,17 +114,29 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
         setScore(finalScore);
         setIsGraded(true);
 
-        if (user && firestore) {
-            const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
-            const newSubmission = {
+        if (authUser && firestore && userProfile) {
+            const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
+            
+            // Non-blocking write for submission
+            const submissionRef = collection(firestore, 'users', authUser.uid, 'submissions');
+            addDoc(submissionRef, {
                 skill: 'Listening',
                 testId: test.id,
-                inputData: JSON.stringify(userAnswers),
+                inputData: JSON.stringify(userAnswers), // Save the actual answers
                 aiReport: null,
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
-            };
-            addDoc(submissionRef, newSubmission).catch(console.error);
+            }).catch(console.error);
+
+            // Non-blocking write for user profile update
+            const userRef = doc(firestore, 'users', authUser.uid);
+            const newTotalSubmissions = (userProfile.totalPracticeTime / 15 || 0) + 1; // Assuming avg 15 mins per session before
+            const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + finalScore) / newTotalSubmissions;
+
+            updateDoc(userRef, {
+                totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 1),
+                currentBand: newAverageBand
+            }).catch(console.error);
 
             toast({
                 title: "Practice Complete!",
@@ -197,7 +215,7 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
                     ): (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                 <Button onClick={(e) => { if(hasPlayed) e.preventDefault()}} disabled={isPlaying} className="w-full sm:w-auto">
+                                 <Button onClick={(e) => { if(hasPlayed) { e.preventDefault(); } }} disabled={isPlaying || hasPlayed} className="w-full sm:w-auto">
                                     {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
                                     {hasPlayed ? 'Audio can only be played once' : isPlaying ? 'Playing...' : 'Play Audio'}
                                 </Button>
@@ -265,4 +283,3 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
         </div>
     );
 }
-
