@@ -4,7 +4,7 @@ import { StatsCards } from '@/components/app/dashboard/stats-cards';
 import { LearningPath } from '@/components/app/dashboard/learning-path';
 import { RecentActivity } from '@/components/app/dashboard/recent-activity';
 import { PredictedDateCard } from '@/components/app/dashboard/predicted-date-card';
-import { Progress } from '@/components/ui/progress';
+import { ProgressChart } from '@/components/app/dashboard/progress-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,8 +17,6 @@ export default function DashboardPage() {
     if (isLoading || !user) {
         return <DashboardSkeleton />;
     }
-
-    const progress = user.targetBand > 0 ? (user.currentBand / user.targetBand) * 100 : 0;
 
     return (
         <div className="space-y-6 animate-in fade-in-50">
@@ -37,21 +35,16 @@ export default function DashboardPage() {
                             <CardTitle>Progress to Target</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex items-center justify-between text-sm mb-2">
-                                <span>Current: {user.currentBand.toFixed(1)}</span>
-                                <span className="font-bold text-primary">Target: {user.targetBand.toFixed(1)}</span>
-                            </div>
-                            <Progress value={progress} />
-                            { user.currentBand > 0 ? 
-                                <p className="text-center text-xs text-muted-foreground mt-2">{progress > 0 ? progress.toFixed(0) : 0}% of the way to your goal. Keep going!</p> 
-                                :
+                           { user.currentBand > 0 ? (
+                               <ProgressChart currentBand={user.currentBand} targetBand={user.targetBand} />
+                           ) : (
                                 <div className="text-center mt-4">
-                                     <p className="text-xs text-muted-foreground mb-2">Take the diagnostic test to set your initial score.</p>
+                                     <p className="text-sm text-muted-foreground mb-4">Take the diagnostic test to set your initial score.</p>
                                      <Button asChild size="sm">
                                         <Link href="/diagnostic-test">Start Test</Link>
                                      </Button>
                                 </div>
-                            }
+                            )}
                         </CardContent>
                     </Card>
                     <PredictedDateCard user={user} />
@@ -92,9 +85,8 @@ function DashboardSkeleton() {
                 <div className="space-y-6">
                     <Card>
                         <CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-4 w-full mb-2" />
-                             <Skeleton className="h-5 w-full" />
+                        <CardContent className="flex justify-center items-center">
+                            <Skeleton className="h-32 w-32 rounded-full" />
                         </CardContent>
                     </Card>
                      <Card>
