@@ -1,14 +1,15 @@
-
 'use client';
 
+import { use } from 'react';
 import { WritingEvaluation } from "@/components/app/writing/writing-evaluation";
 import { notFound } from "next/navigation";
 import { mockTests } from '@/lib/data';
 import type { MockTest, WritingQuestion } from '@/lib/types';
 
-export default function WritingTaskPage({ params }: { params: { testId: string } }) {
+export default function WritingTaskPage({ params }: { params: Promise<{ testId: string }> }) {
     
-    const test = mockTests.find(t => t.id === params.testId);
+    const { testId } = use(params);
+    const test = mockTests.find(t => t.id === testId);
 
     if (!test || !test.questions || test.questions.length === 0) {
         notFound();
@@ -18,7 +19,7 @@ export default function WritingTaskPage({ params }: { params: { testId: string }
 
     return (
         <div>
-            <WritingEvaluation task={task} />
+            <WritingEvaluation task={task} testId={testId} />
         </div>
     );
 }

@@ -29,7 +29,7 @@ const formSchema = z.object({
 
 interface WritingEvaluationProps {
   task: WritingQuestion;
-  testId: string;
+  testId?: string;
   onEvaluationComplete?: (result: AiPoweredWritingEvaluationOutput) => void;
   isDiagnosticTest?: boolean;
 }

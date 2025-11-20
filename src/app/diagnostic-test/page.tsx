@@ -96,6 +96,7 @@ export default function DiagnosticTestPage() {
                     task={diagnosticTask} 
                     onEvaluationComplete={handleEvaluationComplete}
                     isDiagnosticTest={true}
+                    testId="DIAGNOSTIC_001"
                 />
             </div>
         </AuthGuard>
