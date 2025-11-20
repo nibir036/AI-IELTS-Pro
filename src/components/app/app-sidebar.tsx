@@ -10,7 +10,8 @@ import {
   LogOut,
   Lightbulb,
   Settings,
-  GraduationCap
+  GraduationCap,
+  Search
 } from 'lucide-react';
 import {
   Sidebar,
@@ -28,6 +29,7 @@ import { Button } from '../ui/button';
 
 const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/search', label: 'Search', icon: Search },
   { href: '/mock-tests', label: 'Practice Tests', icon: GraduationCap },
   { href: '/grammar', label: 'Grammar', icon: PenSquare },
   { href: '/vocabulary', label: 'Vocabulary', icon: BookMarked },
