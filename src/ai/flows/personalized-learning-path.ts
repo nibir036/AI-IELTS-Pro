@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -13,6 +14,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 
 const PersonalizedLearningPathInputSchema = z.object({
   currentBand: z.number().describe('The user\'s current IELTS band score.'),
@@ -49,7 +51,10 @@ const personalizedLearningPathFlow = ai.defineFlow(
     outputSchema: PersonalizedLearningPathOutputSchema,
   },
   async input => {
-    const {output} = await personalizedLearningPathPrompt(input);
-    return output!;
+    // Wrap the AI call with the retry utility
+    const result = await withRetry(() => personalizedLearningPathPrompt(input), {
+      retryOn: isRetryableGoogleAIError,
+    });
+    return result.output!;
   }
 );

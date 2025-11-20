@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -10,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 
 const GetTranslationInputSchema = z.object({
   text: z.string().describe('The English text to translate.'),
@@ -40,7 +42,10 @@ const getTranslationFlow = ai.defineFlow(
     outputSchema: GetTranslationOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    // Wrap the AI call with the retry utility
+    const result = await withRetry(() => prompt(input), {
+      retryOn: isRetryableGoogleAIError,
+    });
+    return result.output!;
   }
 );

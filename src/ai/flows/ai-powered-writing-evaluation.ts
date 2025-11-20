@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -10,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 
 const AiPoweredWritingEvaluationInputSchema = z.object({
   task: z.string().describe('The writing task for the essay.'),
@@ -87,7 +89,10 @@ const aiPoweredWritingEvaluationFlow = ai.defineFlow(
     outputSchema: AiPoweredWritingEvaluationOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    // Wrap the AI call with the retry utility
+    const result = await withRetry(() => prompt(input), {
+      retryOn: isRetryableGoogleAIError,
+    });
+    return result.output!;
   }
 );

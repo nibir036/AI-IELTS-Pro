@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -10,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 
 const AiPoweredSpeakingEvaluationInputSchema = z.object({
   audioDataUri: z
@@ -69,7 +71,10 @@ const aiPoweredSpeakingEvaluationFlow = ai.defineFlow(
     outputSchema: AiPoweredSpeakingEvaluationOutputSchema,
   },
   async input => {
-    const {output} = await aiPoweredSpeakingEvaluationPrompt(input);
-    return output!;
+    // Wrap the AI call with the retry utility
+    const result = await withRetry(() => aiPoweredSpeakingEvaluationPrompt(input), {
+      retryOn: isRetryableGoogleAIError,
+    });
+    return result.output!;
   }
 );
