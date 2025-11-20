@@ -1,8 +1,8 @@
 'use client';
-import { StatsCards } from '@/components/app/dashboard/stats-cards';
-import { LearningPath } from '@/components/app/dashboard/learning-path';
-import { RecentActivity } from '@/components/app/dashboard/recent-activity';
-import { PredictedDateCard } from '@/components/app/dashboard/predicted-date-card';
+import { StatsCards } from './stats-cards';
+import { LearningPath } from './learning-path';
+import { RecentActivity } from './recent-activity';
+import { PredictedDateCard } from './predicted-date-card';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -88,6 +88,19 @@ function DashboardSkeleton() {
                      <Card>
                         <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
                         <CardContent><Skeleton className="h-24 w-full" /></CardContent>
+                    </Card>
+                    <Card>
+                         <CardHeader>
+                            <Skeleton className="h-6 w-1/2" />
+                            <Skeleton className="h-4 w-3/4" />
+                        </CardHeader>
+                        <CardContent>
+                             <div className="space-y-2">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        </CardContent>
                     </Card>
                 </div>
             </div>
