@@ -16,30 +16,37 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    /**
+     * @description Checks if the user has an 'admin' custom claim.
+     */
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
 
     match /users/{userId} {
       allow read, write: if isOwner(userId);
     }
 
-    // Allow any signed-in user to manage curriculum content.
-    // This allows the admin "Content Factory" to add new lessons.
+    // Allow admins to manage curriculum content.
     match /lessons/{lessonId} {
-      allow read, list, create, update, delete: if isSignedIn();
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /mockTests/{testId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if false; // Admin only for writes
+      allow create, update, delete: if isAdmin(); // Admin only for writes
     }
 
     match /readingTests/{testId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if false; // Admin only for writes
+      allow create, update, delete: if isAdmin(); // Admin only for writes
     }
 
     match /listeningTests/{testId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if false; // Admin only for writes
+      allow create, update, delete: if isAdmin(); // Admin only for writes
     }
 
     // User-specific data is restricted to the owner
