@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { processContentIntoLesson } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
+import { useFirebase } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 export default function AdminPage() {
   const [inputText, setInputText] = useState('');
@@ -14,8 +16,18 @@ export default function AdminPage() {
   const [result, setResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { firestore } = useFirebase();
 
   const handleProcess = async () => {
+    if (!firestore) {
+        setError("Firestore is not available. Please try again later.");
+        toast({
+            variant: 'destructive',
+            title: "Database Error",
+            description: "Could not connect to the database.",
+        });
+        return;
+    }
     setIsProcessing(true);
     setError(null);
     setResult(null);
@@ -23,10 +35,16 @@ export default function AdminPage() {
     try {
       const aiResult = await processContentIntoLesson({ rawText: inputText });
       setResult(aiResult);
+      
+      // Save the result to Firestore
+      const lessonsCollection = collection(firestore, 'lessons');
+      await addDoc(lessonsCollection, aiResult);
+
       toast({
-        title: "Content Processed!",
-        description: "The AI has successfully structured the lesson content.",
+        title: "Lesson Saved!",
+        description: "The new lesson has been generated and saved to the database.",
       });
+
     } catch (err: any) {
       console.error("Error processing content:", err);
       const errorMessage = err.message?.includes('overloaded') 
@@ -68,7 +86,7 @@ export default function AdminPage() {
             />
             <Button onClick={handleProcess} disabled={isProcessing || !inputText}>
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Process Content
+              Process & Save Lesson
             </Button>
           </CardContent>
         </Card>
