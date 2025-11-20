@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 import { useFirebase } from '@/firebase';
@@ -21,11 +21,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-const formSchema = z.object({
-  essay: z.string().min(100, {
-    message: "Essay must be at least 100 characters.",
+const formSchema = (isDiagnostic: boolean) => z.object({
+  essay: z.string().min(isDiagnostic ? 100 : 250, {
+    message: `Essay must be at least ${isDiagnostic ? 100 : 250} words.`,
   }),
 });
+
 
 interface WritingEvaluationProps {
   task: WritingQuestion;
@@ -43,14 +44,24 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
   const { user: userProfile } = useUserProfile();
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<ReturnType<typeof formSchema>>>({
+    resolver: zodResolver(formSchema(isDiagnosticTest)),
     defaultValues: {
       essay: "",
     },
+    mode: "onChange"
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const essayValue = form.watch('essay');
+  const wordCount = useMemo(() => {
+    const words = essayValue.trim().match(/\s+/g);
+    return words ? words.length + 1 : (essayValue.trim() ? 1 : 0);
+  }, [essayValue]);
+
+  const isButtonDisabled = isLoading || (wordCount < (isDiagnosticTest ? 100 : 250));
+
+
+  async function onSubmit(values: z.infer<ReturnType<typeof formSchema>>) {
     setIsLoading(true);
     setError(null);
     setResult(null);
@@ -139,24 +150,42 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
                   className="min-h-[300px] md:min-h-[400px] text-base"
                   {...field}
                 />
-                <FormMessage />
+                 <div className="flex justify-between items-center text-sm text-muted-foreground">
+                    <FormMessage />
+                    <span className={wordCount >= (isDiagnosticTest ? 100 : 250) ? 'text-green-600' : 'text-destructive'}>
+                        {wordCount} words
+                    </span>
+                 </div>
               </FormItem>
             )}
           />
            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-          <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isDiagnosticTest ? 'Analyzing...' : 'Evaluating...'}
-              </>
-            ) : (
+          <div className="flex items-center gap-4">
+            <Button type="submit" disabled={isButtonDisabled} className="w-full sm:w-auto">
+                {isLoading ? (
                 <>
-                <Sparkles className="mr-2 h-4 w-4" />
-                {isDiagnosticTest ? 'Submit and Get My Score' : 'Submit for AI Evaluation'}
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isDiagnosticTest ? 'Analyzing...' : 'Evaluating...'}
                 </>
+                ) : (
+                    <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    {isDiagnosticTest ? 'Submit and Get My Score' : 'Submit for AI Evaluation'}
+                    </>
+                )}
+            </Button>
+            {wordCount < (isDiagnosticTest ? 100 : 250) && !isLoading && (
+                <div className="flex items-center gap-2 text-sm text-amber-600">
+                    <AlertCircle className="h-4 w-4" />
+                    <p>
+                        {isDiagnosticTest 
+                            ? `Please write at least 100 words.`
+                            : `Please write at least ${task.wordCountTarget} words.`
+                        }
+                    </p>
+                </div>
             )}
-          </Button>
+          </div>
         </form>
       </Form>
       
