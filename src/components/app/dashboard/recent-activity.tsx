@@ -28,20 +28,9 @@ export function RecentActivity() {
 
   const { data: submissions, isLoading } = useCollection<Submission>(submissionsQuery);
 
-  const handleRowClick = (submission: Submission) => {
-    // Reading and Listening submissions don't have detailed AI reports to view
-    if (submission.skill === 'Reading' || submission.skill === 'Listening') {
-      return;
-    }
-    router.push(`/submissions/${submission.id}`);
+  const handleRowClick = (submissionId: string) => {
+    router.push(`/submissions/${submissionId}`);
   };
-  
-  const getRowClass = (submission: Submission) => {
-     if (submission.skill === 'Reading' || submission.skill === 'Listening') {
-      return 'cursor-default';
-    }
-    return 'cursor-pointer';
-  }
 
   return (
     <Card>
@@ -71,7 +60,7 @@ export function RecentActivity() {
                 </TableHeader>
                 <TableBody>
                     {submissions.map((submission) => (
-                        <TableRow key={submission.id} onClick={() => handleRowClick(submission)} className={getRowClass(submission)}>
+                        <TableRow key={submission.id} onClick={() => handleRowClick(submission.id)} className="cursor-pointer">
                             <TableCell className="font-medium">{submission.skill}</TableCell>
                             <TableCell>
                                 {submission.scoreBand != null && (

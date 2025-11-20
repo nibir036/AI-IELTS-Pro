@@ -75,10 +75,10 @@ export interface WritingQuestion {
 export interface Submission {
   id: string;
   userId: DocumentReference | string;
-  testId: DocumentReference | string;
-  skill: 'Writing' | 'Speaking' | 'GrammarPractice' | string;
-  inputData: string; // Text response or URL to audio
-  aiReport: AiPoweredWritingEvaluationOutput | AiPoweredSpeakingEvaluationOutput | null;
+  testId: string;
+  skill: 'Writing' | 'Speaking' | 'Reading' | 'Listening' | string;
+  inputData: string | Record<string, string>; // Text response, URL, or map of answers
+  aiReport: AiPoweredWritingEvaluationOutput | AiPoweredSpeakingEvaluationOutput | Record<string, string> | null;
   scoreBand: number | null;
   timestamp: Timestamp | Date;
 }

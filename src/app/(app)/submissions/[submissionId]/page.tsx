@@ -3,14 +3,109 @@
 import { useParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import type { Submission, AiPoweredWritingEvaluationOutput, AiPoweredSpeakingEvaluationOutput } from '@/lib/types';
+import type { Submission, AiPoweredWritingEvaluationOutput, AiPoweredSpeakingEvaluationOutput, ReadingTest, ListeningTest, ReadingQuestion, ListeningQuestion } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle, Headphones, HelpCircle, Lightbulb, XCircle } from 'lucide-react';
 import { WritingEvaluationResults } from '@/components/app/writing/writing-evaluation-results';
 import { SpeakingEvaluationResults } from '@/components/app/speaking/speaking-evaluation-results';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { readingTests, listeningTests } from '@/lib/data';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+
+function ComprehensionTestReview({ submission }: { submission: Submission }) {
+  let test: ReadingTest | ListeningTest | undefined;
+  let questions: (ReadingQuestion | ListeningQuestion)[] = [];
+
+  if (submission.skill === 'Reading') {
+    test = readingTests.find(t => t.id === submission.testId);
+    questions = test?.questions || [];
+  } else if (submission.skill === 'Listening') {
+    test = listeningTests.find(t => t.id === submission.testId);
+    questions = test?.questions || [];
+  }
+
+  if (!test) {
+    return <p>Test content could not be found for this submission.</p>;
+  }
+
+  const userAnswers = submission.inputData as Record<string, string>;
+  const explanations = submission.aiReport as Record<string, string> | null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-4">
+          {submission.skill === 'Reading' ? <BookOpen className="h-6 w-6 text-primary" /> : <Headphones className="h-6 w-6 text-primary" />}
+          <CardTitle>{test.title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+         <ScrollArea className="h-[60vh] pr-4">
+            <div className="space-y-4">
+              {questions.map(q => {
+                const userAnswer = userAnswers[q.id] || '';
+                const isCorrect = q.type === 'fill-in-the-blank' 
+                    ? userAnswer.trim().toLowerCase() === q.answer.toLowerCase()
+                    : userAnswer === q.answer;
+                const explanation = explanations?.[q.id];
+
+                const getOptionClass = (option: string) => {
+                    if (option === q.answer) return 'text-green-600 font-bold';
+                    if (option === userAnswer && option !== q.answer) return 'text-red-600';
+                    return 'text-muted-foreground';
+                };
+
+                return (
+                  <Card key={q.id} className={`p-4 ${!isCorrect ? 'border-red-500' : 'border-green-500'}`}>
+                    <div className="flex items-start gap-2 mb-4">
+                      {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />}
+                      <p className="flex-1 font-medium">{q.question}</p>
+                    </div>
+
+                    {q.type === 'multiple-choice' && (
+                      <RadioGroup value={userAnswer} disabled>
+                        {q.options?.map((option, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <RadioGroupItem value={option} id={`${q.id}-${index}`} />
+                            <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
+                              {option}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
+
+                    {q.type === 'fill-in-the-blank' && (
+                      <div>
+                        <Input value={userAnswer} disabled />
+                        {!isCorrect && <p className="text-xs text-green-600 mt-1">Correct answer: {q.answer}</p>}
+                      </div>
+                    )}
+                    
+                    {!isCorrect && explanation && (
+                        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                            <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                                <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                <p className="text-xs">{explanation}</p>
+                            </div>
+                        </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default function SubmissionPage() {
   const params = useParams();
@@ -25,7 +120,7 @@ export default function SubmissionPage() {
   const { data: submission, isLoading, error } = useDoc<Submission>(submissionRef);
 
   const renderResults = () => {
-    if (!submission || !submission.aiReport) {
+    if (!submission) {
       return (
         <Card>
             <CardHeader><CardTitle>Analysis Not Available</CardTitle></CardHeader>
@@ -42,6 +137,10 @@ export default function SubmissionPage() {
         return <SpeakingEvaluationResults result={submission.aiReport as AiPoweredSpeakingEvaluationOutput} />;
     }
     
+    if (submission.skill === 'Reading' || submission.skill === 'Listening') {
+      return <ComprehensionTestReview submission={submission} />;
+    }
+    
     // Fallback for other types
     return (
         <Card>
@@ -49,8 +148,9 @@ export default function SubmissionPage() {
             <CardContent>
                 <p><strong>Skill:</strong> {submission.skill}</p>
                 <p><strong>Score:</strong> {submission.scoreBand?.toFixed(1) ?? 'N/A'}</p>
-                <pre className="mt-4 whitespace-pre-wrap bg-muted p-4 rounded-md text-sm">
-                    {JSON.stringify(submission.aiReport, null, 2)}
+                 <p className="text-sm mt-4">Raw Data:</p>
+                <pre className="mt-2 whitespace-pre-wrap bg-muted p-4 rounded-md text-sm">
+                    {JSON.stringify(submission, null, 2)}
                 </pre>
             </CardContent>
         </Card>

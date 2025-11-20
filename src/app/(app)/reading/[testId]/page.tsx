@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { notFound } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { readingTests } from '@/lib/data';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -19,7 +18,6 @@ import Link from 'next/link';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
-
 
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
@@ -60,6 +58,30 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
         setScore(finalScore);
         setIsGraded(true);
 
+        // Generate explanations for incorrect answers first
+        const incorrectAnswers = test.questions.filter(q => userAnswers[q.id] !== q.answer);
+        let newExplanations: AnswerExplanations = {};
+        if (incorrectAnswers.length > 0) {
+            setIsGeneratingExplanations(true);
+            const explanationPromises = incorrectAnswers.map(q => 
+                generateTestCorrectionExplanation({
+                    context: test.passage,
+                    question: q.question,
+                    userAnswer: userAnswers[q.id] || "No answer",
+                    correctAnswer: q.answer
+                }).then(result => ({ id: q.id, explanation: result.explanation }))
+                  .catch(err => ({id: q.id, explanation: 'Could not generate explanation.'}))
+            );
+
+            const results = await Promise.all(explanationPromises);
+            results.forEach(res => {
+                newExplanations[res.id] = res.explanation;
+            });
+            setExplanations(newExplanations);
+            setIsGeneratingExplanations(false);
+        }
+
+        // Now save everything to Firestore
         if (authUser && firestore && userProfile) {
             const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
             
@@ -67,8 +89,8 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
             setDocumentNonBlocking(submissionRef, {
                 skill: 'Reading',
                 testId: test.id,
-                inputData: JSON.stringify(userAnswers),
-                aiReport: null,
+                inputData: userAnswers, // Save the user's answers
+                aiReport: newExplanations, // Save the generated explanations
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
             });
@@ -86,28 +108,6 @@ export default function ReadingTaskPage({ params }: { params: { testId: string }
                 title: "Practice Complete!",
                 description: `Your reading score of ${finalScore.toFixed(1)} has been saved.`,
             });
-        }
-
-        // Generate explanations for incorrect answers
-        const incorrectAnswers = test.questions.filter(q => userAnswers[q.id] !== q.answer);
-        if (incorrectAnswers.length > 0) {
-            setIsGeneratingExplanations(true);
-            const explanationPromises = incorrectAnswers.map(q => 
-                generateTestCorrectionExplanation({
-                    context: test.passage,
-                    question: q.question,
-                    userAnswer: userAnswers[q.id],
-                    correctAnswer: q.answer
-                }).then(result => ({ id: q.id, explanation: result.explanation }))
-            );
-
-            const results = await Promise.all(explanationPromises);
-            const newExplanations: AnswerExplanations = {};
-            results.forEach(res => {
-                newExplanations[res.id] = res.explanation;
-            });
-            setExplanations(newExplanations);
-            setIsGeneratingExplanations(false);
         }
     };
 

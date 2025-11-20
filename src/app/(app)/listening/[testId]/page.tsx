@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 
 let WaveSurfer: any = null;
 if (typeof window !== 'undefined') {
@@ -119,37 +121,8 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
         setScore(finalScore);
         setIsGraded(true);
 
-        if (authUser && firestore && userProfile) {
-            const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
-            
-            // Non-blocking write for submission
-            const submissionRef = collection(firestore, 'users', authUser.uid, 'submissions');
-            addDoc(submissionRef, {
-                skill: 'Listening',
-                testId: test.id,
-                inputData: JSON.stringify(userAnswers), // Save the actual answers
-                aiReport: null,
-                scoreBand: finalScore,
-                timestamp: serverTimestamp(),
-            }).catch(console.error);
-
-            // Non-blocking write for user profile update
-            const userRef = doc(firestore, 'users', authUser.uid);
-            const newTotalSubmissions = (userProfile.totalPracticeTime / 15 || 0) + 1; // Assuming avg 15 mins per session before
-            const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + finalScore) / newTotalSubmissions;
-
-            updateDoc(userRef, {
-                totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 1),
-                currentBand: newAverageBand
-            }).catch(console.error);
-
-            toast({
-                title: "Practice Complete!",
-                description: `Your listening score of ${finalScore.toFixed(1)} has been saved.`,
-            });
-        }
-        
         // Generate explanations for incorrect answers
+        let newExplanations: AnswerExplanations = {};
         if (test.transcript) {
             const incorrectAnswers = test.questions.filter(q => {
                 const userAnswer = userAnswers[q.id]?.trim().toLowerCase();
@@ -173,13 +146,40 @@ export default function ListeningTaskPage({ params }: { params: { testId: string
                 );
 
                 const results = await Promise.all(explanationPromises);
-                const newExplanations: AnswerExplanations = {};
                 results.forEach(res => {
                     newExplanations[res.id] = res.explanation;
                 });
                 setExplanations(newExplanations);
                 setIsGeneratingExplanations(false);
             }
+        }
+        
+        if (authUser && firestore && userProfile) {
+            const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
+            
+            const submissionRef = doc(collection(firestore, 'users', authUser.uid, 'submissions'));
+            setDocumentNonBlocking(submissionRef, {
+                skill: 'Listening',
+                testId: test.id,
+                inputData: userAnswers,
+                aiReport: newExplanations,
+                scoreBand: finalScore,
+                timestamp: serverTimestamp(),
+            });
+
+            const userRef = doc(firestore, 'users', authUser.uid);
+            const newTotalSubmissions = (userProfile.totalPracticeTime / 15 || 0) + 1; // Assuming avg 15 mins per session before
+            const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + finalScore) / newTotalSubmissions;
+
+            updateDocumentNonBlocking(userRef, {
+                totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 1),
+                currentBand: newAverageBand
+            });
+
+            toast({
+                title: "Practice Complete!",
+                description: `Your listening score of ${finalScore.toFixed(1)} has been saved.`,
+            });
         }
     };
 
