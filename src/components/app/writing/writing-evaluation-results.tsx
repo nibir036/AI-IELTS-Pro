@@ -45,7 +45,7 @@ export function WritingEvaluationResults({ result }: WritingEvaluationResultsPro
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-2xl font-bold">{score.band.toFixed(1)}</p>
-                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{score.comment}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{score.comment}</p>
                                 </CardContent>
                             </Card>
                         ))}
