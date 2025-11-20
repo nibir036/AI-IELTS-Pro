@@ -58,45 +58,44 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     const [explanations, setExplanations] = useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
 
-    // State to hold the dynamically imported WaveSurfer module
-    const [waveSurferModule, setWaveSurferModule] = useState<any>(null);
-
     useEffect(() => {
-        // Dynamically import WaveSurfer on the client side
+        if (!waveformRef.current || !test?.audioUrl) return;
+
+        let wavesurfer: WaveSurfer | null = null;
+
         import('wavesurfer.js').then(module => {
-            setWaveSurferModule(module.default);
+            const WaveSurfer = module.default;
+            if (!waveformRef.current) return;
+
+            wavesurfer = WaveSurfer.create({
+                container: waveformRef.current,
+                waveColor: 'hsl(var(--muted-foreground))',
+                progressColor: 'hsl(var(--primary))',
+                barWidth: 2,
+                barGap: 1,
+                barRadius: 2,
+                height: 80,
+                url: test.audioUrl,
+            });
+            wavesurferRef.current = wavesurfer;
+
+            wavesurfer.on('ready', () => setIsPlayerReady(true));
+            wavesurfer.on('play', () => {
+                setIsPlaying(true);
+                if (!startTimeRef.current) {
+                    startTimeRef.current = new Date();
+                }
+            });
+            wavesurfer.on('pause', () => setIsPlaying(false));
+            wavesurfer.on('finish', () => setIsPlaying(false));
         });
-    }, []);
-
-
-    useEffect(() => {
-        if (!waveSurferModule || !waveformRef.current || !test?.audioUrl) return;
-        if(wavesurferRef.current) return;
-
-        const wavesurfer = waveSurferModule.create({
-            container: waveformRef.current,
-            waveColor: 'hsl(var(--muted-foreground))',
-            progressColor: 'hsl(var(--primary))',
-            barWidth: 2,
-            barGap: 1,
-            barRadius: 2,
-            height: 80,
-            url: test.audioUrl,
-        });
-        wavesurferRef.current = wavesurfer;
-
-        wavesurfer.on('ready', () => setIsPlayerReady(true));
-        wavesurfer.on('play', () => {
-            setIsPlaying(true);
-            if (!startTimeRef.current) {
-                startTimeRef.current = new Date();
-            }
-        });
-        wavesurfer.on('pause', () => setIsPlaying(false));
-        wavesurfer.on('finish', () => setIsPlaying(false));
         
-        return () => wavesurfer.destroy();
-    }, [waveSurferModule, test?.audioUrl]);
+        return () => {
+            if (wavesurfer) {
+                wavesurfer.destroy();
+            }
+        };
+    }, [test?.audioUrl]);
 
     const handlePlayPause = () => {
         if (wavesurferRef.current) {
@@ -409,5 +408,7 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         </div>
     );
 }
+
+    
 
     
