@@ -86,13 +86,17 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
             });
         }
       }
-    } catch (e) {
-      setError("An error occurred during evaluation. Please try again.");
+    } catch (e: any) {
       console.error(e);
+      if (e.message?.includes('503')) {
+        setError("The AI service is currently overloaded. Please wait a moment and try submitting again.");
+      } else {
+        setError("An error occurred during evaluation. Please try again.");
+      }
        toast({
         variant: "destructive",
         title: "Evaluation Failed",
-        description: "Something went wrong while saving your results.",
+        description: "Could not get feedback from the AI. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -206,6 +210,7 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
               </FormItem>
             )}
           />
+           {error && <p className="text-sm font-medium text-destructive">{error}</p>}
           <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
             {isLoading ? (
               <>
@@ -222,8 +227,6 @@ export function WritingEvaluation({ task, onEvaluationComplete, isDiagnosticTest
         </form>
       </Form>
       
-      {error && <p className="text-destructive text-sm">{error}</p>}
-
       {isLoading && (
         <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 mt-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
