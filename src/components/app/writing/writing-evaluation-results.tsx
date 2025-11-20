@@ -62,9 +62,9 @@ export function WritingEvaluationResults({ result }: WritingEvaluationResultsPro
                         <AccordionContent className="space-y-4 pt-4">
                             {result.improvementAreas.map((area, index) => (
                                 <div key={index} className="p-3 bg-muted/50 rounded-lg border">
-                                    <p className="font-medium flex items-center gap-2">
+                                    <div className="font-medium flex items-center gap-2">
                                         <Badge variant="secondary">{area.type}</Badge> {area.rule}
-                                    </p>
+                                    </div>
                                     <p className="text-sm text-muted-foreground mt-1">{area.example}</p>
                                 </div>
                             ))}
