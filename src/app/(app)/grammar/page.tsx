@@ -4,12 +4,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PenSquare } from 'lucide-react';
 import Link from 'next/link';
-import { lessons as allLessons } from '@/lib/data';
 import type { Lesson } from '@/lib/types';
-
-const grammarLessons = allLessons.filter(lesson => lesson.type === 'Grammar');
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function GrammarPage() {
+  const { firestore } = useFirebase();
+
+  const lessonsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'lessons'), where('type', '==', 'Grammar'));
+  }, [firestore]);
+
+  const { data: grammarLessons, isLoading } = useCollection<Lesson>(lessonsQuery);
 
   return (
     <div className="space-y-6">
@@ -18,7 +26,18 @@ export default function GrammarPage() {
         <p className="text-muted-foreground">Strengthen your grammar foundations with these lessons.</p>
       </div>
 
-      {grammarLessons && grammarLessons.length > 0 ? (
+      {isLoading && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+                <Card key={i}>
+                    <CardHeader><Skeleton className="h-6 w-2/3" /></CardHeader>
+                    <CardContent><Skeleton className="h-10 w-full" /></CardContent>
+                </Card>
+            ))}
+        </div>
+      )}
+
+      {!isLoading && grammarLessons && grammarLessons.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {grammarLessons.map(lesson => (
               <Link href={`/lessons/${lesson.id}`} key={lesson.id} className="block">
@@ -30,14 +49,14 @@ export default function GrammarPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">{lesson.content_en.substring(0, 100)}...</p>
+                    <p className="text-sm text-muted-foreground">{lesson.explanation ? lesson.explanation.substring(0, 100) + '...' : ''}</p>
                   </CardContent>
                 </Card>
               </Link>
             ))}
         </div>
       ) : (
-          <p className="text-center text-muted-foreground pt-10">No grammar lessons found.</p>
+          !isLoading && <p className="text-center text-muted-foreground pt-10">No grammar lessons found.</p>
       )}
     </div>
   );
