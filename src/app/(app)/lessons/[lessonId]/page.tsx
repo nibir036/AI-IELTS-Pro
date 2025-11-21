@@ -1,4 +1,3 @@
-
 'use client';
 import { use } from 'react';
 import { notFound } from "next/navigation";
@@ -41,5 +40,3 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
         </div>
     );
 }
-
-    
