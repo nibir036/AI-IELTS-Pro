@@ -136,8 +136,13 @@ const contentFactoryFlow = ai.defineFlow(
         const contentType = header.split(':')[1].split(';')[0]; // e.g., 'audio/wav'
         
         if (base64Data && contentType) {
-            console.log(`Uploading ${contentType} to Firebase Storage...`);
-            const publicUrl = await uploadAudioToStorage(base64Data, contentType, 'listening-audio');
+            const testId = structuredContent.id;
+            const fileExtension = contentType === 'audio/wav' ? 'wav' : 'mp3';
+            const filePath = `listeningTests/${testId}/${testId}.${fileExtension}`;
+            
+            console.log(`Uploading ${contentType} to Firebase Storage at path: ${filePath}`);
+            
+            const publicUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
             structuredContent.audioUrl = publicUrl;
         } else {
              // Fallback if data URI is malformed

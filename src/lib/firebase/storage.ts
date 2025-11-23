@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getStorage } from 'firebase-admin/storage';
@@ -7,18 +8,15 @@ import { v4 as uuidv4 } from 'uuid';
  * Uploads a base64 encoded audio string to Firebase Storage and returns the public URL.
  * @param base64Audio The base64 encoded audio data (without the data URI prefix).
  * @param contentType The MIME type of the audio (e.g., 'audio/mpeg').
- * @param folder The folder in the bucket to upload to (e.g., 'listening-audio').
+ * @param filePath The full desired path for the file in the bucket (e.g., 'listening-audio/my-test.mp3').
  * @returns The public URL of the uploaded file.
  */
-export async function uploadAudioToStorage(base64Audio: string, contentType: string, folder: string): Promise<string> {
+export async function uploadAudioToStorage(base64Audio: string, contentType: string, filePath: string): Promise<string> {
     try {
-        // This is the correct bucket name, as you specified.
         const bucket = getStorage().bucket('studio-161365104-8c7c1.firebasestorage.app');
         
         const audioBuffer = Buffer.from(base64Audio, 'base64');
-        const fileExtension = contentType === 'audio/wav' ? 'wav' : 'mp3';
-        const fileName = `${folder}/${uuidv4()}.${fileExtension}`;
-        const file = bucket.file(fileName);
+        const file = bucket.file(filePath);
 
         await file.save(audioBuffer, {
             metadata: {
