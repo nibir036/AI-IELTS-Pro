@@ -13,7 +13,7 @@ import { firebaseAdmin } from '@/firebase/admin'; // Ensure admin is initialized
  */
 export async function uploadAudioToStorage(base64Audio: string, contentType: string, filePath: string): Promise<string> {
     try {
-        const bucket = getStorage().bucket(); 
+        const bucket = getStorage().bucket("studio-161365104-8c7c1.appspot.com"); 
         const audioBuffer = Buffer.from(base64Audio, 'base64');
         const file = bucket.file(filePath);
 
