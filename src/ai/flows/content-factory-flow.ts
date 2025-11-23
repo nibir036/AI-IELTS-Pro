@@ -137,7 +137,7 @@ const contentFactoryFlow = ai.defineFlow(
             const audioBuffer = Buffer.from(base64Data, 'base64');
             
             // Upload to Firebase Storage
-            const bucket = getStorage().bucket('studio-161365104-8c7c1.appspot.com');
+            const bucket = getStorage().bucket('studio-161365104-8c7c1.firebasestorage.app');
             const fileName = `listening-audio/${structuredContent.id}_${uuidv4()}.mp3`;
             const file = bucket.file(fileName);
 
