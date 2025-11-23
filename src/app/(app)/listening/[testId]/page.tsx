@@ -1,10 +1,9 @@
-
 'use client';
 
-import { useState, useRef, useEffect, use } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
 import type { ListeningTest, ListeningQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -430,8 +429,9 @@ function TestPageSkeleton() {
     )
 }
 
-export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
-    const { testId } = use(params);
+export default function ListeningTaskPage() {
+    const params = useParams();
+    const testId = params.testId as string;
     const { firestore } = useFirebase();
 
     const testDocRef = useMemoFirebase(() => {

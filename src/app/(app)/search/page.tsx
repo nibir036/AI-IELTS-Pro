@@ -15,12 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
-import {
-  lessons as allLessons,
-  mockTests as allMockTests,
-  readingTests as allReadingTests,
-  listeningTests as allListeningTests,
-} from '@/lib/data';
 import type {
   Lesson,
   MockTest,
@@ -36,7 +30,11 @@ import {
   Lightbulb,
   BookMarked,
   PenSquare,
+  Loader2,
 } from 'lucide-react';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const iconMap = {
   Writing: FileText,
@@ -60,17 +58,30 @@ type SearchResult = {
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const query = searchParams.get('q');
-  const [searchQuery, setSearchQuery] = useState(query || '');
+  const queryParam = searchParams.get('q');
+  const [searchQuery, setSearchQuery] = useState(queryParam || '');
+  const { firestore } = useFirebase();
+
+  const lessonsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'lessons')) : null, [firestore]);
+  const writingTestsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'mockTests')) : null, [firestore]);
+  const readingTestsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'readingTests')) : null, [firestore]);
+  const listeningTestsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'listeningTests')) : null, [firestore]);
+
+  const { data: allLessons, isLoading: lessonsLoading } = useCollection<Lesson>(lessonsQuery);
+  const { data: allMockTests, isLoading: writingTestsLoading } = useCollection<MockTest>(writingTestsQuery);
+  const { data: allReadingTests, isLoading: readingTestsLoading } = useCollection<ReadingTest>(readingTestsQuery);
+  const { data: allListeningTests, isLoading: listeningTestsLoading } = useCollection<ListeningTest>(listeningTestsQuery);
+
+  const isLoading = lessonsLoading || writingTestsLoading || readingTestsLoading || listeningTestsLoading;
 
   const searchResults: SearchResult[] = useMemo(() => {
-    if (!query) return [];
+    if (!queryParam || isLoading) return [];
 
-    const lowerCaseQuery = query.toLowerCase();
+    const lowerCaseQuery = queryParam.toLowerCase();
     const results: SearchResult[] = [];
 
     // Search Lessons
-    allLessons.forEach((lesson) => {
+    allLessons?.forEach((lesson) => {
       if (
         lesson.title.toLowerCase().includes(lowerCaseQuery) ||
         lesson.content_en.toLowerCase().includes(lowerCaseQuery)
@@ -87,7 +98,7 @@ function SearchPageContent() {
     });
 
     // Search Writing Tests
-    allMockTests.forEach((test) => {
+    allMockTests?.forEach((test) => {
       const question = test.questions[0] as WritingQuestion;
       if (
         test.skill === 'Writing' &&
@@ -105,7 +116,7 @@ function SearchPageContent() {
     });
 
     // Search Reading Tests
-    allReadingTests.forEach((test) => {
+    allReadingTests?.forEach((test) => {
       if (
         test.title.toLowerCase().includes(lowerCaseQuery) ||
         test.passage.toLowerCase().includes(lowerCaseQuery)
@@ -122,7 +133,7 @@ function SearchPageContent() {
     });
 
     // Search Listening Tests
-    allListeningTests.forEach((test) => {
+    allListeningTests?.forEach((test) => {
       if (
         test.title.toLowerCase().includes(lowerCaseQuery) ||
         (test.transcript && test.transcript.toLowerCase().includes(lowerCaseQuery))
@@ -139,7 +150,7 @@ function SearchPageContent() {
     });
 
     return results;
-  }, [query]);
+  }, [queryParam, isLoading, allLessons, allMockTests, allReadingTests, allListeningTests]);
 
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -149,8 +160,8 @@ function SearchPageContent() {
   };
 
   useEffect(() => {
-    setSearchQuery(query || '');
-  }, [query]);
+    setSearchQuery(queryParam || '');
+  }, [queryParam]);
 
   return (
     <div className="space-y-6">
@@ -168,10 +179,18 @@ function SearchPageContent() {
         </form>
       </div>
 
-      {query && (
+      {isLoading && queryParam && (
+          <div className="space-y-4">
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-28 w-full" />
+          </div>
+      )}
+
+      {!isLoading && queryParam && (
         <div>
           <h2 className="mb-4 text-xl font-semibold">
-            Results for "{query}" ({searchResults.length} found)
+            Results for "{queryParam}" ({searchResults.length} found)
           </h2>
           {searchResults.length > 0 ? (
             <div className="space-y-4">
@@ -210,7 +229,7 @@ function SearchPageContent() {
           )}
         </div>
       )}
-       {!query && (
+       {!queryParam && (
          <Card className="flex flex-col items-center justify-center py-12 text-center border-dashed">
             <CardHeader>
               <CardTitle>Search the App</CardTitle>
@@ -227,7 +246,7 @@ function SearchPageContent() {
 
 export default function SearchPage() {
     return (
-        <Suspense fallback={<div>Loading search...</div>}>
+        <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
             <SearchPageContent />
         </Suspense>
     )

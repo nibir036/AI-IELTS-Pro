@@ -1,7 +1,6 @@
 'use client';
 
-import { use } from 'react';
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { MockTest, WritingQuestion } from '@/lib/types';
@@ -22,8 +21,9 @@ function TestPageSkeleton() {
     );
 }
 
-export default function WritingTaskPage({ params }: { params: Promise<{ testId: string }> }) {
-    const { testId } = use(params);
+export default function WritingTaskPage() {
+    const params = useParams();
+    const testId = params.testId as string;
     const { firestore } = useFirebase();
 
     const testDocRef = useMemoFirebase(() => {
