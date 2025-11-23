@@ -13,6 +13,8 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 import { generateAudioFromText } from './text-to-speech-flow';
+import { getStorage } from 'firebase-admin/storage';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const ProcessContentInputSchema = z.object({
@@ -50,7 +52,7 @@ const ListeningTestSchema = z.object({
     id: z.string().describe("A unique ID for the test (e.g., L_AC_003)."),
     title: z.string(),
     skill: z.enum(["Listening"]),
-    audioUrl: z.string().url().describe("A placeholder URL for the audio file. You will generate this later."),
+    audioUrl: z.string().url().describe("A placeholder URL for the audio file. This will be replaced by the real URL after upload."),
     transcript: z.string().describe("The full transcript of the audio."),
     questions: z.array(PracticeQuestionSchema),
 });
@@ -124,18 +126,36 @@ const contentFactoryFlow = ai.defineFlow(
       throw new Error("Failed to generate structured content from the AI prompt.");
     }
 
-    // If it's a listening test, generate audio from the transcript
+    // If it's a listening test, generate audio, upload it, and get the public URL.
     if (input.contentType === 'ListeningTest' && 'transcript' in structuredContent && 'audioUrl' in structuredContent) {
         console.log("Generating audio for listening test...");
         try {
-            // This is a complex operation. For now, we generate the audio data but use a placeholder for the final URL.
-            // A full implementation would require uploading the generated audio to Firebase Storage and getting a public URL.
             const audioResult = await generateAudioFromText(structuredContent.transcript);
-            // In a real scenario, you would upload audioResult.audioDataUri and get a URL.
-            structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_1.mp3"; // Placeholder
-            console.log("Audio generated (using placeholder URL). Full implementation requires Firebase Storage upload.");
+            
+            // Convert data URI to buffer
+            const base64Data = audioResult.audioDataUri.split(',')[1];
+            const audioBuffer = Buffer.from(base64Data, 'base64');
+            
+            // Upload to Firebase Storage
+            const bucket = getStorage().bucket();
+            const fileName = `listening-audio/${structuredContent.id}_${uuidv4()}.mp3`;
+            const file = bucket.file(fileName);
+
+            await file.save(audioBuffer, {
+                metadata: {
+                    contentType: 'audio/mpeg',
+                },
+            });
+
+            // Make the file public and get the URL
+            await file.makePublic();
+            structuredContent.audioUrl = file.publicUrl();
+
+            console.log(`Audio uploaded and public URL generated: ${structuredContent.audioUrl}`);
+
         } catch (audioError) {
-            console.error("Failed to generate audio, using placeholder.", audioError);
+            console.error("Failed to generate or upload audio.", audioError);
+            // Fallback to a known placeholder if the process fails
             structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_error.mp3";
         }
     }
