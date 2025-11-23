@@ -10,5 +10,6 @@ import '@/ai/flows/ai-powered-writing-evaluation.ts';
 import '@/ai/flows/predict-target-date.ts';
 import '@/ai/flows/generate-test-correction-explanation.ts';
 import '@/ai/flows/content-factory-flow.ts';
+import '@/ai/flows/text-to-speech-flow.ts';
 
 

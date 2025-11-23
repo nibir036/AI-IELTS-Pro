@@ -1,9 +1,10 @@
+
 'use client';
 
-import { useState, useRef, useEffect, useCallback, use } from 'react';
+import { useState, useRef, useEffect, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { doc, serverTimestamp, increment } from 'firebase/firestore';
 import type { ListeningTest, ListeningQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,10 +31,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import type WaveSurfer from 'wavesurfer.js';
 
-
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
-
 
 function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const { firestore, user: authUser } = useFirebase();
@@ -59,7 +58,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
         let wavesurfer: WaveSurfer | null = null;
         let isMounted = true;
-
+        
         import('wavesurfer.js').then(module => {
             if (!isMounted || !waveformRef.current) return;
             const WaveSurfer = module.default;
@@ -91,7 +90,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             isMounted = false;
             if (wavesurferRef.current) {
                 wavesurferRef.current.destroy();
-                wavesurferRef.current = null;
             }
         };
     }, [test?.audioUrl]);
@@ -127,7 +125,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         setScore(finalScore);
         setIsGraded(true);
 
-        // Generate explanations for incorrect answers
         let newExplanations: AnswerExplanations = {};
         if (test.transcript) {
             const incorrectAnswers = test.questions.filter(q => {
@@ -174,7 +171,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             });
 
             const userRef = doc(firestore, 'users', authUser.uid);
-            const newTotalSubmissions = (userProfile.totalPracticeTime / 15 || 0) + 1; // Assuming avg 15 mins per session before
+            const newTotalSubmissions = (userProfile.totalPracticeTime / 15 || 0) + 1;
             const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + finalScore) / newTotalSubmissions;
 
             updateDocumentNonBlocking(userRef, {
@@ -188,8 +185,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             });
         }
     };
-
-    if (!test) notFound();
 
     const progress = (Object.keys(userAnswers).length / test.questions.length) * 100;
 

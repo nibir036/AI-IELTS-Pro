@@ -12,6 +12,8 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
+import { generateAudioFromText } from './text-to-speech-flow';
+
 
 const ProcessContentInputSchema = z.object({
   contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
@@ -48,7 +50,7 @@ const ListeningTestSchema = z.object({
     id: z.string().describe("A unique ID for the test (e.g., L_AC_003)."),
     title: z.string(),
     skill: z.enum(["Listening"]),
-    audioUrl: z.string().url().describe("A placeholder URL for the audio file."),
+    audioUrl: z.string().url().describe("A placeholder URL for the audio file. You will generate this later."),
     transcript: z.string().describe("The full transcript of the audio."),
     questions: z.array(PracticeQuestionSchema),
 });
@@ -85,7 +87,7 @@ export async function processContent(
 const prompt = ai.definePrompt({
   name: 'contentFactoryPrompt',
   input: { schema: ProcessContentInputSchema },
-  output: { schema: ProcessContentOutputSchema },
+  output: { schema: z.union([LessonSchema, ReadingTestSchema, ListeningTestSchema, WritingTestSchema]) },
   prompt: `You are an expert IELTS curriculum developer. Your task is to analyze the provided raw text and convert it into a structured JSON object.
 
   The user has specified that the content type is '{{{contentType}}}'. A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
@@ -115,6 +117,28 @@ const contentFactoryFlow = ai.defineFlow(
     const result = await withRetry(() => prompt(input), {
       retryOn: isRetryableGoogleAIError,
     });
-    return result.output!;
+    
+    const structuredContent = result.output;
+
+    if (!structuredContent) {
+      throw new Error("Failed to generate structured content from the AI prompt.");
+    }
+
+    // If it's a listening test, generate audio from the transcript
+    if (input.contentType === 'ListeningTest' && 'transcript' in structuredContent && 'audioUrl' in structuredContent) {
+        console.log("Generating audio for listening test...");
+        try {
+            // For now, let's use a placeholder. The full implementation would involve uploading to Firebase Storage.
+            // const audioResult = await generateAudioFromText(structuredContent.transcript);
+            // structuredContent.audioUrl = audioResult.audioDataUri; // This would be a storage URL
+            structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_1.mp3"; // Placeholder
+            console.log("Placeholder audio URL assigned.");
+        } catch (audioError) {
+            console.error("Failed to generate audio, using placeholder.", audioError);
+            structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_error.mp3";
+        }
+    }
+    
+    return structuredContent;
   }
 );
