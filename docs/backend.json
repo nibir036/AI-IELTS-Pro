@@ -253,11 +253,11 @@
         },
         "skill": {
           "type": "string",
-          "description": "Skill assessed in the submission (e.g., Writing, Speaking, GrammarPractice)."
+          "description": "Skill assessed in the submission (e.g., Writing, Speaking, Reading, Listening)."
         },
         "inputData": {
           "type": "string",
-          "description": "The student's text response or the Firebase Storage URL for their audio recording."
+          "description": "The student's text response for Writing, or the Firebase Storage URL for their Speaking audio recording. For Reading/Listening, this can be a map of answers."
         },
         "aiReport": {
           "type": "string",

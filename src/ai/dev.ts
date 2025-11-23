@@ -4,7 +4,7 @@ import { config } from 'dotenv';
 config();
 
 import '@/firebase/admin'; // Initialize Firebase Admin
-import '@/ai/flows/ai-powered-speaking-evaluation.ts';
+import '@/ai/flows/speaking-evaluation-flow.ts';
 import '@/ai/flows/personalized-learning-path.ts';
 import '@/ai/flows/multilingual-support.ts';
 import '@/ai/flows/ai-powered-writing-evaluation.ts';

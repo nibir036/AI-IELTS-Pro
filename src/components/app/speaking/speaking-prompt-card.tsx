@@ -71,7 +71,7 @@ export function SpeakingPromptCard({ prompt }: SpeakingPromptCardProps) {
                 <DialogTitle>Speaking Practice Session</DialogTitle>
               </DialogHeader>
               <div className="max-h-[80vh] overflow-y-auto p-1">
-                <SpeakingEvaluation task={prompt.content_en} />
+                <SpeakingEvaluation task={prompt.content_en} testId={prompt.id} />
               </div>
             </DialogContent>
           </Dialog>
@@ -79,25 +79,27 @@ export function SpeakingPromptCard({ prompt }: SpeakingPromptCardProps) {
       </CardHeader>
       <CardContent>
         <CardDescription>{prompt.content_en}</CardDescription>
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="mt-4" onClick={handleTranslate}>
-                    {isTranslating ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <Languages className="mr-2 h-4 w-4" />
-                    )}
-                    Translate to {user?.nativeLanguage || 'your language'}
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                 <DialogHeader>
-                    <DialogTitle>Translation</DialogTitle>
-                </DialogHeader>
-                {isTranslating && <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin"/></div>}
-                {translatedText && <p className="text-muted-foreground">{translatedText}</p>}
-            </DialogContent>
-        </Dialog>
+        {user?.nativeLanguage !== 'English' && (
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="mt-4" onClick={handleTranslate}>
+                        {isTranslating ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Languages className="mr-2 h-4 w-4" />
+                        )}
+                        Translate to {user?.nativeLanguage || 'your language'}
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Translation</DialogTitle>
+                    </DialogHeader>
+                    {isTranslating && <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin"/></div>}
+                    {translatedText && <p className="text-muted-foreground">{translatedText}</p>}
+                </DialogContent>
+            </Dialog>
+        )}
       </CardContent>
     </Card>
   );

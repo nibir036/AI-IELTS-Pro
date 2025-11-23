@@ -1,19 +1,22 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { aiPoweredSpeakingEvaluation } from '@/ai/flows/ai-powered-speaking-evaluation';
+import { evaluateSpeaking } from '@/ai/flows/speaking-evaluation-flow';
 import type { AiPoweredSpeakingEvaluationOutput } from '@/lib/types';
 import { SpeakingEvaluationResults } from './speaking-evaluation-results';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mic, StopCircle, Sparkles, Send, VideoOff } from 'lucide-react';
+import { Loader2, Mic, StopCircle, Send, VideoOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 import { useFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc, increment } from 'firebase/firestore';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { serverTimestamp } from 'firebase/firestore';
 
 // Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
 let WaveSurfer: any = null;
@@ -29,9 +32,10 @@ if (typeof window !== 'undefined') {
 
 interface SpeakingEvaluationProps {
   task: string;
+  testId: string;
 }
 
-export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
+export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [result, setResult] = useState<AiPoweredSpeakingEvaluationOutput | null>(null);
@@ -43,8 +47,10 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const recordPluginRef = useRef<any | null>(null);
 
-  const { user, firestore } = useFirebase();
+  const { user: authUser, firestore } = useFirebase();
+  const { user: userProfile } = useUserProfile();
   const { toast } = useToast();
+  const startTimeRef = useRef<Date | null>(null);
 
   useEffect(() => {
     if (!WaveSurfer || !RecordPlugin) return;
@@ -106,6 +112,9 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
         setResult(null);
         setAudioBlob(null);
         setIsRecording(true);
+        if (!startTimeRef.current) {
+          startTimeRef.current = new Date();
+        }
         try {
           await recordPluginRef.current.startRecording();
         } catch (err) {
@@ -137,7 +146,7 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
         setError("No audio recorded. Please record your response first.");
         return;
     }
-    if (!user || !firestore) {
+    if (!authUser || !firestore || !userProfile) {
         setError("You must be logged in to submit an evaluation.");
         return;
     }
@@ -148,32 +157,38 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
 
     try {
       const audioDataUri = await blobToDataURL(audioBlob);
-      const response = await aiPoweredSpeakingEvaluation({
+      const response = await evaluateSpeaking({
         task: task,
         audioDataUri: audioDataUri,
       });
-      setResult(response);
+
+      const { aiReport, audioStorageUrl } = response;
+      setResult(aiReport);
 
       // Save submission to Firestore
-      const submissionRef = collection(firestore, 'users', user.uid, 'submissions');
-      await addDoc(submissionRef, {
+      const submissionRef = doc(collection(firestore, 'users', authUser.uid, 'submissions'));
+      setDocumentNonBlocking(submissionRef, {
           skill: 'Speaking',
-          testId: 'Speaking Practice',
-          inputData: 'Audio recording', // Don't store the large data URI
-          aiReport: response,
-          scoreBand: response.scoreBand,
+          testId: testId,
+          inputData: audioStorageUrl, // Save the public URL of the audio
+          aiReport: aiReport,
+          scoreBand: aiReport.scoreBand,
           timestamp: serverTimestamp(),
       });
       
-      // Update user's current band score
-      const userRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userRef, {
-        currentBand: response.scoreBand,
+      const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
+      const newTotalSubmissions = (userProfile.totalPracticeTime / 5 || 0) + 1; // Assuming 5 mins for speaking
+      const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + aiReport.scoreBand) / newTotalSubmissions;
+
+      const userRef = doc(firestore, 'users', authUser.uid);
+      updateDocumentNonBlocking(userRef, {
+        currentBand: newAverageBand,
+        totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 1)
       });
 
       toast({
         title: "Evaluation Complete!",
-        description: `Your speaking score of ${response.scoreBand.toFixed(1)} has been saved.`,
+        description: `Your speaking score of ${aiReport.scoreBand.toFixed(1)} has been saved.`,
       });
 
     } catch (e) {
@@ -194,7 +209,7 @@ export function SpeakingEvaluation({ task }: SpeakingEvaluationProps) {
       <Card>
         <CardHeader>
           <Badge variant="outline" className="w-fit">Speaking Task</Badge>
-          <CardTitle className="pt-2">IELTS Speaking Part 2</CardTitle>
+          <CardTitle className="pt-2">{testId}</CardTitle>
           <CardDescription>{task}</CardDescription>
         </CardHeader>
         <CardContent>
