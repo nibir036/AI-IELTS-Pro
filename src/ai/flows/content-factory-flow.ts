@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -32,7 +31,7 @@ const PracticeQuestionSchema = z.object({
 
 
 const LessonSchema = z.object({
-  id: z.string().describe("A unique ID for the lesson (e.g., VOCAB_005, SPEAKING_006)."),
+  id: z.string().describe("A unique ID for the lesson, e.g., VOCAB_u5t9, SPEAKING_a4f8."),
   type: z.enum(['Grammar', 'Vocabulary', 'Tips', 'Speaking']),
   title: z.string().describe("A concise, descriptive title for the lesson."),
   level: z.enum(['Basic', 'Intermediate', 'Advanced', 'All Levels', "Part 1", "Part 2", "Part 3"]),
@@ -40,7 +39,7 @@ const LessonSchema = z.object({
 });
 
 const ReadingTestSchema = z.object({
-  id: z.string().describe("A unique ID for the test (e.g., R_AC_004)."),
+  id: z.string().describe("A unique ID for the test, e.g., R_AC_x7y2."),
   title: z.string(),
   skill: z.enum(["Reading"]),
   passage: z.string(),
@@ -48,16 +47,16 @@ const ReadingTestSchema = z.object({
 });
 
 const ListeningTestSchema = z.object({
-    id: z.string().describe("A unique ID for the test (e.g., L_AC_003)."),
+    id: z.string().describe("A unique ID for the test, e.g., L_AC_p9q3."),
     title: z.string(),
     skill: z.enum(["Listening"]),
-    audioUrl: z.string().url().describe("A placeholder URL for the audio file. This will be replaced by the real URL after upload."),
+    audioUrl: z.string().url().describe("A placeholder URL. This will be replaced by the real URL after upload."),
     transcript: z.string().describe("The full transcript of the audio."),
     questions: z.array(PracticeQuestionSchema),
 });
 
 const WritingTestSchema = z.object({
-    id: z.string().describe("A unique ID for the test (e.g., IELTS_Writing_007)."),
+    id: z.string().describe("A unique ID for the test, e.g., IELTS_Writing_z1w5."),
     testType: z.enum(["IELTS-Academic", "IELTS-General", "PTE"]),
     skill: z.enum(["Writing"]),
     questions: z.array(z.object({
@@ -91,9 +90,11 @@ const prompt = ai.definePrompt({
   output: { schema: z.union([LessonSchema, ReadingTestSchema, ListeningTestSchema, WritingTestSchema]) },
   prompt: `You are an expert IELTS curriculum developer. Your task is to analyze the provided raw text and convert it into a structured JSON object.
 
+  CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns like 'L_AC_001'. The ID should be a short, random string, prefixed by the content type (e.g., LISTENING_a4f8, READING_z1w5).
+
   The user has specified that the content type is '{{{contentType}}}'. A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
   
-  You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type. Ensure all IDs are unique and follow the examples provided in the schemas.
+  You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
 
   - Lesson Schema (for Grammar, Vocabulary, Tips, or Speaking): ${JSON.stringify(LessonSchema.shape)}
   - WritingTest Schema: ${JSON.stringify(WritingTestSchema.shape)}
@@ -129,23 +130,28 @@ const contentFactoryFlow = ai.defineFlow(
     if (input.contentType === 'ListeningTest' && 'transcript' in structuredContent && 'audioUrl' in structuredContent) {
         console.log("Generating audio for listening test...");
         
-        const audioResult = await generateAudioFromText(structuredContent.transcript);
-        
-        // The TTS flow returns a data URI: 'data:audio/wav;base64,<encoded_data>'
-        const [header, base64Data] = audioResult.audioDataUri.split(',');
-        const contentType = header.split(':')[1].split(';')[0]; // e.g., 'audio/wav'
-        
-        if (base64Data && contentType) {
-            const testId = structuredContent.id;
-            const fileExtension = contentType === 'audio/wav' ? 'wav' : 'mp3';
-            const filePath = `listeningTests/${testId}/${testId}.${fileExtension}`;
+        try {
+            const audioResult = await generateAudioFromText(structuredContent.transcript);
             
-            console.log(`Uploading ${contentType} to Firebase Storage at path: ${filePath}`);
+            // The TTS flow returns a data URI: 'data:audio/wav;base64,<encoded_data>'
+            const [header, base64Data] = audioResult.audioDataUri.split(',');
+            const contentType = header.split(':')[1].split(';')[0]; // e.g., 'audio/wav'
             
-            const publicUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
-            structuredContent.audioUrl = publicUrl;
-        } else {
-             // Fallback if data URI is malformed
+            if (base64Data && contentType) {
+                const testId = structuredContent.id;
+                // Define the precise path in the storage bucket
+                const filePath = `listeningTests/${testId}/${testId}.wav`;
+                
+                console.log(`Uploading ${contentType} to Firebase Storage at path: ${filePath}`);
+                
+                const publicUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
+                structuredContent.audioUrl = publicUrl;
+            } else {
+                 throw new Error("Malformed data URI from TTS flow.");
+            }
+        } catch (audioError) {
+            console.error("Error during audio generation or upload:", audioError);
+            // Fallback if audio process fails, to prevent the whole operation from failing.
             structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_error.mp3";
         }
     }

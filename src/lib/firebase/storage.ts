@@ -1,4 +1,3 @@
-
 'use server';
 
 import { getStorage } from 'firebase-admin/storage';
@@ -13,7 +12,9 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export async function uploadAudioToStorage(base64Audio: string, contentType: string, filePath: string): Promise<string> {
     try {
-        const bucket = getStorage().bucket(); // Get default bucket, which is now correctly initialized.
+        // Initialize storage and get the default bucket.
+        // This relies on the admin SDK being correctly initialized elsewhere.
+        const bucket = getStorage().bucket(); 
         const audioBuffer = Buffer.from(base64Audio, 'base64');
         const file = bucket.file(filePath);
 
@@ -26,19 +27,20 @@ export async function uploadAudioToStorage(base64Audio: string, contentType: str
                   firebaseStorageDownloadTokens: uuidv4(),
                 }
             },
-            public: true, // Make the file public upon upload
         });
         
-        // The publicUrl() method provides a consistent, permanent link.
+        // Make the file public and get its URL.
+        await file.makePublic();
         const publicUrl = file.publicUrl();
+        
         console.log(`Successfully uploaded audio. Public URL: ${publicUrl}`);
         return publicUrl;
 
     } catch (uploadError: any) {
         console.error("CRITICAL: Failed to upload audio to Firebase Storage.", uploadError);
-        console.error("Bucket operations might be failing. Check service account permissions for 'Storage Object Admin'.");
+        console.error("Bucket operations might be failing. Check service account permissions for 'Storage Object Admin'. This could be an authentication issue with the Admin SDK.");
         
-        // Return the specific error placeholder to indicate a failure in the upload process.
+        // Return a specific error placeholder to indicate a failure in the upload process.
         return "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_error.mp3";
     }
 }
