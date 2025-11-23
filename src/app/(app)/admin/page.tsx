@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -13,7 +12,7 @@ import { doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest';
+type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
 
 export default function AdminPage() {
   const [contentType, setContentType] = useState<ContentType | ''>('');
@@ -55,10 +54,13 @@ export default function AdminPage() {
               targetCollection = 'readingTests';
           } else if (aiResult.skill === 'Listening') {
               targetCollection = 'listeningTests';
-          } else {
+          } else if (aiResult.skill === 'Writing') {
+              targetCollection = 'mockTests';
+          }
+           else {
               throw new Error("Unsupported test type");
           }
-      } else if ('type' in aiResult) { // It's a Lesson
+      } else if ('type' in aiResult) { // It's a Lesson (or Speaking Prompt)
           documentId = aiResult.id;
           targetCollection = 'lessons';
       } else {
@@ -112,6 +114,8 @@ export default function AdminPage() {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="Lesson">Lesson (Grammar, Vocabulary, Tips)</SelectItem>
+                    <SelectItem value="SpeakingPrompt">Speaking Prompt</SelectItem>
+                    <SelectItem value="WritingTest">Writing Test</SelectItem>
                     <SelectItem value="ReadingTest">Reading Test</SelectItem>
                     <SelectItem value="ListeningTest">Listening Test</SelectItem>
                 </SelectContent>

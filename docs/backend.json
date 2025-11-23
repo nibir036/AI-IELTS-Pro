@@ -66,7 +66,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Type of lesson (e.g., Grammar, Vocabulary, Tips, Reading, Listening)."
+          "description": "Type of lesson (e.g., Grammar, Vocabulary, Tips, Reading, Listening, Speaking)."
         },
         "title": {
           "type": "string",
@@ -74,7 +74,7 @@
         },
         "level": {
           "type": "string",
-          "description": "Difficulty level of the lesson (e.g., Basic, Intermediate, Advanced)."
+          "description": "Difficulty level of the lesson (e.g., Basic, Intermediate, Advanced, Part 1)."
         },
         "content_en": {
           "type": "string",
@@ -97,7 +97,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "MockTest",
       "type": "object",
-      "description": "Represents a mock test definition within the AI-Band-Builder application.",
+      "description": "Represents a mock test definition, primarily for writing, within the AI-Band-Builder application.",
       "properties": {
         "id": {
           "type": "string",
@@ -109,13 +109,23 @@
         },
         "skill": {
             "type": "string",
-            "description": "The skill being tested (e.g., Writing, Speaking)."
+            "enum": ["Writing"]
         },
         "questions": {
           "type": "array",
-          "description": "Array of question objects.",
+          "description": "Array of question objects for the writing test.",
           "items": {
-            "type": "object"
+            "type": "object",
+             "properties": {
+                "task": {"type": "number"},
+                "topic": {"type": "string"},
+                "taskType": {
+                    "type": "string",
+                    "enum": ["Task 1", "Task 2"]
+                },
+                "wordCountTarget": {"type": "number"}
+            },
+            "required": ["task", "topic", "taskType", "wordCountTarget"]
           }
         }
       },
@@ -353,4 +363,3 @@
     }
   }
 }
-    

@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 
 const ProcessContentInputSchema = z.object({
-  contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest']),
+  contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
   rawText: z.string().describe('The raw text content from a book chapter, article, or test paper to be processed.'),
 });
 export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
@@ -29,11 +29,11 @@ const PracticeQuestionSchema = z.object({
 
 
 const LessonSchema = z.object({
-  id: z.string().describe("A unique ID for the lesson (e.g., VOCAB_005)."),
+  id: z.string().describe("A unique ID for the lesson (e.g., VOCAB_005, SPEAKING_006)."),
   type: z.enum(['Grammar', 'Vocabulary', 'Tips', 'Speaking']),
   title: z.string().describe("A concise, descriptive title for the lesson."),
   level: z.enum(['Basic', 'Intermediate', 'Advanced', 'All Levels', "Part 1", "Part 2", "Part 3"]),
-  content_en: z.string().describe("The full lesson content in English."),
+  content_en: z.string().describe("The full lesson content in English. For Speaking prompts, this is the main task description."),
 });
 
 const ReadingTestSchema = z.object({
@@ -53,11 +53,24 @@ const ListeningTestSchema = z.object({
     questions: z.array(PracticeQuestionSchema),
 });
 
+const WritingTestSchema = z.object({
+    id: z.string().describe("A unique ID for the test (e.g., IELTS_Writing_007)."),
+    testType: z.enum(["IELTS-Academic", "IELTS-General", "PTE"]),
+    skill: z.enum(["Writing"]),
+    questions: z.array(z.object({
+        task: z.number(),
+        topic: z.string(),
+        taskType: z.enum(["Task 1", "Task 2"]),
+        wordCountTarget: z.number(),
+    })),
+});
+
 
 const ProcessContentOutputSchema = z.union([
     LessonSchema,
     ReadingTestSchema,
-    ListeningTestSchema
+    ListeningTestSchema,
+    WritingTestSchema,
 ]);
 export type ProcessContentOutput = z.infer<typeof ProcessContentOutputSchema>;
 
@@ -75,11 +88,12 @@ const prompt = ai.definePrompt({
   output: { schema: ProcessContentOutputSchema },
   prompt: `You are an expert IELTS curriculum developer. Your task is to analyze the provided raw text and convert it into a structured JSON object.
 
-  The user has specified that the content type is '{{{contentType}}}'.
+  The user has specified that the content type is '{{{contentType}}}'. A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
   
-  You must generate a valid JSON object that strictly adheres to the corresponding schema. Ensure all IDs are unique and follow the examples.
+  You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type. Ensure all IDs are unique and follow the examples provided in the schemas.
 
-  - Lesson Schema: ${JSON.stringify(LessonSchema.shape)}
+  - Lesson Schema (for Grammar, Vocabulary, Tips, or Speaking): ${JSON.stringify(LessonSchema.shape)}
+  - WritingTest Schema: ${JSON.stringify(WritingTestSchema.shape)}
   - ReadingTest Schema: ${JSON.stringify(ReadingTestSchema.shape)}
   - ListeningTest Schema: ${JSON.stringify(ListeningTestSchema.shape)}
 

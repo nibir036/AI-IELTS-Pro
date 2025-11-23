@@ -86,7 +86,7 @@ export default function WritingPage() {
                 </div>
                 <CardTitle className="mt-4">No Writing Tests Found</CardTitle>
                 <CardDescription>
-                    We are currently preparing writing practice tests. Please check back soon!
+                    Use the Admin page's Test & Lesson Builder to create new writing tests.
                 </CardDescription>
             </CardHeader>
         </Card>
