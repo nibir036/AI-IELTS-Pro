@@ -38,7 +38,7 @@ const LessonSchema = z.object({
 const ReadingTestSchema = z.object({
   id: z.string().describe("A unique ID for the test (e.g., R_AC_004)."),
   title: z.string(),
-  skill: z.literal("Reading"),
+  skill: z.enum(["Reading"]),
   passage: z.string(),
   questions: z.array(PracticeQuestionSchema),
 });
@@ -46,7 +46,7 @@ const ReadingTestSchema = z.object({
 const ListeningTestSchema = z.object({
     id: z.string().describe("A unique ID for the test (e.g., L_AC_003)."),
     title: z.string(),
-    skill: z.literal("Listening"),
+    skill: z.enum(["Listening"]),
     audioUrl: z.string().url().describe("A placeholder URL for the audio file."),
     transcript: z.string().describe("The full transcript of the audio."),
     questions: z.array(PracticeQuestionSchema),
