@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -31,7 +30,7 @@ import { Button } from '../ui/button';
 const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/search', label: 'Search', icon: Search },
-  { href: '/mock-tests', label: 'Practice Tests', icon: GraduationCap },
+  { href: '/mock-tests', label: 'Study Plan', icon: GraduationCap },
   { href: '/grammar', label: 'Grammar', icon: PenSquare },
   { href: '/vocabulary', label: 'Vocabulary', icon: BookMarked },
   { href: '/tips', label: 'Tips', icon: Lightbulb },

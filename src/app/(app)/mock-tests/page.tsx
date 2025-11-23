@@ -1,48 +1,59 @@
-
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { FileText, Speech, BookOpen, Headphones, ArrowRight } from 'lucide-react';
+import { FileText, Speech, BookOpen, Headphones, ArrowRight, PenSquare, BookMarked } from 'lucide-react';
 
-const practiceSections = [
+const studyPlanSections = [
   {
-    title: 'Writing Practice',
-    description: 'Hone your essay skills with official-style practice tests for Task 1 and Task 2.',
-    icon: FileText,
-    href: '/writing',
+    title: 'Grammar Lessons',
+    description: 'Strengthen your grammar foundations with targeted lessons and exercises.',
+    icon: PenSquare,
+    href: '/grammar',
   },
   {
-    title: 'Speaking Practice',
-    description: 'Practice your responses for all three parts of the speaking test and get instant AI feedback.',
+    title: 'Vocabulary Builder',
+    description: 'Expand your lexical resource with topic-specific vocabulary lists and practice.',
+    icon: BookMarked,
+    href: '/vocabulary',
+  },
+  {
+    title: 'Attempting Speaking',
+    description: 'Learn about the test format, question types, and key strategies for success. Then, practice with our AI.',
     icon: Speech,
-    href: '/speaking',
+    href: '/speaking-guide',
   },
   {
-    title: 'Reading Practice',
-    description: 'Sharpen your reading comprehension with a variety of academic and general interest texts.',
+    title: 'Attempting Writing',
+    description: 'Understand the tasks, scoring criteria, and tips for writing high-scoring essays.',
+    icon: FileText,
+    href: '/writing-guide',
+  },
+  {
+    title: 'Attempting Reading',
+    description: 'Master the skills needed to tackle different question types and manage your time effectively.',
     icon: BookOpen,
-    href: '/reading',
+    href: '/reading-guide',
   },
   {
-    title: 'Listening Practice',
-    description: 'Improve your listening skills with authentic audio recordings and comprehension questions.',
+    title: 'Attempting Listening',
+    description: 'Develop your ability to understand various accents and follow conversations to catch the correct answers.',
     icon: Headphones,
-    href: '/listening',
+    href: '/listening-guide',
   },
 ];
 
-export default function MockTestsPage() {
+export default function StudyPlanPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Practice Tests</h1>
-                <p className="text-muted-foreground">Select a skill to start your practice session. Full, timed mock tests are coming soon!</p>
+                <h1 className="text-3xl font-bold tracking-tight">Your Study Plan</h1>
+                <p className="text-muted-foreground">Follow this structured path to prepare for every section of the IELTS test.</p>
             </div>
             
-            <div className="grid gap-6 md:grid-cols-2">
-                {practiceSections.map((section) => (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {studyPlanSections.map((section) => (
                     <Card key={section.title} className="flex flex-col">
                         <CardHeader>
                             <div className="flex items-start justify-between">
@@ -58,7 +69,7 @@ export default function MockTestsPage() {
                         <CardFooter>
                              <Button asChild className="w-full">
                                 <Link href={section.href}>
-                                    Go to Practice <ArrowRight className="ml-2 h-4 w-4" />
+                                    Let's Go <ArrowRight className="ml-2 h-4 w-4" />
                                 </Link>
                             </Button>
                         </CardFooter>
