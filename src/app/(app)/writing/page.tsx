@@ -6,13 +6,21 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowRight, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { mockTests } from '@/lib/data';
 import type { MockTest, WritingQuestion } from '@/lib/types';
-
-const writingTests: MockTest[] = mockTests.filter(test => test.skill === 'Writing');
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WritingPage() {
-  
+  const { firestore } = useFirebase();
+
+  const testsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'mockTests'), where('skill', '==', 'Writing'));
+  }, [firestore]);
+
+  const { data: writingTests, isLoading } = useCollection<MockTest>(testsQuery);
+
   return (
     <div className="space-y-6">
       <div>
@@ -20,7 +28,26 @@ export default function WritingPage() {
         <p className="text-muted-foreground">Hone your essay skills with official-style practice tests.</p>
       </div>
 
-      {writingTests && writingTests.length > 0 ? (
+       {isLoading && (
+        <div className="grid gap-6 md:grid-cols-2">
+            {[...Array(2)].map((_, i) => (
+                 <Card key={i}>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/4" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-12 w-full" />
+                    </CardContent>
+                    <CardFooter>
+                         <Skeleton className="h-10 w-full" />
+                    </CardFooter>
+                </Card>
+            ))}
+        </div>
+      )}
+
+      {!isLoading && writingTests && writingTests.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2">
             {writingTests.map(test => {
                 if (!test.questions || test.questions.length === 0) {
@@ -52,7 +79,7 @@ export default function WritingPage() {
             )})}
         </div>
       ) : (
-         <Card className="flex flex-col items-center justify-center text-center p-8 border-dashed">
+         !isLoading && <Card className="flex flex-col items-center justify-center text-center p-8 border-dashed">
             <CardHeader>
                 <div className="mx-auto bg-muted rounded-full p-4 w-fit">
                     <FileText className="h-10 w-10 text-muted-foreground" />

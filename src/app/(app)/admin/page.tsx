@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -5,11 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import { processContentIntoLesson, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
+import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 export default function AdminPage() {
@@ -35,23 +36,41 @@ export default function AdminPage() {
     setResult(null);
     
     try {
-      const aiResult = await processContentIntoLesson({ rawText: inputText });
+      const aiResult = await processContent({ rawText: inputText });
       setResult(aiResult);
+
+      let targetCollection: string;
+      let documentId: string;
+
+      if ('skill' in aiResult) { // It's a Test
+          documentId = aiResult.id;
+          if (aiResult.skill === 'Reading') {
+              targetCollection = 'readingTests';
+          } else if (aiResult.skill === 'Listening') {
+              targetCollection = 'listeningTests';
+          } else {
+              throw new Error("Unsupported test type");
+          }
+      } else if ('type' in aiResult) { // It's a Lesson
+          documentId = aiResult.id;
+          targetCollection = 'lessons';
+      } else {
+          throw new Error("Invalid AI output structure");
+      }
       
-      // Save the result to Firestore without awaiting, using the non-blocking helper
-      const lessonsCollection = collection(firestore, 'lessons');
-      addDocumentNonBlocking(lessonsCollection, aiResult);
+      const docRef = doc(firestore, targetCollection, documentId);
+      setDocumentNonBlocking(docRef, aiResult);
 
       toast({
-        title: "Lesson Generated!",
-        description: "The new lesson has been generated and is being saved to the database.",
+        title: "Content Generated!",
+        description: `New content has been generated and is being saved to the '${targetCollection}' collection.`,
       });
 
     } catch (err: any) {
       console.error("Error processing content:", err);
       const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
         ? "The AI service is currently overloaded. Please try again in a moment."
-        : "An error occurred while processing the content.";
+        : `An error occurred while processing the content: ${err.message}`;
       setError(errorMessage);
        toast({
         variant: 'destructive',
@@ -66,9 +85,9 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Content Factory</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Test &amp; Lesson Builder</h1>
         <p className="text-muted-foreground">
-          Use this tool to process raw text into structured lessons for the platform.
+          Use this tool to process raw text into structured lessons or tests for the platform.
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -76,7 +95,7 @@ export default function AdminPage() {
           <CardHeader>
             <CardTitle>1. Paste Your Content</CardTitle>
             <CardDescription>
-              Paste the text from a lesson or article below to convert it into a structured format.
+              Paste the text for a lesson, a reading test (passage + questions), or a listening test (transcript + questions).
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -88,7 +107,7 @@ export default function AdminPage() {
             />
             <Button onClick={handleProcess} disabled={isProcessing || !inputText}>
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Process & Save Lesson
+              Process & Save Content
             </Button>
           </CardContent>
         </Card>
@@ -96,7 +115,7 @@ export default function AdminPage() {
           <CardHeader>
             <CardTitle>2. Review AI Output</CardTitle>
             <CardDescription>
-              The processed JSON will appear here. This will be saved to the 'lessons' collection in Firestore.
+              The processed JSON will appear here. It will be saved to the appropriate Firestore collection.
             </CardDescription>
           </CardHeader>
           <CardContent>

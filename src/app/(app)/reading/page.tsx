@@ -6,10 +6,20 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { readingTests } from '@/lib/data';
 import type { ReadingTest } from '@/lib/types';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ReadingPage() {
+  const { firestore } = useFirebase();
+
+  const testsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'readingTests');
+  }, [firestore]);
+
+  const { data: readingTests, isLoading } = useCollection<ReadingTest>(testsQuery);
 
   return (
     <div className="space-y-6">
@@ -18,7 +28,26 @@ export default function ReadingPage() {
         <p className="text-muted-foreground">Sharpen your reading comprehension with a variety of texts.</p>
       </div>
 
-      {readingTests && readingTests.length > 0 ? (
+      {isLoading && (
+        <div className="grid gap-6 md:grid-cols-2">
+            {[...Array(2)].map((_, i) => (
+                 <Card key={i}>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/4" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-12 w-full" />
+                    </CardContent>
+                    <CardFooter>
+                         <Skeleton className="h-10 w-full" />
+                    </CardFooter>
+                </Card>
+            ))}
+        </div>
+      )}
+
+      {!isLoading && readingTests && readingTests.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2">
             {readingTests.map(test => (
               <Card key={test.id} className="flex flex-col">
@@ -43,14 +72,14 @@ export default function ReadingPage() {
             ))}
         </div>
       ) : (
-         <Card className="flex flex-col items-center justify-center text-center p-8 border-dashed">
+        !isLoading && <Card className="flex flex-col items-center justify-center text-center p-8 border-dashed">
             <CardHeader>
                 <div className="mx-auto bg-muted rounded-full p-4 w-fit">
                     <BookOpen className="h-10 w-10 text-muted-foreground" />
                 </div>
                 <CardTitle className="mt-4">No Reading Tests Found</CardTitle>
                 <CardDescription>
-                    We are currently preparing reading practice tests. Please check back soon!
+                    Use the Admin page's Test & Lesson Builder to create new reading tests.
                 </CardDescription>
             </CardHeader>
         </Card>
