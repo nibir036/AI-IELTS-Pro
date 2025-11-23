@@ -160,6 +160,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
       const response = await evaluateSpeaking({
         task: task,
         audioDataUri: audioDataUri,
+        userId: authUser.uid,
       });
 
       const { aiReport, audioStorageUrl } = response;

@@ -11,9 +11,10 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 import { uploadAudioToStorage } from '@/lib/firebase/storage';
+import { v4 as uuidv4 } from 'uuid';
 
 // Schema for the direct input to this flow
 const EvaluateSpeakingInputSchema = z.object({
@@ -23,6 +24,7 @@ const EvaluateSpeakingInputSchema = z.object({
       'A recorded audio of the user speaking, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
     ),
   task: z.string().describe('The speaking task or question the user responded to.'),
+  userId: z.string().describe('The ID of the user submitting the audio.'),
 });
 export type EvaluateSpeakingInput = z.infer<typeof EvaluateSpeakingInputSchema>;
 
@@ -96,7 +98,12 @@ const speakingEvaluationFlow = ai.defineFlow(
     if (!base64Data || !contentType) {
         throw new Error("Invalid audio data URI format.");
     }
-    const audioUrl = await uploadAudioToStorage(base64Data, contentType, 'speaking-practice');
+    
+    // Generate a unique path for the user's audio
+    const uniqueFilename = `${uuidv4()}.wav`;
+    const filePath = `speaking-submissions/${input.userId}/${uniqueFilename}`;
+    
+    const audioUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
     console.log(`Audio uploaded to: ${audioUrl}`);
 
     // 2. Call the AI for evaluation using the public URL

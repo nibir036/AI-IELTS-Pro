@@ -3,20 +3,25 @@
 
 import * as admin from 'firebase-admin';
 
-// Check if the app is already initialized to prevent re-initialization errors.
 if (!admin.apps.length) {
   try {
     // When running in a Google Cloud environment (like Firebase Studio),
-    // calling initializeApp() without arguments allows the SDK to automatically
-    // detect the service account and project configuration, including the
-    // correct default storage bucket. This is the most reliable method.
+    // this will use the service account attached to the environment.
     admin.initializeApp();
-    console.log('Firebase Admin SDK initialized successfully using application default credentials.');
+    console.log('Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
     console.error('Error initializing Firebase Admin SDK:', error);
-    // This catch block handles cases where automatic initialization might fail,
-    // for example, in a local development environment without proper credentials.
-    // The error message will provide guidance on how to set up local credentials.
+    // This provides a fallback for local development if GOOGLE_APPLICATION_CREDENTIALS is not set.
+    // However, in the Studio environment, the first block should always succeed.
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        console.log("Attempting to initialize with service account from environment variables.");
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    } else {
+        console.error("Firebase Admin SDK initialization failed. No credentials found.");
+    }
   }
 }
 
