@@ -128,11 +128,12 @@ const contentFactoryFlow = ai.defineFlow(
     if (input.contentType === 'ListeningTest' && 'transcript' in structuredContent && 'audioUrl' in structuredContent) {
         console.log("Generating audio for listening test...");
         try {
-            // For now, let's use a placeholder. The full implementation would involve uploading to Firebase Storage.
-            // const audioResult = await generateAudioFromText(structuredContent.transcript);
-            // structuredContent.audioUrl = audioResult.audioDataUri; // This would be a storage URL
+            // This is a complex operation. For now, we generate the audio data but use a placeholder for the final URL.
+            // A full implementation would require uploading the generated audio to Firebase Storage and getting a public URL.
+            const audioResult = await generateAudioFromText(structuredContent.transcript);
+            // In a real scenario, you would upload audioResult.audioDataUri and get a URL.
             structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_1.mp3"; // Placeholder
-            console.log("Placeholder audio URL assigned.");
+            console.log("Audio generated (using placeholder URL). Full implementation requires Firebase Storage upload.");
         } catch (audioError) {
             console.error("Failed to generate audio, using placeholder.", audioError);
             structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_error.mp3";

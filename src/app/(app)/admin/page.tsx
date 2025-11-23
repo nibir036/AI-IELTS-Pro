@@ -8,8 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, setDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
@@ -58,7 +57,7 @@ export default function AdminPage() {
               targetCollection = 'mockTests';
           }
            else {
-              throw new Error("Unsupported test type");
+              throw new Error("Unsupported test skill from AI");
           }
       } else if ('type' in aiResult) { // It's a Lesson (or Speaking Prompt)
           documentId = aiResult.id;
@@ -68,18 +67,19 @@ export default function AdminPage() {
       }
       
       const docRef = doc(firestore, targetCollection, documentId);
-      setDocumentNonBlocking(docRef, aiResult);
+      // Use blocking setDoc and await it for confirmation
+      await setDoc(docRef, aiResult);
 
       toast({
-        title: "Content Generated!",
-        description: `New content has been generated and is being saved to the '${targetCollection}' collection.`,
+        title: "Content Saved!",
+        description: `New content was successfully saved to '${targetCollection}'.`,
       });
 
     } catch (err: any) {
       console.error("Error processing content:", err);
       const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
         ? "The AI service is currently overloaded. Please try again in a moment."
-        : `An error occurred while processing the content: ${err.message}`;
+        : `An error occurred: ${err.message}`;
       setError(errorMessage);
        toast({
         variant: 'destructive',
