@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +48,7 @@ export default function VocabularyPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{lesson.content_en ? lesson.content_en.substring(0, 100) + '...' : ''}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-3">{lesson.content_en}</p>
                 </CardContent>
               </Card>
             </Link>
