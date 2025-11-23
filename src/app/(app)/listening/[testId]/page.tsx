@@ -1,11 +1,9 @@
-
 'use client';
 
 import { useState, useRef, useEffect, useCallback, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
-import { listeningTests } from '@/lib/data';
 import type { ListeningTest, ListeningQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +27,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import type WaveSurfer from 'wavesurfer.js';
 
 
@@ -36,14 +35,11 @@ type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
 
-export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
+function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
-    const { testId } = use(params);
-
-    const test = listeningTests.find(t => t.id === testId);
 
     const waveformRef = useRef<HTMLDivElement>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -62,10 +58,11 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         if (!waveformRef.current || !test?.audioUrl) return;
 
         let wavesurfer: WaveSurfer | null = null;
+        let isMounted = true;
 
         import('wavesurfer.js').then(module => {
+            if (!isMounted || !waveformRef.current) return;
             const WaveSurfer = module.default;
-            if (!waveformRef.current) return;
 
             wavesurfer = WaveSurfer.create({
                 container: waveformRef.current,
@@ -91,8 +88,10 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         });
         
         return () => {
-            if (wavesurfer) {
-                wavesurfer.destroy();
+            isMounted = false;
+            if (wavesurferRef.current) {
+                wavesurferRef.current.destroy();
+                wavesurferRef.current = null;
             }
         };
     }, [test?.audioUrl]);
@@ -409,6 +408,54 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     );
 }
 
-    
+function TestPageSkeleton() {
+    return (
+         <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
+            <Card className="flex flex-col h-full">
+                <CardHeader>
+                    <Skeleton className="h-8 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                </CardHeader>
+                <CardContent className="flex-1 space-y-4">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-10 w-40" />
+                </CardContent>
+            </Card>
+             <Card className="flex flex-col h-full">
+                <CardHeader>
+                    <Skeleton className="h-8 w-1/2" />
+                    <Skeleton className="h-4 w-3/4" />
+                </CardHeader>
+                <CardContent className="flex-1 space-y-6">
+                    <div className="space-y-3">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                    </div>
+                </CardContent>
+             </Card>
+        </div>
+    )
+}
 
+export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
+    const { testId } = use(params);
+    const { firestore } = useFirebase();
+
+    const testDocRef = useMemoFirebase(() => {
+        if (!firestore || !testId) return null;
+        return doc(firestore, 'listeningTests', testId);
+    }, [firestore, testId]);
+
+    const { data: test, isLoading } = useDoc<ListeningTest>(testDocRef);
+
+    if (isLoading) {
+        return <TestPageSkeleton />;
+    }
+
+    if (!test) {
+        notFound();
+    }
     
+    return <ListeningTestComponent test={test} />;
+}

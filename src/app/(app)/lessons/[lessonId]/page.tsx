@@ -4,19 +4,39 @@ import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen } from "lucide-react";
-import { lessons } from '@/lib/data';
 import type { Lesson } from '@/lib/types';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function LessonPage({ params }: { params: Promise<{ lessonId: string }> }) {
-    
-    const { lessonId } = use(params);
-    const lesson = lessons.find(l => l.id === lessonId);
-
-    if (!lesson) {
-        notFound();
-    }
-
+function LessonPageSkeleton() {
     return (
+         <div className="max-w-4xl mx-auto">
+            <Card>
+                <CardHeader>
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-2">
+                             <Skeleton className="h-6 w-20" />
+                             <Skeleton className="h-9 w-80" />
+                             <Skeleton className="h-5 w-40" />
+                        </div>
+                         <Skeleton className="h-16 w-16" />
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[85%]" />
+                     <Skeleton className="h-4 w-full mt-4" />
+                    <Skeleton className="h-4 w-[90%]" />
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
+function LessonComponent({ lesson }: { lesson: Lesson }) {
+     return (
         <div className="max-w-4xl mx-auto">
             <Card>
                 <CardHeader>
@@ -39,4 +59,27 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
             </Card>
         </div>
     );
+}
+
+
+export default function LessonPage({ params }: { params: Promise<{ lessonId: string }> }) {
+    const { lessonId } = use(params);
+    const { firestore } = useFirebase();
+
+    const lessonDocRef = useMemoFirebase(() => {
+        if (!firestore || !lessonId) return null;
+        return doc(firestore, 'lessons', lessonId);
+    }, [firestore, lessonId]);
+
+    const { data: lesson, isLoading } = useDoc<Lesson>(lessonDocRef);
+
+    if (isLoading) {
+        return <LessonPageSkeleton />;
+    }
+
+    if (!lesson) {
+        notFound();
+    }
+    
+    return <LessonComponent lesson={lesson} />;
 }

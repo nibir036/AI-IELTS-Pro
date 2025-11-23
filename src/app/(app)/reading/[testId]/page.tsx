@@ -1,11 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useRef, use } from 'react';
 import { notFound } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
-import { readingTests } from '@/lib/data';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,19 +18,17 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
-export default function ReadingTaskPage({ params }: { params: Promise<{ testId: string }> }) {
+function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
     const { toast } = useToast();
     const startTimeRef = useRef<Date | null>(null);
-    const { testId } = use(params);
-
-    const test = readingTests.find(t => t.id === testId);
 
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
@@ -114,8 +110,6 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
             });
         }
     };
-
-    if (!test) notFound();
 
     const progress = (Object.keys(userAnswers).length / test.questions.length) * 100;
 
@@ -269,4 +263,61 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     );
 }
 
+function TestPageSkeleton() {
+    return (
+         <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
+            <Card className="flex flex-col h-full">
+                <CardHeader>
+                    <Skeleton className="h-8 w-3/4" />
+                </CardHeader>
+                <CardContent className="flex-1 space-y-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[80%]" />
+                    <Skeleton className="h-4 w-full mt-4" />
+                    <Skeleton className="h-4 w-[90%]" />
+                </CardContent>
+            </Card>
+             <Card className="flex flex-col h-full">
+                <CardHeader>
+                    <Skeleton className="h-8 w-1/2" />
+                    <Skeleton className="h-4 w-3/4" />
+                </CardHeader>
+                <CardContent className="flex-1 space-y-6">
+                    <div className="space-y-3">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                    </div>
+                     <div className="space-y-3">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                    </div>
+                </CardContent>
+             </Card>
+        </div>
+    )
+}
+
+export default function ReadingTaskPage({ params }: { params: Promise<{ testId: string }> }) {
+    const { testId } = use(params);
+    const { firestore } = useFirebase();
+
+    const testDocRef = useMemoFirebase(() => {
+        if (!firestore || !testId) return null;
+        return doc(firestore, 'readingTests', testId);
+    }, [firestore, testId]);
+
+    const { data: test, isLoading } = useDoc<ReadingTest>(testDocRef);
+
+    if (isLoading) {
+        return <TestPageSkeleton />;
+    }
+
+    if (!test) {
+        notFound();
+    }
     
+    return <ReadingTestComponent test={test} />;
+}
