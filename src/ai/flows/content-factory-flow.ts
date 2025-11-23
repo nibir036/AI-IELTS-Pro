@@ -10,10 +10,11 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 
 const ProcessContentInputSchema = z.object({
+  contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest']),
   rawText: z.string().describe('The raw text content from a book chapter, article, or test paper to be processed.'),
 });
 export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
@@ -31,7 +32,7 @@ const LessonSchema = z.object({
   id: z.string().describe("A unique ID for the lesson (e.g., VOCAB_005)."),
   type: z.enum(['Grammar', 'Vocabulary', 'Tips', 'Speaking']),
   title: z.string().describe("A concise, descriptive title for the lesson."),
-  level: z.enum(['Basic', 'Intermediate', 'Advanced', 'All Levels']),
+  level: z.enum(['Basic', 'Intermediate', 'Advanced', 'All Levels', "Part 1", "Part 2", "Part 3"]),
   content_en: z.string().describe("The full lesson content in English."),
 });
 
@@ -74,12 +75,9 @@ const prompt = ai.definePrompt({
   output: { schema: ProcessContentOutputSchema },
   prompt: `You are an expert IELTS curriculum developer. Your task is to analyze the provided raw text and convert it into a structured JSON object.
 
-  First, determine the type of content:
-  - If the text is explanatory, about a specific topic like grammar, vocabulary, or exam tips, format it as a 'Lesson'.
-  - If the text contains a reading passage followed by questions, format it as a 'ReadingTest'.
-  - If the text is a transcript of an audio recording followed by questions, format it as a 'ListeningTest'. For Listening tests, use a placeholder for the audioUrl.
-
-  Then, generate a valid JSON object that strictly adheres to the one of the following schemas based on your determination. Ensure all IDs are unique and follow the examples.
+  The user has specified that the content type is '{{{contentType}}}'.
+  
+  You must generate a valid JSON object that strictly adheres to the corresponding schema. Ensure all IDs are unique and follow the examples.
 
   - Lesson Schema: ${JSON.stringify(LessonSchema.shape)}
   - ReadingTest Schema: ${JSON.stringify(ReadingTestSchema.shape)}

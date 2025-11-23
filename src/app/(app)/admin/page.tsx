@@ -9,11 +9,14 @@ import { Loader2 } from 'lucide-react';
 import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest';
 
 export default function AdminPage() {
+  const [contentType, setContentType] = useState<ContentType | ''>('');
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ProcessContentOutput | null>(null);
@@ -31,12 +34,16 @@ export default function AdminPage() {
         });
         return;
     }
+     if (!contentType) {
+        setError("Please select a content type.");
+        return;
+    }
     setIsProcessing(true);
     setError(null);
     setResult(null);
     
     try {
-      const aiResult = await processContent({ rawText: inputText });
+      const aiResult = await processContent({ contentType, rawText: inputText });
       setResult(aiResult);
 
       let targetCollection: string;
@@ -93,19 +100,31 @@ export default function AdminPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>1. Paste Your Content</CardTitle>
+            <CardTitle>1. Create Your Content</CardTitle>
             <CardDescription>
-              Paste the text for a lesson, a reading test (passage + questions), or a listening test (transcript + questions).
+             Select the type of content, then paste the text for a lesson, reading test, or listening test.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
+             <Select value={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
+                <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select content type..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Lesson">Lesson (Grammar, Vocabulary, Tips)</SelectItem>
+                    <SelectItem value="ReadingTest">Reading Test</SelectItem>
+                    <SelectItem value="ListeningTest">Listening Test</SelectItem>
+                </SelectContent>
+            </Select>
+
             <Textarea
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Paste your raw text content here..."
               className="min-h-[400px] text-base"
+              disabled={!contentType}
             />
-            <Button onClick={handleProcess} disabled={isProcessing || !inputText}>
+            <Button onClick={handleProcess} disabled={isProcessing || !inputText || !contentType}>
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Process & Save Content
             </Button>

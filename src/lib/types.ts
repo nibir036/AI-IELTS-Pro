@@ -1,3 +1,4 @@
+
 import type { DocumentReference, Timestamp } from "firebase/firestore";
 
 export interface User {
@@ -16,9 +17,10 @@ export interface Lesson {
   id: string;
   type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening' | 'Speaking';
   title: string;
-  level: 'Basic' | 'Intermediate' | 'Advanced' | string; // Or band level
+  level: 'Basic' | 'Intermediate' | 'Advanced' | 'All Levels' | "Part 1" | "Part 2" | "Part 3";
   content_en: string;
   content_native?: string;
+  explanation?: string;
 }
 
 export interface MockTest {
