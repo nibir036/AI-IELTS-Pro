@@ -4,14 +4,46 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight } from 'lucide-react';
 import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
+
+const creationCards = [
+    {
+        title: "Writing Test",
+        description: "Manually craft a new Writing test with Task 1 and Task 2 prompts.",
+        icon: FileText,
+        href: "/admin/create/writing",
+        isReady: true,
+    },
+     {
+        title: "Listening Test",
+        description: "Create a Listening test with a transcript and multiple questions. AI will generate the audio.",
+        icon: Headphones,
+        href: "/admin/create/listening",
+        isReady: true,
+    },
+    {
+        title: "Speaking Test",
+        description: "Build a new Speaking test with prompts for all three parts.",
+        icon: Mic,
+        href: "/admin/create/speaking",
+        isReady: true,
+    },
+     {
+        title: "Reading Test",
+        description: "This feature is under development. Plan your reading passages here in the future.",
+        icon: BookOpen,
+        href: "/admin/create/reading",
+        isReady: false,
+    }
+]
 
 export default function AdminPage() {
   const [contentType, setContentType] = useState<ContentType | ''>('');
@@ -67,7 +99,6 @@ export default function AdminPage() {
       }
       
       const docRef = doc(firestore, targetCollection, documentId);
-      // Use blocking setDoc and await it for confirmation
       await setDoc(docRef, aiResult);
 
       toast({
@@ -92,19 +123,48 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Test &amp; Lesson Builder</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-muted-foreground">
-          Use this tool to process raw text into structured lessons or tests for the platform.
+          Manage your app's content using AI-powered tools or manual creation.
         </p>
       </div>
+
+       <Card>
+          <CardHeader>
+            <CardTitle>Manual Test Creation</CardTitle>
+            <CardDescription>
+             Manually create and configure specific tests for each module.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {creationCards.map(card => (
+                  <Link key={card.title} href={card.isReady ? card.href : '#'} className={!card.isReady ? "pointer-events-none" : ""}>
+                    <div className={`p-4 border rounded-lg h-full flex flex-col justify-between transition-all ${card.isReady ? 'hover:border-primary hover:shadow-md' : 'bg-muted/50'}`}>
+                        <div>
+                            <div className="flex justify-between items-start">
+                                <h3 className="font-semibold">{card.title}</h3>
+                                <card.icon className={`h-5 w-5 ${card.isReady ? 'text-primary' : 'text-muted-foreground'}`} />
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
+                        </div>
+                        <div className={`flex items-center mt-4 text-sm font-medium ${card.isReady ? 'text-primary' : 'text-muted-foreground'}`}>
+                             {card.isReady ? 'Create Test' : 'Coming Soon'}
+                             {card.isReady && <ArrowRight className="ml-2 h-4 w-4" />}
+                        </div>
+                    </div>
+                </Link>
+              ))}
+          </CardContent>
+        </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>1. Create Your Content</CardTitle>
+            <CardTitle>AI Content Factory</CardTitle>
             <CardDescription>
-             Select the type of content, then paste the text for a lesson, reading test, or listening test.
+             Paste raw text from any source and let the AI structure it into a lesson or test.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -136,9 +196,9 @@ export default function AdminPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>2. Review AI Output</CardTitle>
+            <CardTitle>AI Output Review</CardTitle>
             <CardDescription>
-              The processed JSON will appear here. It will be saved to the appropriate Firestore collection.
+              The processed JSON will appear here before being saved to the database.
             </CardDescription>
           </CardHeader>
           <CardContent>
