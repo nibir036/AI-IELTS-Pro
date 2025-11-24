@@ -29,7 +29,7 @@ import { Button } from '../ui/button';
 
 // This should be a secure way to identify an admin, for this demo we'll hardcode it.
 // In a real app, this would come from custom claims or a database role.
-const ADMIN_UID = 'uNR6q22oech4VhJhtRiZ7ntIvZf2';
+const ADMIN_UIDS = ['yTh2178GN3ZV3mAGi3wAmdPOKlm1'];
 
 const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -52,7 +52,7 @@ export function AppSidebar() {
     }
   };
 
-  const isUserAdmin = user?.uid === ADMIN_UID;
+  const isUserAdmin = user ? ADMIN_UIDS.includes(user.uid) : false;
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
