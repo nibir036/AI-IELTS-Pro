@@ -111,7 +111,7 @@ export default function AdminPage() {
 
   const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !firestore) return;
+    if (!file) return;
 
     // Check file size (100MB limit)
     if (file.size > 100 * 1024 * 1024) {
