@@ -62,7 +62,7 @@ const ListeningTestSchema = z.object({
 const WritingTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., IELTS_Writing_z1w5."),
     testType: z.enum(["IELTS-Academic", "IELTS-General", "PTE"]),
-    skill: zenum(["Writing"]),
+    skill: z.enum(["Writing"]),
     questions: z.array(z.object({
         task: z.number(),
         topic: z.string(),
