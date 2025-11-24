@@ -1,4 +1,5 @@
 
+
 import type { DocumentReference, Timestamp } from "firebase/firestore";
 
 export interface User {
@@ -72,6 +73,7 @@ export interface WritingQuestion {
   topic: string;
   taskType: 'Task 1' | 'Task 2';
   wordCountTarget: number;
+  imageUrl?: string;
 }
 
 export interface Submission {

@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -17,9 +16,13 @@ import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { FileInput } from '@/components/ui/file-input';
+import { uploadImageToStorage } from '@/lib/firebase/storage';
+import { blobToBase64 } from '@/lib/utils';
 
 const formSchema = z.object({
   testType: z.enum(['IELTS-Academic', 'IELTS-General', 'PTE']),
+  task1Image: z.any().optional(),
   task1Topic: z.string().min(10, "Task 1 topic is required."),
   task2Topic: z.string().min(10, "Task 2 topic is required."),
 });
@@ -50,24 +53,33 @@ export default function CreateWritingTestPage() {
 
         setIsSubmitting(true);
         try {
-            const testId = `IELTS_Writing_${uuidv4().slice(0, 4)}`;
+            const testId = `WRITING_${uuidv4().slice(0, 8)}`;
+            let task1ImageUrl = '';
+
+            // Handle image upload for Task 1
+            if (values.task1Image && values.task1Image.length > 0) {
+                const imageFile = values.task1Image[0] as File;
+                const base64Image = await blobToBase64(imageFile);
+                const filePath = `writing-tasks/${testId}/${imageFile.name}`;
+                task1ImageUrl = await uploadImageToStorage(base64Image.split(',')[1], imageFile.type, filePath);
+            }
+
             const newTest = {
                 id: testId,
                 testType: values.testType,
-                skill: 'Writing',
+                skill: 'Writing' as const,
                 questions: [
-                    // For now, let's assume both tasks are part of the test.
-                    // A more complex form could distinguish between them.
                     {
                         task: 1,
                         topic: values.task1Topic,
-                        taskType: 'Task 1',
+                        imageUrl: task1ImageUrl,
+                        taskType: 'Task 1' as const,
                         wordCountTarget: 150,
                     },
                     {
                         task: 2,
                         topic: values.task2Topic,
-                        taskType: 'Task 2',
+                        taskType: 'Task 2' as const,
                         wordCountTarget: 250,
                     }
                 ]
@@ -97,7 +109,7 @@ export default function CreateWritingTestPage() {
              <div>
                 <h1 className="text-3xl font-bold tracking-tight">Create Writing Test</h1>
                 <p className="text-muted-foreground">
-                Manually build a new Writing test with prompts for Task 1 and Task 2.
+                Manually build a new Writing test with prompts and optional images for Task 1 and Task 2.
                 </p>
             </div>
             <Card className="mt-6">
@@ -141,6 +153,22 @@ export default function CreateWritingTestPage() {
                                 </FormItem>
                                 )}
                             />
+                            
+                            <FormField
+                                control={form.control}
+                                name="task1Image"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Task 1 Image (Optional)</FormLabel>
+                                    <FormControl>
+                                        <FileInput {...field} accept="image/*" />
+                                    </FormControl>
+                                    <FormDescription>Upload a chart, graph, or image for Task 1.</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+
 
                             <FormField
                                 control={form.control}

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -119,6 +120,11 @@
              "properties": {
                 "task": {"type": "number"},
                 "topic": {"type": "string"},
+                "imageUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Optional URL for an image or chart, typically for Task 1."
+                },
                 "taskType": {
                     "type": "string",
                     "enum": ["Task 1", "Task 2"]

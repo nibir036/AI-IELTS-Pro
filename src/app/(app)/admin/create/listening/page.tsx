@@ -15,9 +15,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Upload, FileAudio } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { processContent } from '@/ai/flows/content-factory-flow';
+import { FileInput } from '@/components/ui/file-input';
+import { uploadAudioToStorage } from '@/lib/firebase/storage';
+import { blobToBase64 } from '@/lib/utils';
 
 const questionSchema = z.object({
     id: z.string(),
@@ -29,8 +32,12 @@ const questionSchema = z.object({
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
-  transcript: z.string().min(50, "Transcript must be at least 50 characters long."),
+  audioFile: z.any().optional(),
+  transcript: z.string().optional(),
   questions: z.array(questionSchema).min(1, "At least one question is required."),
+}).refine(data => !!data.audioFile || (!!data.transcript && data.transcript.length > 50), {
+    message: 'Either an audio file must be uploaded, or a transcript of at least 50 characters must be provided.',
+    path: ['transcript'], // You can point this to either field
 });
 
 export default function CreateListeningTestPage() {
@@ -61,30 +68,55 @@ export default function CreateListeningTestPage() {
 
         setIsSubmitting(true);
         try {
-            const rawText = `Title: ${values.title}\nTranscript: ${values.transcript}\nQuestions: ${JSON.stringify(values.questions)}`;
+            const testId = `LISTENING_${uuidv4().slice(0, 8)}`;
+            let audioUrl = '';
 
-            const result = await processContent({
-                contentType: 'ListeningTest',
-                rawText: rawText,
-            });
-
-            if ('skill' in result && result.skill === 'Listening') {
-                 await setDoc(doc(firestore, 'listeningTests', result.id), result);
-                 toast({
-                    title: 'Success!',
-                    description: `Listening test "${result.title}" has been created.`,
-                });
-                router.push('/listening');
-            } else {
-                throw new Error("AI did not return a valid ListeningTest object.");
+            if (values.audioFile && values.audioFile.length > 0) {
+                 const file = values.audioFile[0] as File;
+                 const base64Audio = await blobToBase64(file);
+                 const filePath = `listeningTests/${testId}/${file.name}`;
+                 audioUrl = await uploadAudioToStorage(base64Audio.split(',')[1], file.type, filePath);
             }
 
-        } catch (error) {
+            const listeningTest = {
+                id: testId,
+                title: values.title,
+                skill: 'Listening' as const,
+                audioUrl: audioUrl,
+                transcript: values.transcript || '',
+                questions: values.questions,
+            };
+            
+            // If no audio file, but there is a transcript, let AI generate the audio
+            if (!audioUrl && listeningTest.transcript) {
+                console.log("Generating audio from transcript...");
+                const processResult = await processContent({
+                    contentType: 'ListeningTest',
+                    rawText: `Title: ${listeningTest.title}\nTranscript: ${listeningTest.transcript}`,
+                });
+                
+                if ('audioUrl' in processResult) {
+                    listeningTest.audioUrl = processResult.audioUrl;
+                } else {
+                     throw new Error('AI processing failed to return an audio URL.');
+                }
+            } else if (!audioUrl) {
+                throw new Error("No audio source provided. Please upload a file or provide a transcript.");
+            }
+
+            await setDoc(doc(firestore, 'listeningTests', testId), listeningTest);
+            toast({
+                title: 'Success!',
+                description: `Listening test "${listeningTest.title}" has been created.`,
+            });
+            router.push('/listening');
+
+        } catch (error: any) {
             console.error('Error creating listening test:', error);
             toast({
                 variant: 'destructive',
                 title: 'Creation Failed',
-                description: 'Could not create the listening test. Please try again.',
+                description: error.message || 'Could not create the listening test. Please try again.',
             });
         } finally {
             setIsSubmitting(false);
@@ -96,7 +128,7 @@ export default function CreateListeningTestPage() {
              <div>
                 <h1 className="text-3xl font-bold tracking-tight">Create Listening Test</h1>
                 <p className="text-muted-foreground">
-                Build a listening test with a full transcript and questions. The AI will generate the audio file for you.
+                Upload an audio file or provide a transcript for AI audio generation.
                 </p>
             </div>
             <Form {...form}>
@@ -115,13 +147,30 @@ export default function CreateListeningTestPage() {
                                 </FormItem>
                                 )}
                             />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                                <FormField
+                                    control={form.control}
+                                    name="audioFile"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Upload Audio File</FormLabel>
+                                            <FormControl>
+                                                <FileInput {...field} accept=".mp3, .wav" />
+                                            </FormControl>
+                                            <FormDescription>Upload an MP3 or WAV file. Max 10MB.</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <div className="text-center text-muted-foreground font-bold">OR</div>
+                            </div>
                              <FormField
                                 control={form.control}
                                 name="transcript"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Audio Transcript</FormLabel>
-                                    <FormControl><Textarea placeholder="Paste the full audio transcript here..." {...field} className="min-h-[200px]" /></FormControl>
+                                    <FormLabel>Audio Transcript (for AI generation)</FormLabel>
+                                    <FormControl><Textarea placeholder="If you don't upload an audio file, paste the full audio transcript here and the AI will generate the audio for you." {...field} className="min-h-[200px]" /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                                 )}
@@ -198,7 +247,7 @@ export default function CreateListeningTestPage() {
 
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Generate Audio & Create Test
+                        Create Listening Test
                     </Button>
                 </form>
             </Form>
