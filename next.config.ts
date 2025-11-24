@@ -30,6 +30,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  serverComponentsExternalPackages: ['pdf-parse'],
 };
 
 export default nextConfig;
