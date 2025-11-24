@@ -27,6 +27,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useFirebase } from '@/firebase';
 import { Button } from '../ui/button';
 
+// This should be a secure way to identify an admin, for this demo we'll hardcode it.
+// In a real app, this would come from custom claims or a database role.
+const ADMIN_UID = 'uNR6q22oech4VhJhtRiZ7ntIvZf2';
+
 const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/search', label: 'Search', icon: Search },
@@ -47,6 +51,8 @@ export function AppSidebar() {
       await auth.signOut();
     }
   };
+
+  const isUserAdmin = user?.uid === ADMIN_UID;
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -106,7 +112,7 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                 </Link>
             </SidebarMenuItem>
-            {adminLinks.map((link) => (
+            {isUserAdmin && adminLinks.map((link) => (
               <SidebarMenuItem key={link.href}>
                 <Link href={link.href} onClick={() => setOpenMobile(false)}>
                   <SidebarMenuButton
