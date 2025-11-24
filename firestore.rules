@@ -18,10 +18,11 @@ service cloud.firestore {
     }
     
     /**
-     * @description Checks if the user is the designated admin by their UID.
+     * @description Checks if the user is a designated admin by their UID.
      */
     function isAdmin() {
-      return isSignedIn() && request.auth.uid == 'uNR6q22oech4VhJhtRiZ7ntIvZf2';
+      let admin_uids = ['yTh2178GN3ZV3mAGi3wAmdPOKlm1'];
+      return isSignedIn() && request.auth.uid in admin_uids;
     }
 
     match /users/{userId} {
@@ -47,6 +48,11 @@ service cloud.firestore {
     match /listeningTests/{testId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin(); // Admin only for writes
+    }
+    
+    match /knowledge/{chunkId} {
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     // User-specific data is restricted to the owner

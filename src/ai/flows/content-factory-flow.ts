@@ -1,7 +1,8 @@
 'use server';
 
 /**
- * @fileOverview A Genkit flow for processing raw text into structured lesson or test content.
+ * @fileOverview A Genkit flow for processing raw text into structured lesson or test content,
+ * potentially augmented by information from a knowledge base.
  *
  * - processContent - A function that handles the content creation process.
  * - ProcessContentInput - The input type for the function.
@@ -13,11 +14,14 @@ import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 import { generateAudioFromText } from './text-to-speech-flow';
 import { uploadAudioToStorage } from '@/lib/firebase/storage';
+import { firebaseAdmin } from '@/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
+const firestore = firebaseAdmin.firestore();
 
 const ProcessContentInputSchema = z.object({
   contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
-  rawText: z.string().describe('The raw text content from a book chapter, article, or test paper to be processed.'),
+  rawText: z.string().describe('The raw text content or topic to be processed.'),
 });
 export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
 
@@ -58,7 +62,7 @@ const ListeningTestSchema = z.object({
 const WritingTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., IELTS_Writing_z1w5."),
     testType: z.enum(["IELTS-Academic", "IELTS-General", "PTE"]),
-    skill: z.enum(["Writing"]),
+    skill: zenum(["Writing"]),
     questions: z.array(z.object({
         task: z.number(),
         topic: z.string(),
@@ -86,23 +90,33 @@ export async function processContent(
 
 const prompt = ai.definePrompt({
   name: 'contentFactoryPrompt',
-  input: { schema: ProcessContentInputSchema },
-  output: { schema: z.union([LessonSchema, ReadingTestSchema, ListeningTestSchema, WritingTestSchema]) },
-  prompt: `You are an expert IELTS curriculum developer. Your task is to analyze the provided raw text and convert it into a structured JSON object.
+  input: { schema: z.object({
+    contentType: ProcessContentInputSchema.shape.contentType,
+    rawText: ProcessContentInputSchema.shape.rawText,
+    knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
+  }) },
+  output: { schema: ProcessContentOutputSchema },
+  prompt: `You are an expert IELTS curriculum developer. Your task is to analyze the provided text and context to generate a structured JSON object for an IELTS learning module.
 
   CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns like 'L_AC_001'. The ID should be a short, random string, prefixed by the content type (e.g., LISTENING_a4f8, READING_z1w5).
 
-  The user has specified that the content type is '{{{contentType}}}'. A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
+  The user has specified that the desired content type is '{{{contentType}}}'.
+  A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
   
+  Use the provided 'Raw Text' as the primary basis for the content. If 'Knowledge Base Context' is provided, use it as supplementary information to enrich and inform your generation.
+
   You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
 
-  - Lesson Schema (for Grammar, Vocabulary, Tips, or Speaking): ${JSON.stringify(LessonSchema.shape)}
+  - Lesson Schema: ${JSON.stringify(LessonSchema.shape)}
   - WritingTest Schema: ${JSON.stringify(WritingTestSchema.shape)}
   - ReadingTest Schema: ${JSON.stringify(ReadingTestSchema.shape)}
   - ListeningTest Schema: ${JSON.stringify(ListeningTestSchema.shape)}
 
-  Raw Text to Analyze:
   ---
+  Knowledge Base Context:
+  {{{knowledge}}}
+  ---
+  Raw Text to Process:
   {{{rawText}}}
   ---
 `,
@@ -116,7 +130,26 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-    const result = await withRetry(() => prompt(input), {
+
+    // 1. Retrieve relevant knowledge from Firestore
+    console.log("Searching knowledge base...");
+    let knowledge = '';
+    try {
+        const knowledgeQuery = await firestore.collection('knowledge')
+            // This is a very basic search. A real implementation would use a more sophisticated search/vector query.
+            .limit(5)
+            .get(); 
+
+        if (!knowledgeQuery.empty) {
+            knowledge = knowledgeQuery.docs.map(doc => doc.data().chunk).join('\n\n---\n\n');
+            console.log(`Found ${knowledgeQuery.size} relevant knowledge chunks.`);
+        }
+    } catch (e) {
+        console.warn("Could not query knowledge base. Proceeding without it.", e);
+    }
+
+    // 2. Call the AI with the input text and the retrieved knowledge
+    const result = await withRetry(() => prompt({ ...input, knowledge }), {
       retryOn: isRetryableGoogleAIError,
     });
     
@@ -126,22 +159,18 @@ const contentFactoryFlow = ai.defineFlow(
       throw new Error("Failed to generate structured content from the AI prompt.");
     }
 
-    // If it's a listening test, generate audio, upload it, and update the URL.
+    // 3. Post-process for special cases like Listening tests
     if (input.contentType === 'ListeningTest' && 'transcript' in structuredContent && 'audioUrl' in structuredContent) {
         console.log("Generating audio for listening test...");
         
         try {
             const audioResult = await generateAudioFromText(structuredContent.transcript);
-            
-            // The TTS flow returns a data URI: 'data:audio/wav;base64,<encoded_data>'
             const [header, base64Data] = audioResult.audioDataUri.split(',');
-            const contentType = header.split(':')[1].split(';')[0]; // e.g., 'audio/wav'
+            const contentType = header.split(':')[1].split(';')[0];
             
             if (base64Data && contentType) {
                 const testId = structuredContent.id;
-                // Define the precise path in the storage bucket
                 const filePath = `listeningTests/${testId}/${testId}.wav`;
-                
                 console.log(`Uploading ${contentType} to Firebase Storage at path: ${filePath}`);
                 
                 const publicUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
@@ -151,7 +180,6 @@ const contentFactoryFlow = ai.defineFlow(
             }
         } catch (audioError) {
             console.error("Error during audio generation or upload:", audioError);
-            // Fallback if audio process fails, to prevent the whole operation from failing.
             structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_error.mp3";
         }
     }

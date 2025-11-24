@@ -4,13 +4,17 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight } from 'lucide-react';
+import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight, UploadCloud } from 'lucide-react';
 import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import { FileInput } from '@/components/ui/file-input';
+import { blobToBase64 } from '@/lib/utils';
+import { uploadImageToStorage } from '@/lib/firebase/storage';
+import { v4 as uuidv4 } from 'uuid';
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
 
@@ -43,12 +47,13 @@ const creationCards = [
         href: "/admin/create/reading",
         isReady: false,
     }
-]
+];
 
 export default function AdminPage() {
   const [contentType, setContentType] = useState<ContentType | ''>('');
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [result, setResult] = useState<ProcessContentOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -57,11 +62,6 @@ export default function AdminPage() {
   const handleProcess = async () => {
     if (!firestore) {
         setError("Firestore is not available. Please try again later.");
-        toast({
-            variant: 'destructive',
-            title: "Database Error",
-            description: "Could not connect to the database.",
-        });
         return;
     }
      if (!contentType) {
@@ -77,28 +77,13 @@ export default function AdminPage() {
       setResult(aiResult);
 
       let targetCollection: string;
-      let documentId: string;
-
-      if ('skill' in aiResult) { // It's a Test
-          documentId = aiResult.id;
-          if (aiResult.skill === 'Reading') {
-              targetCollection = 'readingTests';
-          } else if (aiResult.skill === 'Listening') {
-              targetCollection = 'listeningTests';
-          } else if (aiResult.skill === 'Writing') {
-              targetCollection = 'mockTests';
-          }
-           else {
-              throw new Error("Unsupported test skill from AI");
-          }
-      } else if ('type' in aiResult) { // It's a Lesson (or Speaking Prompt)
-          documentId = aiResult.id;
-          targetCollection = 'lessons';
+      if ('skill' in aiResult) {
+          targetCollection = aiResult.skill === 'Reading' ? 'readingTests' : aiResult.skill === 'Listening' ? 'listeningTests' : 'mockTests';
       } else {
-          throw new Error("Invalid AI output structure");
+          targetCollection = 'lessons';
       }
       
-      const docRef = doc(firestore, targetCollection, documentId);
+      const docRef = doc(firestore, targetCollection, aiResult.id);
       await setDoc(docRef, aiResult);
 
       toast({
@@ -122,6 +107,46 @@ export default function AdminPage() {
     }
   };
 
+  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !firestore) return;
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const base64Pdf = await blobToBase64(file);
+      const res = await fetch('/api/process-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfData: base64Pdf.split(',')[1], fileName: file.name }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to process PDF on the server.');
+      }
+
+      const data = await res.json();
+      
+      toast({
+        title: 'PDF Processed',
+        description: `Successfully extracted and stored ${data.chunkCount} knowledge chunks from ${file.name}.`,
+      });
+
+    } catch (err: any) {
+      console.error('PDF upload error:', err);
+      setError(err.message);
+      toast({
+        variant: 'destructive',
+        title: 'PDF Upload Failed',
+        description: err.message,
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -133,60 +158,67 @@ export default function AdminPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="col-span-1 lg:col-span-2">
-          <CardHeader>
+           <CardHeader>
             <CardTitle>AI Content Factory</CardTitle>
             <CardDescription>
-             Paste raw text from any source (e.g., PDF, article, notes) and let the AI structure it into a lesson or test, then save it directly to the database.
+             Use the AI to structure raw text into lessons or tests, or upload a PDF to train the AI with new knowledge.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col gap-4">
-              <Select value={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
-                  <SelectTrigger>
-                      <SelectValue placeholder="1. Select content type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                      <SelectItem value="Lesson">Lesson (Grammar, Vocabulary, Tips)</SelectItem>
-                      <SelectItem value="SpeakingPrompt">Speaking Prompt</SelectItem>
-                      <SelectItem value="WritingTest">Writing Test</SelectItem>
-                      <SelectItem value="ReadingTest">Reading Test</SelectItem>
-                      <SelectItem value="ListeningTest">Listening Test (from Transcript)</SelectItem>
-                  </SelectContent>
-              </Select>
-
-              <Textarea
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="2. Paste your raw text content here..."
-                className="flex-grow text-base min-h-[300px]"
-                disabled={!contentType}
-              />
-              <Button onClick={handleProcess} disabled={isProcessing || !inputText || !contentType}>
-                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                3. Process & Save Content
-              </Button>
-            </div>
-             <div className="relative">
-                <p className="text-sm font-medium mb-2">AI Output Review</p>
-                <div className="p-4 bg-muted rounded-md h-full min-h-[300px] overflow-x-auto text-sm">
-                  {isProcessing && (
-                    <div className="flex items-center justify-center h-full">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* PDF Upload Section */}
+                <div className="space-y-2">
+                    <h3 className="font-semibold">Train AI with a PDF</h3>
+                    <div className="flex items-center justify-center w-full">
+                        <label htmlFor="pdf-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <UploadCloud className="w-8 h-8 mb-2 text-gray-500" />
+                                <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                <p className="text-xs text-gray-500">PDF (MAX. 10MB)</p>
+                            </div>
+                            <input id="pdf-upload" type="file" className="hidden" onChange={handlePdfUpload} accept=".pdf" disabled={isUploading} />
+                        </label>
                     </div>
-                  )}
-                  {error && <p className="text-destructive whitespace-pre-wrap">{error}</p>}
-                  {result && (
-                    <pre className="whitespace-pre-wrap">
-                      {JSON.stringify(result, null, 2)}
-                    </pre>
-                  )}
-                  {!isProcessing && !result && !error && (
-                      <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-                          <p>Output will be shown here.</p>
-                      </div>
-                  )}
+                     {isUploading && <div className="flex justify-center items-center gap-2"><Loader2 className="animate-spin h-4 w-4"/> <span>Processing PDF...</span></div>}
+                </div>
+                 {/* Text Input Section */}
+                <div className="space-y-2">
+                    <h3 className="font-semibold">Generate from Raw Text</h3>
+                    <Textarea
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder="Or paste your raw text content here..."
+                        className="text-base min-h-[128px]"
+                    />
                 </div>
             </div>
+             <div className="flex flex-col sm:flex-row items-center gap-4">
+                 <Select value={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
+                    <SelectTrigger className="w-full sm:w-[240px]">
+                        <SelectValue placeholder="Select content type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Lesson">Lesson (Grammar, Vocab, etc.)</SelectItem>
+                        <SelectItem value="SpeakingPrompt">Speaking Prompt</SelectItem>
+                        <SelectItem value="WritingTest">Writing Test</SelectItem>
+                        <SelectItem value="ReadingTest">Reading Test</SelectItem>
+                        <SelectItem value="ListeningTest">Listening Test (from Transcript)</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button onClick={handleProcess} disabled={isProcessing || !inputText || !contentType} className="w-full sm:w-auto">
+                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Generate & Save from Text
+                </Button>
+            </div>
+             {error && <p className="text-destructive text-sm font-medium">{error}</p>}
+             {result && (
+                  <div className="relative mt-4">
+                    <p className="text-sm font-medium mb-2">AI Output Review</p>
+                    <div className="p-4 bg-muted rounded-md h-full max-h-80 overflow-x-auto text-sm">
+                        <pre className="whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                  </div>
+              )}
           </CardContent>
         </Card>
 

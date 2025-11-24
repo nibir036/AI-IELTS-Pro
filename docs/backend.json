@@ -311,6 +311,28 @@
         "id",
         "lessonIds"
       ]
+    },
+    "KnowledgeChunk": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "KnowledgeChunk",
+      "type": "object",
+      "description": "A chunk of text extracted from an uploaded document, used as a knowledge base for the AI.",
+      "properties": {
+        "sourceFile": {
+          "type": "string",
+          "description": "The name of the PDF file this chunk was extracted from."
+        },
+        "chunk": {
+          "type": "string",
+          "description": "The text content of this specific chunk."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when this chunk was created."
+        }
+      },
+      "required": ["sourceFile", "chunk", "createdAt"]
     }
   },
   "auth": {
@@ -366,6 +388,12 @@
         "$ref": "#/entities/LearningPath"
       },
       "description": "Stores customized learning paths for users. Access is restricted to the user themselves."
+    },
+    "/knowledge/{chunkId}": {
+      "schema": {
+        "$ref": "#/entities/KnowledgeChunk"
+      },
+      "description": "Stores chunks of text from uploaded documents to be used as a knowledge base. Read is public, write is admin-only."
     }
   }
 }
