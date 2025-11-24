@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -169,8 +168,8 @@ export default function AdminPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="col-span-1 lg:col-span-2">
+      
+        <Card>
            <CardHeader>
             <CardTitle>AI Content Factory</CardTitle>
             <CardDescription>
@@ -179,9 +178,8 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* PDF Upload Section */}
                 <div className="space-y-2">
-                    <h3 className="font-semibold">Train AI with a PDF</h3>
+                    <h3 className="font-semibold text-sm">Train AI with a PDF</h3>
                     <div className="flex items-center justify-center w-full">
                         <label htmlFor="pdf-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -194,14 +192,14 @@ export default function AdminPage() {
                     </div>
                      {isUploading && <div className="flex justify-center items-center gap-2"><Loader2 className="animate-spin h-4 w-4"/> <span>Processing PDF...</span></div>}
                 </div>
-                 {/* Text Input Section */}
+                
                 <div className="space-y-2">
-                    <h3 className="font-semibold">Generate from Raw Text</h3>
+                    <h3 className="font-semibold text-sm">Generate from Raw Text</h3>
                     <Textarea
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         placeholder="Or paste your raw text content here..."
-                        className="text-base min-h-[128px]"
+                        className="text-sm min-h-[128px]"
                     />
                 </div>
             </div>
@@ -235,7 +233,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-         <Card className="col-span-1 lg:col-span-2">
+         <Card>
           <CardHeader>
             <CardTitle>Manual Content Creation</CardTitle>
             <CardDescription>
@@ -262,9 +260,6 @@ export default function AdminPage() {
               ))}
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
-
-    
