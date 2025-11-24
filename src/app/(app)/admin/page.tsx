@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -8,13 +9,10 @@ import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight, UploadCloud }
 import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { doc, setDoc, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
-import { FileInput } from '@/components/ui/file-input';
 import { blobToBase64 } from '@/lib/utils';
-import { uploadImageToStorage } from '@/lib/firebase/storage';
-import { v4 as uuidv4 } from 'uuid';
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
 
@@ -78,7 +76,12 @@ export default function AdminPage() {
 
       let targetCollection: string;
       if ('skill' in aiResult) {
-          targetCollection = aiResult.skill === 'Reading' ? 'readingTests' : aiResult.skill === 'Listening' ? 'listeningTests' : 'mockTests';
+          switch (aiResult.skill) {
+              case 'Reading': targetCollection = 'readingTests'; break;
+              case 'Listening': targetCollection = 'listeningTests'; break;
+              case 'Writing': targetCollection = 'mockTests'; break;
+              default: targetCollection = 'lessons';
+          }
       } else {
           targetCollection = 'lessons';
       }
@@ -110,6 +113,16 @@ export default function AdminPage() {
   const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !firestore) return;
+
+    // Check file size (100MB limit)
+    if (file.size > 100 * 1024 * 1024) {
+        toast({
+            variant: 'destructive',
+            title: 'File Too Large',
+            description: 'Please upload a PDF smaller than 100MB.',
+        });
+        return;
+    }
 
     setIsUploading(true);
     setError(null);
@@ -174,7 +187,7 @@ export default function AdminPage() {
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <UploadCloud className="w-8 h-8 mb-2 text-gray-500" />
                                 <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-gray-500">PDF (MAX. 10MB)</p>
+                                <p className="text-xs text-gray-500">PDF (MAX. 100MB)</p>
                             </div>
                             <input id="pdf-upload" type="file" className="hidden" onChange={handlePdfUpload} accept=".pdf" disabled={isUploading} />
                         </label>
@@ -253,3 +266,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
