@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { notFound, useParams, useRouter } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
 import type { ListeningTest, ListeningQuestion } from '@/lib/types';
@@ -429,9 +429,8 @@ function TestPageSkeleton() {
     )
 }
 
-export default function ListeningTaskPage() {
-    const params = useParams();
-    const testId = params.testId as string;
+export default function ListeningTaskPage({ params }: { params: { testId: string } }) {
+    const { testId } = params;
     const { firestore } = useFirebase();
 
     const testDocRef = useMemoFirebase(() => {

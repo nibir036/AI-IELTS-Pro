@@ -1,6 +1,6 @@
 'use client';
 
-import { notFound, useParams } from "next/navigation";
+import { notFound } from "next/navigation";
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { MockTest, WritingQuestion } from '@/lib/types';
@@ -21,9 +21,8 @@ function TestPageSkeleton() {
     );
 }
 
-export default function WritingTaskPage() {
-    const params = useParams();
-    const testId = params.testId as string;
+export default function WritingTaskPage({ params }: { params: { testId: string } }) {
+    const { testId } = params;
     const { firestore } = useFirebase();
 
     const testDocRef = useMemoFirebase(() => {
@@ -41,6 +40,7 @@ export default function WritingTaskPage() {
         notFound();
     }
 
+    // This component currently only supports one question per test.
     const task = test.questions[0] as WritingQuestion;
 
     return (

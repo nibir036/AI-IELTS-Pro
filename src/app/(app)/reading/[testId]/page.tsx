@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { notFound, useParams } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
@@ -300,9 +300,8 @@ function TestPageSkeleton() {
     )
 }
 
-export default function ReadingTaskPage() {
-    const params = useParams();
-    const testId = params.testId as string;
+export default function ReadingTaskPage({ params }: { params: { testId: string } }) {
+    const { testId } = params;
     const { firestore } = useFirebase();
 
     const testDocRef = useMemoFirebase(() => {

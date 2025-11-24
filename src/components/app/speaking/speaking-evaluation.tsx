@@ -210,8 +210,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
       <Card>
         <CardHeader>
           <Badge variant="outline" className="w-fit">Speaking Task</Badge>
-          <CardTitle className="pt-2">{testId}</CardTitle>
-          <CardDescription>{task}</CardDescription>
+          <CardTitle className="pt-2">{task}</CardTitle>
         </CardHeader>
         <CardContent>
           {hasMicPermission === null && <div className="flex items-center justify-center h-24 bg-muted rounded-lg"><Loader2 className="animate-spin" /></div>}

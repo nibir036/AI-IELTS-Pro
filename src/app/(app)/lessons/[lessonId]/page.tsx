@@ -61,9 +61,8 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
 }
 
 
-export default function LessonPage() {
-    const params = useParams();
-    const lessonId = params.lessonId as string;
+export default function LessonPage({ params }: { params: { lessonId: string } }) {
+    const { lessonId } = params;
     const { firestore } = useFirebase();
 
     const lessonDocRef = useMemoFirebase(() => {
