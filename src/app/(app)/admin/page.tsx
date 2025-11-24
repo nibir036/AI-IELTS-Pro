@@ -17,28 +17,28 @@ type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 
 const creationCards = [
     {
         title: "Writing Test",
-        description: "Manually craft a new Writing test with Task 1 and Task 2 prompts.",
+        description: "Manually craft a new Writing test.",
         icon: FileText,
         href: "/admin/create/writing",
         isReady: true,
     },
      {
         title: "Listening Test",
-        description: "Create a Listening test with a transcript and multiple questions. AI will generate the audio.",
+        description: "Upload audio or use AI generation.",
         icon: Headphones,
         href: "/admin/create/listening",
         isReady: true,
     },
     {
         title: "Speaking Test",
-        description: "Build a new Speaking test with prompts for all three parts.",
+        description: "Build a new Speaking test.",
         icon: Mic,
         href: "/admin/create/speaking",
         isReady: true,
     },
      {
         title: "Reading Test",
-        description: "This feature is under development. Plan your reading passages here in the future.",
+        description: "Feature under development.",
         icon: BookOpen,
         href: "/admin/create/reading",
         isReady: false,
@@ -131,9 +131,68 @@ export default function AdminPage() {
         </p>
       </div>
 
-       <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="col-span-1 lg:col-span-2">
           <CardHeader>
-            <CardTitle>Manual Test Creation</CardTitle>
+            <CardTitle>AI Content Factory</CardTitle>
+            <CardDescription>
+             Paste raw text from any source (e.g., PDF, article, notes) and let the AI structure it into a lesson or test, then save it directly to the database.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-4">
+              <Select value={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
+                  <SelectTrigger>
+                      <SelectValue placeholder="1. Select content type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="Lesson">Lesson (Grammar, Vocabulary, Tips)</SelectItem>
+                      <SelectItem value="SpeakingPrompt">Speaking Prompt</SelectItem>
+                      <SelectItem value="WritingTest">Writing Test</SelectItem>
+                      <SelectItem value="ReadingTest">Reading Test</SelectItem>
+                      <SelectItem value="ListeningTest">Listening Test (from Transcript)</SelectItem>
+                  </SelectContent>
+              </Select>
+
+              <Textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="2. Paste your raw text content here..."
+                className="flex-grow text-base min-h-[300px]"
+                disabled={!contentType}
+              />
+              <Button onClick={handleProcess} disabled={isProcessing || !inputText || !contentType}>
+                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                3. Process & Save Content
+              </Button>
+            </div>
+             <div className="relative">
+                <p className="text-sm font-medium mb-2">AI Output Review</p>
+                <div className="p-4 bg-muted rounded-md h-full min-h-[300px] overflow-x-auto text-sm">
+                  {isProcessing && (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  )}
+                  {error && <p className="text-destructive whitespace-pre-wrap">{error}</p>}
+                  {result && (
+                    <pre className="whitespace-pre-wrap">
+                      {JSON.stringify(result, null, 2)}
+                    </pre>
+                  )}
+                  {!isProcessing && !result && !error && (
+                      <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                          <p>Output will be shown here.</p>
+                      </div>
+                  )}
+                </div>
+            </div>
+          </CardContent>
+        </Card>
+
+         <Card className="col-span-1 lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Manual Content Creation</CardTitle>
             <CardDescription>
              Manually create and configure specific tests for each module.
             </CardDescription>
@@ -156,68 +215,6 @@ export default function AdminPage() {
                     </div>
                 </Link>
               ))}
-          </CardContent>
-        </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>AI Content Factory</CardTitle>
-            <CardDescription>
-             Paste raw text from any source and let the AI structure it into a lesson or test.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-             <Select value={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
-                <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select content type..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="Lesson">Lesson (Grammar, Vocabulary, Tips)</SelectItem>
-                    <SelectItem value="SpeakingPrompt">Speaking Prompt</SelectItem>
-                    <SelectItem value="WritingTest">Writing Test</SelectItem>
-                    <SelectItem value="ReadingTest">Reading Test</SelectItem>
-                    <SelectItem value="ListeningTest">Listening Test</SelectItem>
-                </SelectContent>
-            </Select>
-
-            <Textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Paste your raw text content here..."
-              className="min-h-[400px] text-base"
-              disabled={!contentType}
-            />
-            <Button onClick={handleProcess} disabled={isProcessing || !inputText || !contentType}>
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Process & Save Content
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>AI Output Review</CardTitle>
-            <CardDescription>
-              The processed JSON will appear here before being saved to the database.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isProcessing && (
-              <div className="flex items-center justify-center h-40">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            )}
-            {error && <p className="text-destructive">{error}</p>}
-            {result && (
-              <pre className="p-4 bg-muted rounded-md overflow-x-auto text-sm">
-                {JSON.stringify(result, null, 2)}
-              </pre>
-            )}
-            {!isProcessing && !result && (
-                <div className="text-center text-muted-foreground p-8 border-dashed border rounded-md">
-                    <p>Output will be shown here.</p>
-                </div>
-            )}
           </CardContent>
         </Card>
       </div>
