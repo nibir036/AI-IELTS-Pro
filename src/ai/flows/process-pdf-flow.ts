@@ -48,7 +48,8 @@ const processPdfFlow = ai.defineFlow(
     outputSchema: ProcessPdfOutputSchema,
   },
   async ({ pdfData, fileName }) => {
-    const firestore = getFirebaseAdmin().firestore();
+    const adminApp = await getFirebaseAdmin();
+    const firestore = adminApp.firestore();
     
     // 1. Convert base64 PDF data to a buffer
     const pdfBuffer = Buffer.from(pdfData, 'base64');

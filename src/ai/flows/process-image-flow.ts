@@ -59,7 +59,8 @@ const processImageFlow = ai.defineFlow(
   },
   async ({ imageData, fileName }) => {
     // Get the firestore instance from the initialized admin app
-    const firestore = getFirebaseAdmin().firestore();
+    const adminApp = await getFirebaseAdmin();
+    const firestore = adminApp.firestore();
     
     // The model expects a full data URI
     const imageDataUri = `data:image/jpeg;base64,${imageData}`;
