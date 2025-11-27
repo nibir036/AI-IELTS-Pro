@@ -120,7 +120,7 @@ const prompt = ai.definePrompt({
   **YOUR CORE TASK:**
   1.  **Analyze the Input:** Determine if the 'rawText' is a short topic/summary (e.g., "The Verb System") or a full, detailed piece of content.
   2.  **Expand or Reformat:**
-      *   **If the 'rawText' is a short topic, you MUST EXPAND it.** Generate a complete, detailed lesson from scratch based on that topic. Create explanations, examples, tables, etc., as an expert teacher would.
+      *   **If the 'rawText' is a short topic, you MUST EXPAND it.** Generate a complete, detailed lesson from scratch based on that topic, using the provided 'knowledge' context. Create explanations, examples, tables, etc., as an expert teacher would.
       *   **If the 'rawText' is already detailed, you must REFORMAT it** into the structured 'contentBlocks' format.
   3.  **Generate Structured JSON:** You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
 
@@ -254,3 +254,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    

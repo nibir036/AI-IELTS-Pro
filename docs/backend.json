@@ -80,10 +80,6 @@
         "content_en": {
           "type": "string",
           "description": "Full lesson content in English."
-        },
-        "content_native": {
-          "type": "string",
-          "description": "Basic explanation in the user's native language."
         }
       },
       "required": [
@@ -397,3 +393,5 @@
     }
   }
 }
+
+    

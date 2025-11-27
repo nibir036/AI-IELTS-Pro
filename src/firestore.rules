@@ -49,6 +49,11 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin(); // Admin only for writes
     }
+    
+    match /knowledge/{chunkId} {
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
 
     // User-specific data is restricted to the owner
     match /users/{userId}/submissions/{submissionId} {
@@ -60,3 +65,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
