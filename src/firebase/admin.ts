@@ -1,6 +1,6 @@
 'use server';
 
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
 import type { App } from 'firebase-admin/app';
 
 // This simplified logic ensures robust initialization.
@@ -8,7 +8,10 @@ import type { App } from 'firebase-admin/app';
 // which is the correct way to handle auth in server environments like Firebase App Hosting.
 function initializeAdminApp(): App {
   if (admin.apps.length > 0) {
-    return admin.app();
+    const existingApp = admin.apps[0];
+    if (existingApp) {
+        return existingApp;
+    }
   }
 
   try {
