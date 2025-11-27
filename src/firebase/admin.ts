@@ -10,14 +10,14 @@ import type { App } from 'firebase-admin/app';
 // This variable will hold the singleton instance of the initialized app.
 let adminApp: App | null = null;
 
-function initializeAdminApp(): App {
+async function initializeAdminApp(): Promise<App> {
   if (adminApp) {
     return adminApp;
   }
 
   if (admin.apps.length > 0 && admin.apps[0]) {
     console.log('Reusing existing Firebase Admin SDK app instance.');
-    adminApp = admin.apps[0];
+    adminApp = admin.apps[0] as App;
     return adminApp;
   }
 
@@ -46,7 +46,7 @@ function initializeAdminApp(): App {
  * Ensures that initialization only happens once.
  * @returns The initialized Firebase Admin App.
  */
-export function getFirebaseAdmin(): App {
+export async function getFirebaseAdmin(): Promise<App> {
     // This will either return the existing instance or initialize a new one.
     return initializeAdminApp();
 }
