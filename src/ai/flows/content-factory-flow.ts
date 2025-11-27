@@ -111,20 +111,25 @@ const prompt = ai.definePrompt({
     knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
-  prompt: `You are an expert instructional designer and visual artist for an IELTS learning app. Your task is to transform raw text from a textbook into a structured, engaging, and visually rich JSON object that looks like a professional online lesson.
+  prompt: `You are an expert instructional designer and visual artist for an IELTS learning app. Your task is to transform raw text into a structured, engaging, and visually rich JSON object.
 
   CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns. The ID should be a short, random string, prefixed by the content type (e.g., GRAMMAR_a4f8, READING_z1w5).
 
   The user has specified that the desired content type is '{{{contentType}}}'. A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
   
-  You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
+  **YOUR CORE TASK:**
+  1.  **Analyze the Input:** Determine if the 'rawText' is a short topic/summary (e.g., "The Verb System") or a full, detailed piece of content.
+  2.  **Expand or Reformat:**
+      *   **If the 'rawText' is a short topic, you MUST EXPAND it.** Generate a complete, detailed lesson from scratch based on that topic. Create explanations, examples, tables, etc., as an expert teacher would.
+      *   **If the 'rawText' is already detailed, you must REFORMAT it** into the structured 'contentBlocks' format.
+  3.  **Generate Structured JSON:** You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
 
   **FOR 'Lesson' CONTENT TYPE (CRITICAL INSTRUCTIONS):**
-  - **Analyze Structure:** Analyze the 'rawText' to identify the main sections (e.g., "A Study this example", "B We use...", "C We use do/does..."). Each section should become a 'contentBlock'.
+  - **Analyze Structure:** Break down the content into logical sections. Each section should become a 'contentBlock'.
   - **Block Types:** Use the correct 'type' for each block:
-    - 'image_placeholder': For the main situation image at the start of a lesson (like "Alex is in bed asleep").
+    - 'image_placeholder': For the main situation image at the start of a lesson.
     - 'explanation': For descriptive text.
-    - 'grammar_table': For conjugation tables. You MUST parse the subjects (I/we/you/they) and verbs (drive/work/do) into the 'tableRows' array.
+    - 'grammar_table': For conjugation tables. You MUST parse subjects and verbs into the 'tableRows' array.
     - 'example_list': For bulleted or numbered lists of example sentences.
   - **Section Titles**: Use the \`sectionTitle\` field for headers like "A Study this example situation:".
   - **Image Hints (IMPORTANT!):** For an 'image_placeholder' block, create a very specific, 2-3 word \`imageHint\` based on the *concrete subject and action* of the example sentence.
