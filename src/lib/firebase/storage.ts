@@ -11,21 +11,24 @@ async function uploadToStorage(
     filePath: string
 ): Promise<string> {
     try {
-        const adminApp = await getFirebaseAdmin();
+        const adminApp = getFirebaseAdmin();
         const bucket = getStorage(adminApp).bucket("studio-161365104-8c7c1.appspot.com");
         const buffer = Buffer.from(base64Data, 'base64');
         const file = bucket.file(filePath);
 
+        // The 'metadata' object within the options now includes another 'metadata' field for the token
         await file.save(buffer, {
             metadata: {
                 contentType: contentType,
                 metadata: {
                   firebaseStorageDownloadTokens: uuidv4(),
                 }
-            },
-            public: true, // Make the file public
+            }
         });
         
+        // Make the file public after saving it
+        await file.makePublic();
+
         // Return the public URL
         const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
         console.log(`Successfully uploaded file. Public URL: ${publicUrl}`);

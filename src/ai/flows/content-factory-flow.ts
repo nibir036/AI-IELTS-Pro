@@ -186,7 +186,7 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-    const firestore = (await getFirebaseAdmin()).firestore();
+    const firestore = getFirebaseAdmin().firestore();
     // 1. Retrieve relevant knowledge from Firestore
     console.log("Searching knowledge base...");
     let knowledge = '';
