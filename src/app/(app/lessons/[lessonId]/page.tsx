@@ -4,12 +4,14 @@ import { use } from 'react';
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Lightbulb } from "lucide-react";
-import type { Lesson, ContentBlock } from '@/lib/types';
+import { CheckCircle } from "lucide-react";
+import type { Lesson, ContentBlock, GrammarTableRow } from '@/lib/types';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from '@/components/ui/separator';
 
 function LessonPageSkeleton() {
     return (
@@ -38,56 +40,86 @@ function LessonPageSkeleton() {
     )
 }
 
-function RenderContentBlock({ block }: { block: ContentBlock }) {
-    switch (block.type) {
-        case 'explanation':
-            return <p className="text-foreground/80 leading-relaxed">{block.content}</p>;
-        case 'example':
-            return (
-                <div className="my-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                    <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
-                        <p className="font-mono text-sm italic">"{block.content}"</p>
-                    </div>
-                    {block.generatedImageUrl && (
+
+function GrammarTable({ rows }: { rows: GrammarTableRow[] }) {
+    if (!rows || rows.length === 0) return null;
+    return (
+        <div className="my-4 overflow-hidden rounded-lg border">
+            <Table>
+                <TableBody>
+                    {rows.map((row, index) => (
+                        <TableRow key={index} className={index === rows.length - 1 ? "border-b-0" : ""}>
+                            <TableCell className="w-[40%] font-mono text-sm text-muted-foreground">{row.subject}</TableCell>
+                            <TableCell className="font-semibold" dangerouslySetInnerHTML={{ __html: row.verb }} />
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    )
+}
+
+function ExampleList({ examples }: { examples: string[] }) {
+    if (!examples || examples.length === 0) return null;
+    return (
+        <ul className="my-4 list-disc list-inside space-y-2">
+            {examples.map((example, index) => (
+                <li key={index} className="text-foreground/80 pl-2">
+                    <span dangerouslySetInnerHTML={{ __html: example }} />
+                </li>
+            ))}
+        </ul>
+    )
+}
+
+
+function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
+    return (
+        <div className="space-y-4 py-4">
+             {index > 0 && <Separator />}
+             {block.sectionTitle && (
+                <h3 className="text-xl font-semibold" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
+            )}
+            
+            {block.type === 'explanation' && block.content && (
+                <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />
+            )}
+            
+             {block.type === 'image_placeholder' && (
+                <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    {block.generatedImageUrl ? (
                         <div className="relative aspect-video">
                             <Image
                                 src={block.generatedImageUrl}
-                                alt={block.content}
+                                alt={block.imageHint || 'Lesson image'}
                                 fill
                                 className="rounded-lg shadow-md object-contain"
                             />
                         </div>
+                    ) :  <Skeleton className="aspect-video w-full" />}
+                     {block.content && (
+                         <div className="p-4 bg-muted/50 rounded-lg">
+                            <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />
+                        </div>
                     )}
                 </div>
-            );
-        case 'tip':
-            return (
-                 <div className="my-4 flex items-start gap-3 rounded-lg border bg-amber-50 p-4 text-amber-900 dark:bg-amber-900/20 dark:text-amber-200 dark:border-amber-800">
-                    <Lightbulb className="h-5 w-5 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                    <div>
-                        <h4 className="font-semibold">Pro Tip</h4>
-                        <p className="text-sm">{block.content}</p>
-                    </div>
+            )}
+            
+            {block.type === 'grammar_table' && block.tableRows && (
+                <GrammarTable rows={block.tableRows} />
+            )}
+
+            {block.type === 'example_list' && block.examples && (
+                <ExampleList examples={block.examples} />
+            )}
+            
+             {block.type === 'example' && block.content && (
+                <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
+                    <p className="font-mono text-sm italic" dangerouslySetInnerHTML={{ __html: `"${block.content}"` }} />
                 </div>
-            );
-        case 'image_placeholder':
-             return (
-                <div className="my-6">
-                    {block.generatedImageUrl && (
-                        <Image
-                            src={block.generatedImageUrl}
-                            alt={block.content}
-                            width={600}
-                            height={400}
-                            className="rounded-lg shadow-md mx-auto object-contain"
-                        />
-                    )}
-                    <p className="text-center text-xs text-muted-foreground mt-2 italic">{block.content}</p>
-                </div>
-            )
-        default:
-            return null;
-    }
+            )}
+        </div>
+    )
 }
 
 
@@ -102,18 +134,18 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                             <CardTitle className="text-3xl font-bold">{lesson.title}</CardTitle>
                             <CardDescription>Level: {lesson.level}</CardDescription>
                         </div>
-                         <div className="rounded-md bg-muted p-3">
-                           <BookOpen className="h-8 w-8 text-muted-foreground" />
+                         <div className="flex items-center justify-center rounded-lg bg-primary/10 text-primary h-16 w-16 text-3xl font-bold">
+                           {lesson.id.split('_')[0].charAt(0)}
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="divide-y">
                      {(lesson.contentBlocks && lesson.contentBlocks.length > 0) ? (
                         lesson.contentBlocks.map((block, index) => (
-                           <RenderContentBlock key={index} block={block} />
+                           <RenderContentBlock key={index} block={block} index={index}/>
                         ))
                      ) : (
-                         <p className="prose dark:prose-invert max-w-none text-base text-foreground/80">{lesson.content_en}</p>
+                         <p className="prose dark:prose-invert max-w-none text-base text-foreground/80 pt-4" dangerouslySetInnerHTML={{ __html: lesson.content_en }} />
                      )}
                 </CardContent>
             </Card>
