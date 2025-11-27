@@ -1,10 +1,12 @@
 
 'use server';
 
+import { config } from 'dotenv';
+config();
+
 import admin from 'firebase-admin';
 import type { App } from 'firebase-admin/app';
 import * as fs from 'fs';
-import * as path from 'path';
 
 function initializeAdminApp(): App {
   if (admin.apps.length > 0 && admin.apps[0]) {
@@ -13,8 +15,6 @@ function initializeAdminApp(): App {
 
   console.log('Firebase Admin SDK not initialized, initializing now...');
   try {
-    // Read the service account key from the environment variable.
-    // This is more robust for different server environments.
     const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
     if (!serviceAccountPath) {
         throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not set. This is required for server-side authentication.');
@@ -24,8 +24,6 @@ function initializeAdminApp(): App {
     
     const app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        // Add your databaseURL here if you have one, to avoid potential lookup issues
-        // databaseURL: `https://<YOUR_PROJECT_ID>.firebaseio.com`
     });
 
     console.log('Firebase Admin SDK initialized successfully.');
