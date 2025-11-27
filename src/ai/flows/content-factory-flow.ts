@@ -83,6 +83,7 @@ const WritingTestSchema = z.object({
         topic: z.string(),
         taskType: z.enum(["Task 1", "Task 2"]),
         wordCountTarget: z.number(),
+        imageUrl: z.string().optional().describe("A hint for an image for Task 1, e.g., 'line graph showing movie ticket sales'"),
     })),
 });
 
@@ -111,48 +112,64 @@ const prompt = ai.definePrompt({
     knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
-  prompt: `Role: You are an expert IELTS and ESL Curriculum Designer mimicking the pedagogical style of "English Grammar in Use" (Raymond Murphy).
+  prompt: `You are a world-class AI curriculum designer for IELTS and ESL students.
+Your task is to take a raw text input and a desired content type, and generate a structured, high-quality JSON output that adheres to the specified schema for that type.
 
-  Input: A grammar topic (e.g., "Unit 2 Present Simple (I do)").
-  
-  Task: Generate a complete, structured lesson for this topic. You must invent the examples and exercises, but they must be high-quality, simple, and clear.
-  
-  Structure Requirements (Output must be valid JSON):
-  1.  **Concept Context (Section A):** A short scenario introducing the grammar point. Include a "Visual Description" so the frontend can display an icon or placeholder.
-  2.  **The Rules (Section B):** Bullet points explaining when to use this tense (e.g., "general truths," "habits").
-  3.  **Grammar Table (Section C):** A structured look at Positive, Negative, and Question forms.
-  4.  **Exercises (Right Page):** Generate 3 distinct exercise types:
-      * Type 1: Fill in the blank (verb conjugation).
-      * Type 2: Make sentences negative or questions.
-      * Type 3: Situation-based questions (e.g., "You ask Lisa...").
-  
-  Output Format: JSON ONLY. Do not write markdown or conversational text.
-  
-  The user has specified that the desired content type is '{{{contentType}}}'. You must adhere to the corresponding output schema.
+You MUST act as a specialized expert based on the requested 'contentType'.
 
-  **If the 'contentType' is 'Lesson' and the 'rawText' is a short topic (like "The Verb System"), you MUST EXPAND it into a full lesson following these structure requirements.**
-  
-  **If the 'rawText' is already detailed content, reformat it to fit this structured model.**
+---
+## Persona & Task Instructions by Content Type:
 
-  **General Rules:**
-  - Generate a completely new, unique 'id' for the content.
-  - Break down the content into logical 'contentBlocks'.
-  - The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
-  
-  ---
-  SCHEMAS:
-  - Lesson Schema: ${JSON.stringify(LessonSchema.shape)}
-  - WritingTest Schema: ${JSON.stringify(WritingTestSchema.shape)}
-  - ReadingTest Schema: ${JSON.stringify(ReadingTestSchema.shape)}
-  - ListeningTest Schema: ${JSON.stringify(ListeningTestSchema.shape)}
+**IF contentType is 'Lesson' AND rawText is a 'Grammar' topic:**
+*   **Role:** Expert ESL Curriculum Designer, mimicking the pedagogical style of "English Grammar in Use" (Raymond Murphy).
+*   **Task:** Expand the grammar topic into a complete, structured lesson. Invent high-quality, simple, and clear examples.
+*   **Structure Requirements:**
+    1.  **Concept Context (Section A):** A short scenario introducing the grammar point in an 'image_placeholder' block.
+    2.  **The Rules (Section B):** Bullet points explaining when to use the tense in 'explanation' blocks.
+    3.  **Grammar Table (Section C):** A structured look at Positive, Negative, and Question forms using a 'grammar_table' block.
+    4.  **Content:** The main 'content_en' field should be a very short, one-sentence summary.
+*   **Image Hints:** The 'imageHint' for the 'image_placeholder' MUST be based on the concrete subject and action of the example sentence (e.g., 'man sleeping in bed', 'nurse with patient').
 
-  ---
-  Knowledge Base Context (if available):
-  {{{knowledge}}}
-  ---
-  Raw Text to Process:
-  {{{rawText}}}
-  ---
+**IF contentType is 'Lesson' AND rawText is a 'Vocabulary' topic:**
+*   **Role:** Expert Lexicographer and IELTS coach.
+*   **Task:** Create a vocabulary list from the topic. For each word, provide a simple definition and a clear example sentence relevant to IELTS.
+*   **Structure:** Create multiple 'contentBlocks'. Each block should have the vocabulary word as the 'sectionTitle', and the definition and example sentence in the 'content'.
+
+**IF contentType is 'Lesson' AND rawText is a 'Tips' topic:**
+*   **Role:** Senior IELTS Examiner giving advice.
+*   **Task:** Expand the topic into a concise, actionable tip.
+*   **Structure:** Use a 'tip' type 'contentBlock'. The 'content' should be the full, detailed tip.
+
+**IF contentType is 'SpeakingPrompt':**
+*   **Role:** IELTS Speaking Test Designer.
+*   **Task:** Based on the 'rawText' topic, generate a set of related speaking prompts for all three parts of the test.
+*   **Structure:** Create three separate 'Lesson' objects in the output, one for each part ('Part 1', 'Part 2', 'Part 3'). Each lesson's 'content_en' will contain the respective prompts.
+
+**IF contentType is 'WritingTest':**
+*   **Role:** IELTS Test Creator.
+*   **Task:** Generate a realistic IELTS Writing Test based on the 'rawText' topic.
+*   **Structure:** Generate one question for Task 1 and one for Task 2. For Task 1 (Academic), include an 'imageUrl' hint describing a chart or graph (e.g., 'line graph showing visitor numbers').
+
+**IF contentType is 'ReadingTest' or 'ListeningTest':**
+*   **Role:** Academic Test Designer.
+*   **Task:** The 'rawText' will contain the passage or transcript. Your job is to create it if it doesn't exist and then generate 4-5 relevant questions of various types (multiple-choice, true-false-not-given, fill-in-the-blank) based STRICTLY on the provided text.
+*   **Structure:** The 'passage' or 'transcript' field should contain the full text. The 'questions' array should be populated with questions and their correct answers. For ListeningTest, the 'audioUrl' should be left as a placeholder.
+
+---
+## General Rules:
+
+- **ID Generation:** Always generate a completely new, unique 'id' for the content.
+- **Expansion:** If the 'rawText' is a short topic, you MUST EXPAND it into a full piece of content according to the rules for that 'contentType'. Do not just repeat the input.
+- **Output Format:** JSON ONLY. Do not write markdown or conversational text.
+
+---
+### INPUT:
+
+- **Desired Content Type:** '{{{contentType}}}'
+- **Knowledge Base Context (use if helpful):** {{{knowledge}}}
+- **Raw Text to Process:** '{{{rawText}}}'
+
+---
 `,
   config: {
     temperature: 0.7,
@@ -202,7 +219,13 @@ const contentFactoryFlow = ai.defineFlow(
     if ('contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
         console.log("Generating images for lesson blocks...");
         const imageGenerationPromises = structuredContent.contentBlocks.map(async (block, index) => {
-            let imagePrompt = block.imageHint;
+            let imagePrompt : string | undefined = undefined;
+
+            if (block.type === 'image_placeholder') {
+                imagePrompt = block.content;
+            } else if (block.imageHint) {
+                imagePrompt = block.imageHint;
+            }
 
             if (imagePrompt) {
                 try {
