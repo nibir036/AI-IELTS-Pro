@@ -111,33 +111,29 @@ const prompt = ai.definePrompt({
     knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
-  prompt: `You are an expert instructional designer and visual artist for an IELTS learning app. Your task is to transform raw text into a structured, engaging, and visually rich JSON object.
+  prompt: `Role: You are an expert ESL Curriculum Designer mimicking the pedagogical style of "English Grammar in Use" (Raymond Murphy).
 
-  CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns. The ID should be a short, random string, prefixed by the content type (e.g., GRAMMAR_a4f8, READING_z1w5).
-
-  The user has specified that the desired content type is '{{{contentType}}}'. A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
+  Input: A grammar topic (e.g., "Unit 2 Present Simple (I do)").
   
-  **YOUR CORE TASK:**
-  1.  **Analyze the Input:** Determine if the 'rawText' is a short topic/summary (e.g., "The Verb System") or a full, detailed piece of content.
-  2.  **Expand or Reformat:**
-      *   **If the 'rawText' is a short topic, you MUST EXPAND it.** Generate a complete, detailed lesson from scratch based on that topic, using the provided 'knowledge' context. Create explanations, examples, tables, etc., as an expert teacher would.
-      *   **If the 'rawText' is already detailed, you must REFORMAT it** into the structured 'contentBlocks' format.
-  3.  **Generate Structured JSON:** You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
+  Task: Generate a complete, structured lesson for the given topic. You must invent high-quality, simple, and clear examples and exercises. The output must be valid JSON only. Do not write markdown or conversational text.
 
-  **FOR 'Lesson' CONTENT TYPE (CRITICAL INSTRUCTIONS):**
-  - **Analyze Structure:** Break down the content into logical sections. Each section should become a 'contentBlock'.
-  - **Block Types:** Use the correct 'type' for each block:
-    - 'image_placeholder': For the main situation image at the start of a lesson.
-    - 'explanation': For descriptive text.
-    - 'grammar_table': For conjugation tables. You MUST parse subjects and verbs into the 'tableRows' array.
-    - 'example_list': For bulleted or numbered lists of example sentences.
-  - **Section Titles**: Use the \`sectionTitle\` field for headers like "A Study this example situation:".
-  - **Image Hints (IMPORTANT!):** For an 'image_placeholder' block, create a very specific, 2-3 word \`imageHint\` based on the *concrete subject and action* of the example sentence.
-    - Example: If the text is "Alex is a bus driver, but now he is in bed asleep", the hint MUST be 'man sleeping in bed'.
-    - Example: If the text is "Nurses look after patients", the hint MUST be 'nurse with patient'.
-    - DO NOT use abstract grammar terms for hints. The hint must describe a visual scene.
-  - **Main Summary**: The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
+  The user has specified that the desired content type is '{{{contentType}}}'. You must adhere to the corresponding output schema.
 
+  **If the 'contentType' is 'Lesson' and the 'rawText' is a short topic (like "The Verb System"), you MUST EXPAND it into a full lesson following these structure requirements:**
+  
+  Structure Requirements:
+  1.  **Concept Context (Section A):** Create a short scenario introducing the grammar point. Format this as an 'image_placeholder' content block. The 'content' field should contain the example sentence, and you must generate a 'imageHint' that describes the visual scene.
+  2.  **The Rules (Section B):** Explain when to use the tense (e.g., "general truths," "habits") using 'explanation' and 'example_list' content blocks.
+  3.  **Grammar Table (Section C):** Create a 'grammar_table' content block showing Positive, Negative, and Question forms.
+  4.  **Exercises (Right Page):** Generate at least three distinct 'explanation' blocks for exercises, each with a clear title (e.g., 'Exercise 1: Fill in the blank'). Do not generate the answers.
+
+  **If the 'rawText' is already detailed content, reformat it to fit this structured model.**
+
+  **General Rules:**
+  - Generate a completely new, unique 'id' for the content.
+  - Break down the content into logical 'contentBlocks'.
+  - The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
+  
   ---
   SCHEMAS:
   - Lesson Schema: ${JSON.stringify(LessonSchema.shape)}
@@ -254,5 +250,7 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
 
     
