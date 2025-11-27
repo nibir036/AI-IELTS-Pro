@@ -1,37 +1,42 @@
+
 'use server';
 
 import admin from 'firebase-admin';
 import type { App } from 'firebase-admin/app';
+import * as fs from 'fs';
+import * as path from 'path';
 
-// This simplified logic ensures robust initialization.
-// It relies on the standard GOOGLE_APPLICATION_CREDENTIALS environment variable,
-// which is the correct way to handle auth in server environments like Firebase App Hosting.
 function initializeAdminApp(): App {
-  // Check if the app is already initialized to prevent errors
-  if (admin.apps.length > 0) {
-    const existingApp = admin.apps[0];
-    if (existingApp) {
-        return existingApp;
-    }
+  if (admin.apps.length > 0 && admin.apps[0]) {
+    return admin.apps[0];
   }
 
-  // If not initialized, create a new app instance.
-  // This will automatically use the service account credentials from the environment.
   console.log('Firebase Admin SDK not initialized, initializing now...');
   try {
-    const app = admin.initializeApp();
+    // Read the service account key from the environment variable.
+    // This is more robust for different server environments.
+    const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (!serviceAccountPath) {
+        throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not set. This is required for server-side authentication.');
+    }
+
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    
+    const app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        // Add your databaseURL here if you have one, to avoid potential lookup issues
+        // databaseURL: `https://<YOUR_PROJECT_ID>.firebaseio.com`
+    });
+
     console.log('Firebase Admin SDK initialized successfully.');
     return app;
   } catch (error: any) {
     console.error('CRITICAL: Firebase Admin SDK initialization failed.', error);
-    // This error is critical for server-side functionality.
-    // Ensure that the service account credentials are correctly set up in the environment.
-    // Re-throw the error to make the failure visible during server startup.
     throw new Error(`Firebase Admin SDK initialization failed: ${error.message}`);
   }
 }
 
-// Export a function that returns the initialized app instance.
+// Export an async function that returns the initialized app instance.
 export async function getFirebaseAdmin() {
     return initializeAdminApp();
 }
