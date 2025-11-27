@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -13,7 +14,8 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 import { generateAudioFromText } from './text-to-speech-flow';
-import { uploadAudioToStorage } from '@/lib/firebase/storage';
+import { generateLessonImage } from './generate-lesson-image-flow';
+import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
 import { getFirebaseAdmin } from '@/firebase/admin';
 
 const ProcessContentInputSchema = z.object({
@@ -34,6 +36,7 @@ const ContentBlockSchema = z.object({
     type: z.enum(['explanation', 'example', 'tip', 'image_placeholder']),
     content: z.string().describe("The text content for this block. For 'image_placeholder', this is a description of the desired image."),
     imageHint: z.string().optional().describe("A 1-2 word hint for finding an image directly related to the content. E.g., for 'A man is reading a book', the hint would be 'man reading'."),
+    generatedImageUrl: z.string().url().optional().describe("The URL of the AI-generated image for this block."),
 });
 
 const LessonSchema = z.object({
@@ -164,6 +167,7 @@ const contentFactoryFlow = ai.defineFlow(
     }
 
     // 2. Call the AI with the input text and the retrieved knowledge
+    console.log("Generating structured content from AI...");
     const result = await withRetry(() => prompt({ ...input, knowledge }), {
       retryOn: isRetryableGoogleAIError,
     });
@@ -173,8 +177,39 @@ const contentFactoryFlow = ai.defineFlow(
     if (!structuredContent) {
       throw new Error("Failed to generate structured content from the AI prompt.");
     }
+    console.log("Structured content generated.");
 
-    // 3. Post-process for special cases like Listening tests
+
+    // 3. Post-process for media generation
+    if (structuredContent.type === 'Lesson' && Array.isArray(structuredContent.contentBlocks)) {
+        console.log("Generating images for lesson blocks...");
+        const imageGenerationPromises = structuredContent.contentBlocks.map(async (block, index) => {
+            if ((block.type === 'example' || block.type === 'image_placeholder') && block.imageHint) {
+                try {
+                    console.log(`Generating image for hint: "${block.imageHint}"`);
+                    const imageResult = await generateLessonImage(block.imageHint);
+                    
+                    const [header, base64Data] = imageResult.imageDataUri.split(',');
+                    const contentType = header.split(':')[1].split(';')[0];
+                    const filePath = `lesson-images/${structuredContent.id}/block_${index}.png`;
+                    
+                    const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
+                    block.generatedImageUrl = publicUrl;
+                    console.log(`Image for hint "${block.imageHint}" uploaded to ${publicUrl}`);
+                    return block;
+                } catch (imgError) {
+                    console.error(`Failed to generate or upload image for hint: "${block.imageHint}"`, imgError);
+                    // Leave the block as is, without a generatedImageUrl
+                    return block;
+                }
+            }
+            return block;
+        });
+
+        structuredContent.contentBlocks = await Promise.all(imageGenerationPromises);
+        console.log("Image generation for lesson blocks complete.");
+    }
+
     if (input.contentType === 'ListeningTest' && 'transcript' in structuredContent && 'audioUrl' in structuredContent) {
         console.log("Generating audio for listening test...");
         

@@ -17,7 +17,8 @@ export interface User {
 export type ContentBlock = {
   type: 'explanation' | 'example' | 'tip' | 'image_placeholder';
   content: string;
-  imageHint?: string; // For 'image_placeholder' type
+  imageHint?: string;
+  generatedImageUrl?: string; // URL of the AI-generated image
 };
 
 export interface Lesson {
