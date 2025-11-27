@@ -1,3 +1,4 @@
+
 'use client';
 import { use } from 'react';
 import { notFound } from "next/navigation";
@@ -51,7 +52,7 @@ function RenderContentBlock({ block }: { block: ContentBlock }) {
                         <div className="relative aspect-video">
                             <Image
                                 src={block.generatedImageUrl}
-                                alt={block.content}
+                                alt={block.imageHint || block.content}
                                 fill
                                 className="rounded-lg shadow-md object-contain"
                             />
@@ -72,7 +73,7 @@ function RenderContentBlock({ block }: { block: ContentBlock }) {
         case 'image_placeholder':
              return (
                 <div className="my-6">
-                    {block.generatedImageUrl && (
+                    {block.generatedImageUrl ? (
                         <Image
                             src={block.generatedImageUrl}
                             alt={block.content}
@@ -80,8 +81,9 @@ function RenderContentBlock({ block }: { block: ContentBlock }) {
                             height={400}
                             className="rounded-lg shadow-md mx-auto object-contain"
                         />
+                    ) : (
+                         <p className="text-center text-xs text-muted-foreground mt-2 italic" dangerouslySetInnerHTML={{ __html: block.content }} />
                     )}
-                    <p className="text-center text-xs text-muted-foreground mt-2 italic" dangerouslySetInnerHTML={{ __html: block.content }} />
                 </div>
             )
         default:

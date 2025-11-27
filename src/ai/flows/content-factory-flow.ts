@@ -118,9 +118,9 @@ const prompt = ai.definePrompt({
     - 'example': For standalone example sentences or short dialogues. Highlight these.
     - 'tip': For helpful hints or warnings.
     - 'image_placeholder': Where a visual would help clarify a concept, add a placeholder. Describe the image in the 'content' field.
-  - **CRITICALLY IMPORTANT: For every 'example' block, you MUST provide a relevant 2-word 'imageHint' that visually describes the *concrete subject and action* of the example sentence.
+  - **CRITICALLY IMPORTANT: For every 'example' block and 'image_placeholder' block, you MUST provide a relevant 2-word 'imageHint' that visually describes the *concrete subject and action* of the content.
     - If the example is 'Nurses look after patients in hospitals', the imageHint must be 'nurse with patient'.
-    - If the example is 'I usually go away at weekends', the imageHint must be 'person traveling'.
+    - If the example is 'The earth goes round the sun.', the imageHint must be 'earth orbiting sun'.
     - If the example is 'She is driving to work', the imageHint must be 'woman driving'.
     - DO NOT derive the hint from the abstract grammatical rule. Base it on the real-world content of the sentence.**
   - The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
@@ -188,10 +188,17 @@ const contentFactoryFlow = ai.defineFlow(
     if (structuredContent.type === 'Lesson' && Array.isArray(structuredContent.contentBlocks)) {
         console.log("Generating images for lesson blocks...");
         const imageGenerationPromises = structuredContent.contentBlocks.map(async (block, index) => {
-            if ((block.type === 'example' || block.type === 'image_placeholder') && block.imageHint) {
+            let imagePrompt = '';
+            if (block.type === 'image_placeholder' && block.content) {
+                imagePrompt = block.content;
+            } else if (block.type === 'example' && block.imageHint) {
+                imagePrompt = block.imageHint;
+            }
+
+            if (imagePrompt) {
                 try {
-                    console.log(`Generating image for hint: "${block.imageHint}"`);
-                    const imageResult = await generateLessonImage(block.imageHint);
+                    console.log(`Generating image for prompt: "${imagePrompt}"`);
+                    const imageResult = await generateLessonImage(imagePrompt);
                     
                     const [header, base64Data] = imageResult.imageDataUri.split(',');
                     const contentType = header.split(':')[1].split(';')[0];
@@ -199,12 +206,10 @@ const contentFactoryFlow = ai.defineFlow(
                     
                     const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
                     block.generatedImageUrl = publicUrl;
-                    console.log(`Image for hint "${block.imageHint}" uploaded to ${publicUrl}`);
-                    return block;
+                    console.log(`Image for prompt "${imagePrompt}" uploaded to ${publicUrl}`);
                 } catch (imgError) {
-                    console.error(`Failed to generate or upload image for hint: "${block.imageHint}"`, imgError);
+                    console.error(`Failed to generate or upload image for prompt: "${imagePrompt}"`, imgError);
                     // Leave the block as is, without a generatedImageUrl
-                    return block;
                 }
             }
             return block;
@@ -241,5 +246,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
