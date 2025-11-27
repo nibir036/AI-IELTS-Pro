@@ -15,8 +15,6 @@ import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 import { generateAudioFromText } from './text-to-speech-flow';
 import { uploadAudioToStorage } from '@/lib/firebase/storage';
 import { getFirebaseAdmin } from '@/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
-
 
 const ProcessContentInputSchema = z.object({
   contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
@@ -44,7 +42,7 @@ const LessonSchema = z.object({
 const ReadingTestSchema = z.object({
   id: z.string().describe("A unique ID for the test, e.g., R_AC_x7y2."),
   title: z.string(),
-  skill: z.enum(["Reading"]),
+  skill: z.literal("Reading"),
   passage: z.string(),
   questions: z.array(PracticeQuestionSchema),
 });
@@ -52,7 +50,7 @@ const ReadingTestSchema = z.object({
 const ListeningTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., L_AC_p9q3."),
     title: z.string(),
-    skill: z.enum(["Listening"]),
+    skill: z.literal("Listening"),
     audioUrl: z.string().url().describe("A placeholder URL. This will be replaced by the real URL after upload."),
     transcript: z.string().describe("The full transcript of the audio."),
     questions: z.array(PracticeQuestionSchema),
@@ -61,7 +59,7 @@ const ListeningTestSchema = z.object({
 const WritingTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., IELTS_Writing_z1w5."),
     testType: z.enum(["IELTS-Academic", "IELTS-General", "PTE"]),
-    skill: z.enum(["Writing"]),
+    skill: z.literal("Writing"),
     questions: z.array(z.object({
         task: z.number(),
         topic: z.string(),

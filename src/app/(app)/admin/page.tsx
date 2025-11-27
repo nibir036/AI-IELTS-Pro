@@ -12,6 +12,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { blobToBase64 } from '@/lib/utils';
+import { processPdf } from '@/ai/flows/process-pdf-flow';
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
 
@@ -42,7 +43,7 @@ const creationCards = [
         description: "Feature under development.",
         icon: BookOpen,
         href: "/admin/create/reading",
-        isReady: false,
+        isReady: true,
     }
 ];
 
@@ -128,22 +129,11 @@ export default function AdminPage() {
 
     try {
       const base64Pdf = await blobToBase64(file);
-      const res = await fetch('/api/process-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfData: base64Pdf.split(',')[1], fileName: file.name }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to process PDF on the server.');
-      }
-
-      const data = await res.json();
+      const result = await processPdf({ pdfData: base64Pdf.split(',')[1], fileName: file.name });
       
       toast({
         title: 'PDF Processed',
-        description: `Successfully extracted and stored ${data.chunkCount} knowledge chunks from ${file.name}.`,
+        description: `Successfully extracted and stored ${result.chunkCount} knowledge chunks from ${file.name}.`,
       });
 
     } catch (err: any) {

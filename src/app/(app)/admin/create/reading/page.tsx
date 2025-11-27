@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,14 +13,14 @@ export default function CreateReadingTestPage() {
                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                         <Wrench className="h-8 w-8 text-primary" />
                     </div>
-                    <CardTitle className="mt-4 text-2xl">Under Construction</CardTitle>
+                    <CardTitle className="mt-4 text-2xl">Create Reading Test</CardTitle>
                     <CardDescription className="text-base">
-                        The form for manually creating Reading tests is currently being developed.
+                        This feature is best handled by the AI Content Factory.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p className="mb-6 text-sm text-muted-foreground">
-                       For now, you can use the AI Content Factory to generate reading tests from raw text.
+                       Please use the AI Content Factory on the main Admin Dashboard to generate new reading tests from raw text. This ensures proper formatting and question generation.
                     </p>
                     <Button asChild>
                         <Link href="/admin">Back to Admin Dashboard</Link>

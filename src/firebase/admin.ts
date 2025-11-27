@@ -7,6 +7,7 @@ import type { App } from 'firebase-admin/app';
 // It relies on the standard GOOGLE_APPLICATION_CREDENTIALS environment variable,
 // which is the correct way to handle auth in server environments like Firebase App Hosting.
 function initializeAdminApp(): App {
+  // Check if the app is already initialized to prevent errors
   if (admin.apps.length > 0) {
     const existingApp = admin.apps[0];
     if (existingApp) {
@@ -14,6 +15,9 @@ function initializeAdminApp(): App {
     }
   }
 
+  // If not initialized, create a new app instance.
+  // This will automatically use the service account credentials from the environment.
+  console.log('Firebase Admin SDK not initialized, initializing now...');
   try {
     const app = admin.initializeApp();
     console.log('Firebase Admin SDK initialized successfully.');
