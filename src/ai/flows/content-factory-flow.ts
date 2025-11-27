@@ -111,22 +111,27 @@ const prompt = ai.definePrompt({
     knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
-  prompt: `Role: You are an expert ESL Curriculum Designer mimicking the pedagogical style of "English Grammar in Use" (Raymond Murphy).
+  prompt: `Role: You are an expert IELTS and ESL Curriculum Designer mimicking the pedagogical style of "English Grammar in Use" (Raymond Murphy).
 
   Input: A grammar topic (e.g., "Unit 2 Present Simple (I do)").
   
-  Task: Generate a complete, structured lesson for the given topic. You must invent high-quality, simple, and clear examples and exercises. The output must be valid JSON only. Do not write markdown or conversational text.
-
+  Task: Generate a complete, structured lesson for this topic. You must invent the examples and exercises, but they must be high-quality, simple, and clear.
+  
+  Structure Requirements (Output must be valid JSON):
+  1.  **Concept Context (Section A):** A short scenario introducing the grammar point. Include a "Visual Description" so the frontend can display an icon or placeholder.
+  2.  **The Rules (Section B):** Bullet points explaining when to use this tense (e.g., "general truths," "habits").
+  3.  **Grammar Table (Section C):** A structured look at Positive, Negative, and Question forms.
+  4.  **Exercises (Right Page):** Generate 3 distinct exercise types:
+      * Type 1: Fill in the blank (verb conjugation).
+      * Type 2: Make sentences negative or questions.
+      * Type 3: Situation-based questions (e.g., "You ask Lisa...").
+  
+  Output Format: JSON ONLY. Do not write markdown or conversational text.
+  
   The user has specified that the desired content type is '{{{contentType}}}'. You must adhere to the corresponding output schema.
 
-  **If the 'contentType' is 'Lesson' and the 'rawText' is a short topic (like "The Verb System"), you MUST EXPAND it into a full lesson following these structure requirements:**
+  **If the 'contentType' is 'Lesson' and the 'rawText' is a short topic (like "The Verb System"), you MUST EXPAND it into a full lesson following these structure requirements.**
   
-  Structure Requirements:
-  1.  **Concept Context (Section A):** Create a short scenario introducing the grammar point. Format this as an 'image_placeholder' content block. The 'content' field should contain the example sentence, and you must generate a 'imageHint' that describes the visual scene.
-  2.  **The Rules (Section B):** Explain when to use the tense (e.g., "general truths," "habits") using 'explanation' and 'example_list' content blocks.
-  3.  **Grammar Table (Section C):** Create a 'grammar_table' content block showing Positive, Negative, and Question forms.
-  4.  **Exercises (Right Page):** Generate at least three distinct 'explanation' blocks for exercises, each with a clear title (e.g., 'Exercise 1: Fill in the blank'). Do not generate the answers.
-
   **If the 'rawText' is already detailed content, reformat it to fit this structured model.**
 
   **General Rules:**
@@ -250,7 +255,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
 
     
