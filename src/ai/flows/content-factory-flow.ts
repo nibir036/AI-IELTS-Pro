@@ -118,7 +118,11 @@ const prompt = ai.definePrompt({
     - 'example': For standalone example sentences or short dialogues. Highlight these.
     - 'tip': For helpful hints or warnings.
     - 'image_placeholder': Where a visual would help clarify a concept, add a placeholder. Describe the image in the 'content' field.
-  - **Crucially, for every 'example' or 'image_placeholder' block, you MUST provide a relevant 2-word 'imageHint' that visually describes the content of the block. For example, if the content is 'A man is reading a book', the imageHint should be 'man reading'. If the content is about 'driving to work', the imageHint should be 'woman driving'.**
+  - **CRITICALLY IMPORTANT: For every 'example' block, you MUST provide a relevant 2-word 'imageHint' that visually describes the *concrete subject and action* of the example sentence.
+    - If the example is 'Nurses look after patients in hospitals', the imageHint must be 'nurse with patient'.
+    - If the example is 'I usually go away at weekends', the imageHint must be 'person traveling'.
+    - If the example is 'She is driving to work', the imageHint must be 'woman driving'.
+    - DO NOT derive the hint from the abstract grammatical rule. Base it on the real-world content of the sentence.**
   - The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
 
   ---
@@ -237,3 +241,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
