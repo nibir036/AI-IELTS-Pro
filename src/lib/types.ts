@@ -10,18 +10,23 @@ export interface User {
   nativeLanguage: string;
   currentBand: number;
   targetBand: number;
-  learningPathId: string; // Changed from DocumentReference to string
+  learningPathId: string; 
   totalPracticeTime: number; // in minutes
 }
+
+export type ContentBlock = {
+  type: 'explanation' | 'example' | 'tip' | 'image_placeholder';
+  content: string;
+  imageHint?: string; // For 'image_placeholder' type
+};
 
 export interface Lesson {
   id: string;
   type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening' | 'Speaking';
   title: string;
   level: 'Basic' | 'Intermediate' | 'Advanced' | 'All Levels' | "Part 1" | "Part 2" | "Part 3";
-  content_en: string;
-  content_native?: string;
-  explanation?: string;
+  contentBlocks: ContentBlock[]; // Changed from content_en to contentBlocks
+  content_en: string; // Keep for backward compatibility or simple descriptions
 }
 
 export interface MockTest {

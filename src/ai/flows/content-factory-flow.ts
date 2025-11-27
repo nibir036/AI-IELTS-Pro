@@ -30,13 +30,19 @@ const PracticeQuestionSchema = z.object({
   answer: z.string().describe("The correct answer to the question."),
 });
 
+const ContentBlockSchema = z.object({
+    type: z.enum(['explanation', 'example', 'tip', 'image_placeholder']),
+    content: z.string().describe("The text content for this block. For 'image_placeholder', this is a description of the desired image."),
+    imageHint: z.string().optional().describe("A 1-2 word hint for finding the image, e.g., 'person thinking'"),
+});
 
 const LessonSchema = z.object({
   id: z.string().describe("A unique ID for the lesson, e.g., VOCAB_u5t9, SPEAKING_a4f8."),
   type: z.enum(['Grammar', 'Vocabulary', 'Tips', 'Speaking']),
   title: z.string().describe("A concise, descriptive title for the lesson."),
   level: z.enum(['Basic', 'Intermediate', 'Advanced', 'All Levels', "Part 1", "Part 2", "Part 3"]),
-  content_en: z.string().describe("The full lesson content in English. For Speaking prompts, this is the main task description."),
+  content_en: z.string().describe("A brief, one-sentence summary of the lesson's content."),
+  contentBlocks: z.array(ContentBlockSchema).describe("An array of structured content blocks that make up the lesson."),
 });
 
 const ReadingTestSchema = z.object({
@@ -93,24 +99,34 @@ const prompt = ai.definePrompt({
     knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
-  prompt: `You are an expert IELTS curriculum developer. Your task is to analyze the provided text and context to generate a structured JSON object for an IELTS learning module.
+  prompt: `You are an expert instructional designer and IELTS curriculum developer. Your task is to transform raw text into a structured, engaging, and visually appealing JSON object for an IELTS learning module.
 
   CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns like 'L_AC_001'. The ID should be a short, random string, prefixed by the content type (e.g., LISTENING_a4f8, READING_z1w5).
 
   The user has specified that the desired content type is '{{{contentType}}}'.
   A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
   
-  Use the provided 'Raw Text' as the primary basis for the content. If 'Knowledge Base Context' is provided, use it as supplementary information to enrich and inform your generation.
-
   You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
 
+  **For 'Lesson' Content Type (Grammar, Vocab, etc.):**
+  - Analyze the 'rawText' to understand the core concept.
+  - Break down the explanation into logical 'contentBlocks'.
+  - Use different block types to create an engaging flow:
+    - 'explanation': For core teaching text.
+    - 'example': For standalone example sentences or short dialogues. Highlight these.
+    - 'tip': For helpful hints or warnings.
+    - 'image_placeholder': Where a visual would help, add a placeholder. Describe the image in the 'content' field and provide a 2-word 'imageHint'. For example, if explaining 'present continuous,' you might suggest an image of a person running.
+  - The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
+
+  ---
+  SCHEMAS:
   - Lesson Schema: ${JSON.stringify(LessonSchema.shape)}
   - WritingTest Schema: ${JSON.stringify(WritingTestSchema.shape)}
   - ReadingTest Schema: ${JSON.stringify(ReadingTestSchema.shape)}
   - ListeningTest Schema: ${JSON.stringify(ListeningTestSchema.shape)}
 
   ---
-  Knowledge Base Context:
+  Knowledge Base Context (if available):
   {{{knowledge}}}
   ---
   Raw Text to Process:
@@ -133,7 +149,6 @@ const contentFactoryFlow = ai.defineFlow(
     let knowledge = '';
     try {
         const knowledgeQuery = await firestore.collection('knowledge')
-            // This is a very basic search. A real implementation would use a more sophisticated search/vector query.
             .limit(5)
             .get(); 
 
