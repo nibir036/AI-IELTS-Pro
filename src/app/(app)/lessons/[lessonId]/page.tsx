@@ -37,9 +37,7 @@ function LessonPageSkeleton() {
     )
 }
 
-function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
-    const imageUrl = `https://picsum.photos/seed/${block.imageHint || index}/600/400`;
-
+function RenderContentBlock({ block }: { block: ContentBlock }) {
     switch (block.type) {
         case 'explanation':
             return <p className="text-foreground/80 leading-relaxed">{block.content}</p>;
@@ -49,15 +47,16 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                     <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
                         <p className="font-mono text-sm italic">"{block.content}"</p>
                     </div>
-                    <div className="relative aspect-video">
-                        <Image
-                            src={imageUrl}
-                            alt={block.content}
-                            fill
-                            className="rounded-lg shadow-md object-cover"
-                            data-ai-hint={block.imageHint}
-                        />
-                    </div>
+                    {block.generatedImageUrl && (
+                        <div className="relative aspect-video">
+                            <Image
+                                src={block.generatedImageUrl}
+                                alt={block.content}
+                                fill
+                                className="rounded-lg shadow-md object-contain"
+                            />
+                        </div>
+                    )}
                 </div>
             );
         case 'tip':
@@ -71,16 +70,17 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                 </div>
             );
         case 'image_placeholder':
-            return (
+             return (
                 <div className="my-6">
-                    <Image
-                        src={imageUrl}
-                        alt={block.content}
-                        width={600}
-                        height={400}
-                        className="rounded-lg shadow-md mx-auto"
-                        data-ai-hint={block.imageHint}
-                    />
+                    {block.generatedImageUrl && (
+                        <Image
+                            src={block.generatedImageUrl}
+                            alt={block.content}
+                            width={600}
+                            height={400}
+                            className="rounded-lg shadow-md mx-auto object-contain"
+                        />
+                    )}
                     <p className="text-center text-xs text-muted-foreground mt-2 italic">{block.content}</p>
                 </div>
             )
@@ -109,7 +109,7 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                 <CardContent className="space-y-6">
                      {(lesson.contentBlocks && lesson.contentBlocks.length > 0) ? (
                         lesson.contentBlocks.map((block, index) => (
-                           <RenderContentBlock key={index} block={block} index={index} />
+                           <RenderContentBlock key={index} block={block} />
                         ))
                      ) : (
                          <p className="prose dark:prose-invert max-w-none text-base text-foreground/80">{lesson.content_en}</p>
@@ -121,9 +121,8 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
 }
 
 
-export default function LessonPage({ params }: { params: { lessonId: string } }) {
-    const p = use(params);
-    const { lessonId } = p;
+export default function LessonPage({ params }: { params: Promise<{ lessonId: string }> }) {
+    const { lessonId } = use(params);
     const { firestore } = useFirebase();
 
     const lessonDocRef = useMemoFirebase(() => {
