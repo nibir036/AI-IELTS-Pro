@@ -3,7 +3,7 @@
 
 import { getStorage } from 'firebase-admin/storage';
 import { v4 as uuidv4 } from 'uuid';
-import { firebaseAdmin } from '@/firebase/admin'; // Ensure admin is initialized
+import { getFirebaseAdmin } from '@/firebase/admin'; // Ensure admin is initialized
 
 async function uploadToStorage(
     base64Data: string, 
@@ -11,7 +11,8 @@ async function uploadToStorage(
     filePath: string
 ): Promise<string> {
     try {
-        const bucket = getStorage(firebaseAdmin.app()).bucket("studio-161365104-8c7c1.appspot.com");
+        const adminApp = getFirebaseAdmin();
+        const bucket = getStorage(adminApp).bucket("studio-161365104-8c7c1.appspot.com");
         const buffer = Buffer.from(base64Data, 'base64');
         const file = bucket.file(filePath);
 

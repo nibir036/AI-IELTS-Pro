@@ -6,11 +6,11 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { firebaseAdmin } from '@/firebase/admin';
+import { getFirebaseAdmin } from '@/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import pdf from 'pdf-parse';
 
-const firestore = firebaseAdmin.firestore();
+const firestore = getFirebaseAdmin().firestore();
 
 // Helper to chunk text into smaller pieces
 function chunkText(text: string, chunkSize: number, overlap: number): string[] {

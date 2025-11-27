@@ -14,10 +14,10 @@ import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 import { generateAudioFromText } from './text-to-speech-flow';
 import { uploadAudioToStorage } from '@/lib/firebase/storage';
-import { firebaseAdmin } from '@/firebase/admin';
+import { getFirebaseAdmin } from '@/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
-const firestore = firebaseAdmin.firestore();
+const firestore = getFirebaseAdmin().firestore();
 
 const ProcessContentInputSchema = z.object({
   contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
