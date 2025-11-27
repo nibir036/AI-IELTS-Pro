@@ -127,8 +127,10 @@ You MUST act as a specialized expert based on the requested 'contentType'.
     1.  **Concept Context (Section A):** A short scenario introducing the grammar point in an 'image_placeholder' block.
     2.  **The Rules (Section B):** Bullet points explaining when to use the tense in 'explanation' blocks.
     3.  **Grammar Table (Section C):** A structured look at Positive, Negative, and Question forms using a 'grammar_table' block.
-    4.  **Content:** The main 'content_en' field should be a very short, one-sentence summary.
-*   **Image Hints:** The 'imageHint' for the 'image_placeholder' MUST be based on the concrete subject and action of the example sentence (e.g., 'man sleeping in bed', 'nurse with patient').
+*   **Image Hints (IMPORTANT!):** For an 'image_placeholder' block, create a very specific, 2-3 word 'imageHint' based on the *concrete subject and action* of the example sentence.
+    *   Example: If the text is "Alex is a bus driver, but now he is in bed asleep", the hint MUST be 'man sleeping in bed'.
+    *   Example: If the text is "Nurses look after patients", the hint MUST be 'nurse with patient'.
+*   **Content:** The main 'content_en' field should be a very short, one-sentence summary.
 
 **IF contentType is 'Lesson' AND rawText is a 'Vocabulary' topic:**
 *   **Role:** Expert Lexicographer and IELTS coach.
@@ -159,7 +161,7 @@ You MUST act as a specialized expert based on the requested 'contentType'.
 ## General Rules:
 
 - **ID Generation:** Always generate a completely new, unique 'id' for the content.
-- **Expansion:** If the 'rawText' is a short topic, you MUST EXPAND it into a full piece of content according to the rules for that 'contentType'. Do not just repeat the input.
+- **Expansion (CRITICAL!):** If the 'rawText' is a short topic (less than 50 words), you MUST EXPAND it into a full piece of content according to the rules for that 'contentType'. Do not just repeat the input. Be creative and comprehensive.
 - **Output Format:** JSON ONLY. Do not write markdown or conversational text.
 
 ---
@@ -221,8 +223,9 @@ const contentFactoryFlow = ai.defineFlow(
         const imageGenerationPromises = structuredContent.contentBlocks.map(async (block, index) => {
             let imagePrompt : string | undefined = undefined;
 
+            // More aggressive image generation trigger
             if (block.type === 'image_placeholder') {
-                imagePrompt = block.content;
+                imagePrompt = block.content || block.imageHint;
             } else if (block.imageHint) {
                 imagePrompt = block.imageHint;
             }

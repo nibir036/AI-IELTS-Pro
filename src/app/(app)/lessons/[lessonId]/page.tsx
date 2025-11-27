@@ -4,7 +4,7 @@ import { use } from 'react';
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, CheckCircle } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import type { Lesson, ContentBlock, GrammarTableRow } from '@/lib/types';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -42,6 +42,7 @@ function LessonPageSkeleton() {
 
 
 function GrammarTable({ rows }: { rows: GrammarTableRow[] }) {
+    if (!rows || rows.length === 0) return null;
     return (
         <div className="my-4 overflow-hidden rounded-lg border">
             <Table>
@@ -49,7 +50,7 @@ function GrammarTable({ rows }: { rows: GrammarTableRow[] }) {
                     {rows.map((row, index) => (
                         <TableRow key={index} className={index === rows.length - 1 ? "border-b-0" : ""}>
                             <TableCell className="w-[40%] font-mono text-sm text-muted-foreground">{row.subject}</TableCell>
-                            <TableCell className="font-semibold">{row.verb}</TableCell>
+                            <TableCell className="font-semibold" dangerouslySetInnerHTML={{ __html: row.verb }} />
                         </TableRow>
                     ))}
                 </TableBody>
@@ -59,6 +60,7 @@ function GrammarTable({ rows }: { rows: GrammarTableRow[] }) {
 }
 
 function ExampleList({ examples }: { examples: string[] }) {
+    if (!examples || examples.length === 0) return null;
     return (
         <ul className="my-4 list-disc list-inside space-y-2">
             {examples.map((example, index) => (
@@ -148,7 +150,7 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                            <RenderContentBlock key={index} block={block} index={index}/>
                         ))
                      ) : (
-                         <p className="prose dark:prose-invert max-w-none text-base text-foreground/80" dangerouslySetInnerHTML={{ __html: lesson.content_en }} />
+                         <p className="prose dark:prose-invert max-w-none text-base text-foreground/80 pt-4" dangerouslySetInnerHTML={{ __html: lesson.content_en }} />
                      )}
                 </CardContent>
             </Card>
@@ -178,3 +180,5 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
     
     return <LessonComponent lesson={lesson} />;
 }
+
+    
