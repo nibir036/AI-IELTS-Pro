@@ -40,12 +40,12 @@ function LessonPageSkeleton() {
 function RenderContentBlock({ block }: { block: ContentBlock }) {
     switch (block.type) {
         case 'explanation':
-            return <p className="text-foreground/80 leading-relaxed">{block.content}</p>;
+            return <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />;
         case 'example':
             return (
                 <div className="my-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                     <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
-                        <p className="font-mono text-sm italic">"{block.content}"</p>
+                        <p className="font-mono text-sm italic" dangerouslySetInnerHTML={{ __html: `"${block.content}"` }} />
                     </div>
                     {block.generatedImageUrl && (
                         <div className="relative aspect-video">
@@ -65,7 +65,7 @@ function RenderContentBlock({ block }: { block: ContentBlock }) {
                     <Lightbulb className="h-5 w-5 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                     <div>
                         <h4 className="font-semibold">Pro Tip</h4>
-                        <p className="text-sm">{block.content}</p>
+                        <p className="text-sm" dangerouslySetInnerHTML={{ __html: block.content }} />
                     </div>
                 </div>
             );
@@ -81,7 +81,7 @@ function RenderContentBlock({ block }: { block: ContentBlock }) {
                             className="rounded-lg shadow-md mx-auto object-contain"
                         />
                     )}
-                    <p className="text-center text-xs text-muted-foreground mt-2 italic">{block.content}</p>
+                    <p className="text-center text-xs text-muted-foreground mt-2 italic" dangerouslySetInnerHTML={{ __html: block.content }} />
                 </div>
             )
         default:
@@ -112,7 +112,7 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                            <RenderContentBlock key={index} block={block} />
                         ))
                      ) : (
-                         <p className="prose dark:prose-invert max-w-none text-base text-foreground/80">{lesson.content_en}</p>
+                         <p className="prose dark:prose-invert max-w-none text-base text-foreground/80" dangerouslySetInnerHTML={{ __html: lesson.content_en }} />
                      )}
                 </CardContent>
             </Card>
