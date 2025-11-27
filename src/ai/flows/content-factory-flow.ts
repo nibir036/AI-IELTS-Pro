@@ -42,7 +42,7 @@ const LessonSchema = z.object({
 const ReadingTestSchema = z.object({
   id: z.string().describe("A unique ID for the test, e.g., R_AC_x7y2."),
   title: z.string(),
-  skill: z.literal("Reading"),
+  skill: z.enum(["Reading"]),
   passage: z.string(),
   questions: z.array(PracticeQuestionSchema),
 });
@@ -50,7 +50,7 @@ const ReadingTestSchema = z.object({
 const ListeningTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., L_AC_p9q3."),
     title: z.string(),
-    skill: z.literal("Listening"),
+    skill: z.enum(["Listening"]),
     audioUrl: z.string().url().describe("A placeholder URL. This will be replaced by the real URL after upload."),
     transcript: z.string().describe("The full transcript of the audio."),
     questions: z.array(PracticeQuestionSchema),
@@ -59,7 +59,7 @@ const ListeningTestSchema = z.object({
 const WritingTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., IELTS_Writing_z1w5."),
     testType: z.enum(["IELTS-Academic", "IELTS-General", "PTE"]),
-    skill: z.literal("Writing"),
+    skill: z.enum(["Writing"]),
     questions: z.array(z.object({
         task: z.number(),
         topic: z.string(),
