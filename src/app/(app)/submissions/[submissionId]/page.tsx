@@ -1,5 +1,6 @@
 'use client';
 
+import { use } from 'react';
 import { notFound } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
@@ -20,7 +21,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 function ComprehensionTestReview({ submission }: { submission: Submission }) {
     const { firestore } = useFirebase();
     let testRef = null;
-    let questions: (ReadingQuestion | ListeningQuestion)[] = [];
     
     if (submission.skill === 'Reading') {
         testRef = useMemoFirebase(() => {
@@ -44,7 +44,7 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
         return <p>Test content could not be found for this submission.</p>;
     }
     
-    questions = test.questions || [];
+    const questions = test.questions || [];
 
     const userAnswers = submission.inputData as Record<string, string>;
     const explanations = submission.aiReport as Record<string, string> | null;
@@ -119,8 +119,8 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
 }
 
 
-export default function SubmissionPage({ params }: { params: { submissionId: string } }) {
-  const { submissionId } = params;
+export default function SubmissionPage({ params }: { params: Promise<{ submissionId: string }> }) {
+  const { submissionId } = use(params);
   const { firestore, user } = useFirebase();
 
   const submissionRef = useMemoFirebase(() => {

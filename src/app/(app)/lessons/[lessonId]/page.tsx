@@ -1,5 +1,6 @@
 'use client';
-import { notFound, useParams } from "next/navigation";
+import { use } from 'react';
+import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen } from "lucide-react";
@@ -61,8 +62,8 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
 }
 
 
-export default function LessonPage({ params }: { params: { lessonId: string } }) {
-    const { lessonId } = params;
+export default function LessonPage({ params }: { params: Promise<{ lessonId: string }> }) {
+    const { lessonId } = use(params);
     const { firestore } = useFirebase();
 
     const lessonDocRef = useMemoFirebase(() => {
