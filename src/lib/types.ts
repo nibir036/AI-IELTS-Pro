@@ -14,11 +14,19 @@ export interface User {
   totalPracticeTime: number; // in minutes
 }
 
+export type GrammarTableRow = {
+  subject: string;
+  verb: string;
+}
+
 export type ContentBlock = {
-  type: 'explanation' | 'example' | 'tip' | 'image_placeholder';
-  content: string;
+  type: 'explanation' | 'example' | 'tip' | 'image_placeholder' | 'grammar_table' | 'example_list';
+  sectionTitle?: string; // e.g., "A", "B", "C"
+  content?: string;
   imageHint?: string;
-  generatedImageUrl?: string; // URL of the AI-generated image
+  generatedImageUrl?: string; 
+  tableRows?: GrammarTableRow[]; // For grammar_table
+  examples?: string[]; // For example_list
 };
 
 export interface Lesson {
@@ -26,8 +34,8 @@ export interface Lesson {
   type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening' | 'Speaking';
   title: string;
   level: 'Basic' | 'Intermediate' | 'Advanced' | 'All Levels' | "Part 1" | "Part 2" | "Part 3";
-  contentBlocks: ContentBlock[]; // Changed from content_en to contentBlocks
-  content_en: string; // Keep for backward compatibility or simple descriptions
+  contentBlocks: ContentBlock[];
+  content_en: string; // Brief summary
 }
 
 export interface MockTest {

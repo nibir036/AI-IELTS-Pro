@@ -32,12 +32,21 @@ const PracticeQuestionSchema = z.object({
   answer: z.string().describe("The correct answer to the question."),
 });
 
-const ContentBlockSchema = z.object({
-    type: z.enum(['explanation', 'example', 'tip', 'image_placeholder']),
-    content: z.string().describe("The text content for this block. For 'image_placeholder', this is a description of the desired image."),
-    imageHint: z.string().optional().describe("A 1-2 word hint for finding an image directly related to the content. E.g., for 'A man is reading a book', the hint would be 'man reading'."),
-    generatedImageUrl: z.string().url().optional().describe("The URL of the AI-generated image for this block."),
+const GrammarTableRowSchema = z.object({
+    subject: z.string(),
+    verb: z.string(),
 });
+
+const ContentBlockSchema = z.object({
+    type: z.enum(['explanation', 'example', 'tip', 'image_placeholder', 'grammar_table', 'example_list']),
+    sectionTitle: z.string().optional().describe("A title for this block, e.g., 'A', 'B', 'Study this example situation'"),
+    content: z.string().optional().describe("The text content for this block."),
+    imageHint: z.string().optional().describe("A 1-2 word hint for finding an image. MUST be derived from the concrete subject and action of the content, not abstract grammar rules."),
+    generatedImageUrl: z.string().url().optional().describe("The URL of the AI-generated image for this block."),
+    tableRows: z.array(GrammarTableRowSchema).optional().describe("An array of structured grammar table rows."),
+    examples: z.array(z.string()).optional().describe("An array of example sentences for a list."),
+});
+
 
 const LessonSchema = z.object({
   id: z.string().describe("A unique ID for the lesson, e.g., VOCAB_u5t9, SPEAKING_a4f8."),
@@ -102,28 +111,27 @@ const prompt = ai.definePrompt({
     knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
-  prompt: `You are an expert instructional designer and visual artist for an IELTS learning app. Your task is to transform raw text into a structured, engaging, and visually rich JSON object.
+  prompt: `You are an expert instructional designer and visual artist for an IELTS learning app. Your task is to transform raw text from a textbook into a structured, engaging, and visually rich JSON object that looks like a professional online lesson.
 
-  CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns. The ID should be a short, random string, prefixed by the content type (e.g., LISTENING_a4f8, READING_z1w5).
+  CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns. The ID should be a short, random string, prefixed by the content type (e.g., GRAMMAR_a4f8, READING_z1w5).
 
   The user has specified that the desired content type is '{{{contentType}}}'. A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
   
   You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
 
-  **For 'Lesson' Content Type (Grammar, Vocab, etc.):**
-  - Analyze the 'rawText' to understand the core concept.
-  - Break down the explanation into logical 'contentBlocks'.
-  - Use different block types to create an engaging flow:
-    - 'explanation': For core teaching text.
-    - 'example': For standalone example sentences or short dialogues. Highlight these.
-    - 'tip': For helpful hints or warnings.
-    - 'image_placeholder': Where a visual would help clarify a concept, add a placeholder. Describe the image in the 'content' field.
-  - **CRITICALLY IMPORTANT: For every 'example' block and 'image_placeholder' block, you MUST provide a relevant 2-word 'imageHint' that visually describes the *concrete subject and action* of the content.
-    - If the example is 'Nurses look after patients in hospitals', the imageHint must be 'nurse with patient'.
-    - If the example is 'The earth goes round the sun.', the imageHint must be 'earth orbiting sun'.
-    - If the example is 'She is driving to work', the imageHint must be 'woman driving'.
-    - DO NOT derive the hint from the abstract grammatical rule. Base it on the real-world content of the sentence.**
-  - The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
+  **FOR 'Lesson' CONTENT TYPE (CRITICAL INSTRUCTIONS):**
+  - **Analyze Structure:** Analyze the 'rawText' to identify the main sections (e.g., "A Study this example", "B We use...", "C We use do/does..."). Each section should become a 'contentBlock'.
+  - **Block Types:** Use the correct 'type' for each block:
+    - 'image_placeholder': For the main situation image at the start of a lesson (like "Alex is in bed asleep").
+    - 'explanation': For descriptive text.
+    - 'grammar_table': For conjugation tables. You MUST parse the subjects (I/we/you/they) and verbs (drive/work/do) into the 'tableRows' array.
+    - 'example_list': For bulleted or numbered lists of example sentences.
+  - **Section Titles**: Use the \`sectionTitle\` field for headers like "A Study this example situation:".
+  - **Image Hints (IMPORTANT!):** For an 'image_placeholder' block, create a very specific, 2-3 word \`imageHint\` based on the *concrete subject and action* of the example sentence.
+    - Example: If the text is "Alex is a bus driver, but now he is in bed asleep", the hint MUST be 'man sleeping in bed'.
+    - Example: If the text is "Nurses look after patients", the hint MUST be 'nurse with patient'.
+    - DO NOT use abstract grammar terms for hints. The hint must describe a visual scene.
+  - **Main Summary**: The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
 
   ---
   SCHEMAS:
@@ -185,15 +193,10 @@ const contentFactoryFlow = ai.defineFlow(
 
 
     // 3. Post-process for media generation
-    if (structuredContent.type === 'Lesson' && Array.isArray(structuredContent.contentBlocks)) {
+    if ('contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
         console.log("Generating images for lesson blocks...");
         const imageGenerationPromises = structuredContent.contentBlocks.map(async (block, index) => {
-            let imagePrompt = '';
-            if (block.type === 'image_placeholder' && block.content) {
-                imagePrompt = block.content;
-            } else if (block.type === 'example' && block.imageHint) {
-                imagePrompt = block.imageHint;
-            }
+            let imagePrompt = block.imageHint;
 
             if (imagePrompt) {
                 try {
