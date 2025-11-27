@@ -11,8 +11,9 @@ import { useFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
-import { blobToBase64 } from '@/lib/utils';
+import { blobToBase64, cn } from '@/lib/utils';
 import { processPdf } from '@/ai/flows/process-pdf-flow';
+import { processImage } from '@/ai/flows/process-image-flow';
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
 
@@ -52,6 +53,7 @@ export default function AdminPage() {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [result, setResult] = useState<ProcessContentOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -110,44 +112,77 @@ export default function AdminPage() {
     }
   };
 
-  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileUpload = async (file: File) => {
     if (!file) return;
-
+  
     // Check file size (100MB limit)
     if (file.size > 100 * 1024 * 1024) {
-        toast({
-            variant: 'destructive',
-            title: 'File Too Large',
-            description: 'Please upload a PDF smaller than 100MB.',
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'File Too Large',
+        description: 'Please upload a file smaller than 100MB.',
+      });
+      return;
     }
-
+  
     setIsUploading(true);
     setError(null);
-
+  
     try {
-      const base64Pdf = await blobToBase64(file);
-      const result = await processPdf({ pdfData: base64Pdf.split(',')[1], fileName: file.name });
+      const base64Data = (await blobToBase64(file)).split(',')[1];
+      let result;
+      
+      if (file.type.startsWith('image/')) {
+        result = await processImage({ imageData: base64Data, fileName: file.name });
+      } else if (file.type === 'application/pdf') {
+        result = await processPdf({ pdfData: base64Data, fileName: file.name });
+      } else {
+        throw new Error('Unsupported file type. Please upload a PDF or an image.');
+      }
       
       toast({
-        title: 'PDF Processed',
+        title: 'File Processed',
         description: `Successfully extracted and stored ${result.chunkCount} knowledge chunks from ${file.name}.`,
       });
-
+  
     } catch (err: any) {
-      console.error('PDF upload error:', err);
+      console.error('File upload error:', err);
       setError(err.message);
       toast({
         variant: 'destructive',
-        title: 'PDF Upload Failed',
+        title: 'File Upload Failed',
         description: err.message,
       });
     } finally {
       setIsUploading(false);
     }
   };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setIsDragging(true);
+    } else if (e.type === "dragleave") {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        handleFileUpload(e.target.files[0]);
+    }
+  }
+
 
   return (
     <div className="space-y-8">
@@ -163,24 +198,24 @@ export default function AdminPage() {
            <CardHeader>
             <CardTitle>AI Content Factory</CardTitle>
             <CardDescription>
-             Use the AI to structure raw text into lessons or tests, or upload a PDF to train the AI with new knowledge.
+             Use the AI to structure raw text into lessons or tests, or upload a file to train the AI with new knowledge.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <h3 className="font-semibold text-sm">Train AI with a PDF</h3>
-                    <div className="flex items-center justify-center w-full">
-                        <label htmlFor="pdf-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted">
+                    <h3 className="font-semibold text-sm">Train AI with a File</h3>
+                    <div className="flex items-center justify-center w-full" onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
+                        <label htmlFor="file-upload" className={cn("flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted", isDragging && "border-primary bg-primary/10")}>
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <UploadCloud className="w-8 h-8 mb-2 text-gray-500" />
                                 <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-gray-500">PDF (MAX. 100MB)</p>
+                                <p className="text-xs text-gray-500">PDF or Image (MAX. 100MB)</p>
                             </div>
-                            <input id="pdf-upload" type="file" className="hidden" onChange={handlePdfUpload} accept=".pdf" disabled={isUploading} />
+                            <input id="file-upload" type="file" className="hidden" onChange={handleFileSelect} accept=".pdf,image/*" disabled={isUploading} />
                         </label>
                     </div>
-                     {isUploading && <div className="flex justify-center items-center gap-2"><Loader2 className="animate-spin h-4 w-4"/> <span>Processing PDF...</span></div>}
+                     {isUploading && <div className="flex justify-center items-center gap-2"><Loader2 className="animate-spin h-4 w-4"/> <span>Processing File...</span></div>}
                 </div>
                 
                 <div className="space-y-2">
