@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -53,7 +52,7 @@ export default function CreateWritingTestPage() {
 
         setIsSubmitting(true);
         try {
-            const testId = `WRITING_${uuidv4().slice(0, 8)}`;
+            const testId = `IELTS_Writing_${uuidv4().slice(0, 8).toUpperCase()}`;
             let task1ImageUrl = '';
 
             // Handle image upload for Task 1

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -15,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { Loader2, PlusCircle, Trash2, Upload, FileAudio } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { processContent } from '@/ai/flows/content-factory-flow';
 import { FileInput } from '@/components/ui/file-input';
@@ -68,7 +67,7 @@ export default function CreateListeningTestPage() {
 
         setIsSubmitting(true);
         try {
-            const testId = `LISTENING_${uuidv4().slice(0, 8)}`;
+            const testId = `L_AC_${uuidv4().slice(0, 4).toUpperCase()}`;
             let audioUrl = '';
 
             if (values.audioFile && values.audioFile.length > 0) {
@@ -100,7 +99,7 @@ export default function CreateListeningTestPage() {
                 } else {
                      throw new Error('AI processing failed to return an audio URL.');
                 }
-            } else if (!audioUrl) {
+            } else if (!audioUrl && !listeningTest.transcript) {
                 throw new Error("No audio source provided. Please upload a file or provide a transcript.");
             }
 
@@ -147,7 +146,7 @@ export default function CreateListeningTestPage() {
                                 </FormItem>
                                 )}
                             />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                            <div className="space-y-4">
                                 <FormField
                                     control={form.control}
                                     name="audioFile"
@@ -162,8 +161,14 @@ export default function CreateListeningTestPage() {
                                         </FormItem>
                                     )}
                                 />
-                                <div className="text-center text-muted-foreground font-bold">OR</div>
-                            </div>
+                                <div className="relative">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <span className="w-full border-t" />
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-background px-2 text-muted-foreground">Or</span>
+                                    </div>
+                                </div>
                              <FormField
                                 control={form.control}
                                 name="transcript"
@@ -175,6 +180,7 @@ export default function CreateListeningTestPage() {
                                 </FormItem>
                                 )}
                             />
+                            </div>
                         </CardContent>
                     </Card>
 
