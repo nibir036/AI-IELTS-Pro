@@ -41,8 +41,8 @@ export interface Lesson {
 export interface MockTest {
   id: string;
   testType: 'IELTS-Academic' | 'PTE' | 'IELTS-General';
-  skill: 'Writing' | 'Speaking' | 'Reading' | 'Listening';
-  questions: Array<Record<string, any>>;
+  skill: 'Writing';
+  questions: Array<WritingQuestion>;
 }
 
 export interface ReadingTest {

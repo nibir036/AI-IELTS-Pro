@@ -78,12 +78,7 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
         <div className="space-y-4 py-4">
              {index > 0 && <Separator />}
              {block.sectionTitle && (
-                <div className="flex items-center gap-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
-                        {block.sectionTitle.charAt(0)}
-                    </div>
-                    <h3 className="text-xl font-semibold" dangerouslySetInnerHTML={{ __html: block.sectionTitle.substring(1).trim() }}/>
-                </div>
+                <h3 className="text-xl font-semibold" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
             {block.type === 'explanation' && block.content && (
@@ -180,5 +175,3 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
     
     return <LessonComponent lesson={lesson} />;
 }
-
-    
