@@ -37,14 +37,27 @@ function LessonPageSkeleton() {
     )
 }
 
-function RenderContentBlock({ block }: { block: ContentBlock }) {
+function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
+    const imageUrl = `https://picsum.photos/seed/${block.imageHint || index}/600/400`;
+
     switch (block.type) {
         case 'explanation':
             return <p className="text-foreground/80 leading-relaxed">{block.content}</p>;
         case 'example':
             return (
-                <div className="my-4 p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
-                    <p className="font-mono text-sm italic">"{block.content}"</p>
+                <div className="my-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
+                        <p className="font-mono text-sm italic">"{block.content}"</p>
+                    </div>
+                    <div className="relative aspect-video">
+                        <Image
+                            src={imageUrl}
+                            alt={block.content}
+                            fill
+                            className="rounded-lg shadow-md object-cover"
+                            data-ai-hint={block.imageHint}
+                        />
+                    </div>
                 </div>
             );
         case 'tip':
@@ -58,7 +71,6 @@ function RenderContentBlock({ block }: { block: ContentBlock }) {
                 </div>
             );
         case 'image_placeholder':
-             const imageUrl = `https://picsum.photos/seed/${block.imageHint || '1'}/600/400`;
             return (
                 <div className="my-6">
                     <Image
@@ -97,7 +109,7 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                 <CardContent className="space-y-6">
                      {(lesson.contentBlocks && lesson.contentBlocks.length > 0) ? (
                         lesson.contentBlocks.map((block, index) => (
-                           <RenderContentBlock key={index} block={block} />
+                           <RenderContentBlock key={index} block={block} index={index} />
                         ))
                      ) : (
                          <p className="prose dark:prose-invert max-w-none text-base text-foreground/80">{lesson.content_en}</p>

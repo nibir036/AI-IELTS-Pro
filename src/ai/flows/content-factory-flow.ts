@@ -33,7 +33,7 @@ const PracticeQuestionSchema = z.object({
 const ContentBlockSchema = z.object({
     type: z.enum(['explanation', 'example', 'tip', 'image_placeholder']),
     content: z.string().describe("The text content for this block. For 'image_placeholder', this is a description of the desired image."),
-    imageHint: z.string().optional().describe("A 1-2 word hint for finding the image, e.g., 'person thinking'"),
+    imageHint: z.string().optional().describe("A 1-2 word hint for finding an image directly related to the content. E.g., for 'A man is reading a book', the hint would be 'man reading'."),
 });
 
 const LessonSchema = z.object({
@@ -99,12 +99,11 @@ const prompt = ai.definePrompt({
     knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
-  prompt: `You are an expert instructional designer and IELTS curriculum developer. Your task is to transform raw text into a structured, engaging, and visually appealing JSON object for an IELTS learning module.
+  prompt: `You are an expert instructional designer and visual artist for an IELTS learning app. Your task is to transform raw text into a structured, engaging, and visually rich JSON object.
 
-  CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns like 'L_AC_001'. The ID should be a short, random string, prefixed by the content type (e.g., LISTENING_a4f8, READING_z1w5).
+  CRITICAL: You MUST generate a completely new, unique 'id' for the content. Do NOT reuse existing ID patterns. The ID should be a short, random string, prefixed by the content type (e.g., LISTENING_a4f8, READING_z1w5).
 
-  The user has specified that the desired content type is '{{{contentType}}}'.
-  A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
+  The user has specified that the desired content type is '{{{contentType}}}'. A 'SpeakingPrompt' should be formatted as a 'Lesson' schema with the type 'Speaking'.
   
   You must generate a valid JSON object that strictly adheres to the corresponding schema for the specified content type.
 
@@ -115,7 +114,8 @@ const prompt = ai.definePrompt({
     - 'explanation': For core teaching text.
     - 'example': For standalone example sentences or short dialogues. Highlight these.
     - 'tip': For helpful hints or warnings.
-    - 'image_placeholder': Where a visual would help, add a placeholder. Describe the image in the 'content' field and provide a 2-word 'imageHint'. For example, if explaining 'present continuous,' you might suggest an image of a person running.
+    - 'image_placeholder': Where a visual would help clarify a concept, add a placeholder. Describe the image in the 'content' field.
+  - **Crucially, for every 'example' or 'image_placeholder' block, you MUST provide a relevant 2-word 'imageHint' that visually describes the content of the block. For example, if the content is 'A man is reading a book', the imageHint should be 'man reading'. If the content is about 'driving to work', the imageHint should be 'woman driving'.**
   - The main 'content_en' field should be a very short, one-sentence summary of the entire lesson.
 
   ---
@@ -133,6 +133,9 @@ const prompt = ai.definePrompt({
   {{{rawText}}}
   ---
 `,
+  config: {
+    temperature: 0.7,
+  }
 });
 
 
