@@ -17,7 +17,6 @@ import { uploadAudioToStorage } from '@/lib/firebase/storage';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
-const firestore = getFirebaseAdmin().firestore();
 
 const ProcessContentInputSchema = z.object({
   contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
@@ -130,7 +129,7 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-
+    const firestore = (await getFirebaseAdmin()).firestore();
     // 1. Retrieve relevant knowledge from Firestore
     console.log("Searching knowledge base...");
     let knowledge = '';

@@ -10,8 +10,6 @@ import { getFirebaseAdmin } from '@/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import pdf from 'pdf-parse';
 
-const firestore = getFirebaseAdmin().firestore();
-
 // Helper to chunk text into smaller pieces
 function chunkText(text: string, chunkSize: number, overlap: number): string[] {
     const chunks: string[] = [];
@@ -49,7 +47,7 @@ const processPdfFlow = ai.defineFlow(
     outputSchema: ProcessPdfOutputSchema,
   },
   async ({ pdfData, fileName }) => {
-    
+    const firestore = (await getFirebaseAdmin()).firestore();
     // 1. Convert base64 PDF data to a buffer
     const pdfBuffer = Buffer.from(pdfData, 'base64');
     

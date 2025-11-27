@@ -11,7 +11,7 @@ async function uploadToStorage(
     filePath: string
 ): Promise<string> {
     try {
-        const adminApp = getFirebaseAdmin();
+        const adminApp = await getFirebaseAdmin();
         const bucket = getStorage(adminApp).bucket("studio-161365104-8c7c1.appspot.com");
         const buffer = Buffer.from(base64Data, 'base64');
         const file = bucket.file(filePath);
