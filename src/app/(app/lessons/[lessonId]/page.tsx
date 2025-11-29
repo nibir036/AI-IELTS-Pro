@@ -89,19 +89,13 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
     const handleTranslateToggle = async () => {
         if (isTranslating) return;
 
-        // If content is already translated, revert it.
-        if (isTranslated) {
-            setIsTranslated(false);
-            return;
-        }
-
-        // If we have a cached translation, just show it.
+        // If we already have a translation, just toggle the view.
         if (translatedContent) {
-            setIsTranslated(true);
+            setIsTranslated(!isTranslated);
             return;
         }
 
-        // Otherwise, fetch the translation.
+        // If we don't have a translation yet, fetch it.
         if (!canTranslate) return;
         
         setIsTranslating(true);
@@ -111,7 +105,7 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
                 nativeLanguage: user.nativeLanguage,
             });
             setTranslatedContent(result.translatedText);
-            setIsTranslated(true);
+            setIsTranslated(true); // Show the translation immediately
         } catch (error) {
             console.error('Translation error:', error);
             toast({
