@@ -16,11 +16,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const languages = [
-    'Arabic', 'Chinese (Mandarin)', 'English', 'French', 'German', 'Hindi', 'Japanese', 'Korean',
-    'Portuguese', 'Russian', 'Spanish', 'Vietnamese'
-];
+import { languages } from '@/lib/languages';
 
 const settingsSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50),
