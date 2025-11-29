@@ -11,6 +11,11 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
+function getTotalQuestions(test: ReadingTest): number {
+    if (!test.parts) return 0;
+    return test.parts.reduce((total, part) => total + part.questions.length, 0);
+}
+
 export default function ReadingPage() {
   const { firestore } = useFirebase();
 
@@ -49,7 +54,11 @@ export default function ReadingPage() {
 
       {!isLoading && readingTests && readingTests.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2">
-            {readingTests.map(test => (
+            {readingTests.map(test => {
+               if (!test.parts || test.parts.length === 0) {
+                 return null; // Skip rendering if the test doesn't have the new structure
+               }
+               return (
               <Card key={test.id} className="flex flex-col">
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -59,7 +68,9 @@ export default function ReadingPage() {
                    <Badge variant="secondary" className="w-fit">{test.skill}</Badge>
                 </CardHeader>
                 <CardContent className="flex-1">
-                  <p className="text-sm text-muted-foreground line-clamp-3">{test.passage}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                     A full-length reading test with {test.parts.length} parts and {getTotalQuestions(test)} questions.
+                  </p>
                 </CardContent>
                 <CardFooter>
                     <Button asChild className="w-full">
@@ -69,7 +80,7 @@ export default function ReadingPage() {
                     </Button>
                 </CardFooter>
               </Card>
-            ))}
+            )})}
         </div>
       ) : (
         !isLoading && <Card className="flex flex-col items-center justify-center text-center p-8 border-dashed">

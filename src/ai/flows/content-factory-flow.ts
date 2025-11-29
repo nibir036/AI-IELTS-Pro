@@ -27,9 +27,10 @@ export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
 const PracticeQuestionSchema = z.object({
   id: z.string().describe("A unique ID for the question (e.g., q1, q2)."),
   question: z.string().describe("The question text."),
-  type: z.enum(["multiple-choice", "true-false-not-given", "fill-in-the-blank"]).describe("The type of question."),
-  options: z.array(z.string()).optional().describe("A list of options for multiple-choice or true-false-not-given questions."),
+  type: z.enum(["multiple-choice", "true-false-not-given", "note-completion", "matching-headings", "matching-information", "summary-completion", "yes-no-not-given", "matching-sentence-endings", "fill-in-the-blank"]).describe("The type of question."),
+  options: z.array(z.string()).optional().describe("A list of options for the question."),
   answer: z.string().describe("The correct answer to the question."),
+  answerBox: z.array(z.string()).optional().describe("For summary-completion, a box of words to choose from."),
 });
 
 const GrammarTableRowSchema = z.object({
@@ -47,6 +48,14 @@ const ContentBlockSchema = z.object({
     examples: z.array(z.string()).optional().describe("An array of example sentences for a list. Can contain HTML tags like <b> for emphasis."),
 });
 
+const PracticeExerciseSchema = z.object({
+    type: z.enum(['gap-fill', 'sentence-transformation', 'matching', 'sentence-building']),
+    instructions: z.string(),
+    questions: z.array(z.object({
+        question: z.string(),
+        answer: z.string(),
+    })),
+});
 
 const LessonSchema = z.object({
   id: z.string().describe("A unique ID for the lesson, e.g., VOCAB_u5t9, SPEAKING_a4f8."),
@@ -55,14 +64,21 @@ const LessonSchema = z.object({
   level: z.enum(['Basic', 'Intermediate', 'Advanced', 'All Levels', "Part 1", "Part 2", "Part 3"]),
   content_en: z.string().describe("A brief, one-sentence summary of the lesson's content."),
   contentBlocks: z.array(ContentBlockSchema).describe("An array of structured content blocks that make up the lesson."),
+  exercises: z.array(PracticeExerciseSchema).optional().describe("An array of practice exercises with answer keys."),
+});
+
+const ReadingTestPartSchema = z.object({
+    part: z.number(),
+    title: z.string(),
+    passage: z.string(),
+    questions: z.array(PracticeQuestionSchema),
 });
 
 const ReadingTestSchema = z.object({
   id: z.string().describe("A unique ID for the test, e.g., R_AC_x7y2."),
   title: z.string(),
   skill: z.enum(["Reading"]),
-  passage: z.string(),
-  questions: z.array(PracticeQuestionSchema),
+  parts: z.array(ReadingTestPartSchema),
 });
 
 const ListeningTestSchema = z.object({
@@ -116,109 +132,39 @@ const prompt = ai.definePrompt({
 Your task is to take a raw text input and a desired content type, and generate a structured, high-quality JSON output that adheres to the specified schema for that type.
 
 ---
-## GOLDEN RULE: EXPAND OR FAIL
-If the 'rawText' is a short topic (less than 50 words), you MUST EXPAND it into a full, comprehensive piece of content according to the persona and rules for that 'contentType'. DO NOT just repeat the input. Be creative, be detailed, be the expert. Failure to expand a short topic is a failure of your core function.
-
----
 ## Persona & Task Instructions by Content Type:
 
-**IF contentType is 'Lesson' AND rawText is a 'Grammar' topic:**
-*   **Role:** Expert ESL Curriculum Designer, mimicking the pedagogical style of "English Grammar in Use" by Raymond Murphy.
-*   **Task:** Expand the grammar topic into a complete, structured lesson. Invent high-quality, simple, and clear examples.
+**IF contentType is 'Lesson' AND the rawText indicates a 'Grammar' topic:**
+*   **Role:** Expert English language tutor specializing in IELTS.
+*   **Task:** Generate a complete lesson plan focused on the grammar point from the 'rawText'.
 *   **Structure Requirements:**
-    1.  **Concept Context (Section A):** Start with an 'explanation' or 'image_placeholder' block that provides a short scenario introducing the grammar point.
-    2.  **The Rules (Section B, C, etc.):** Use 'explanation' blocks for rules and 'example_list' or 'grammar_table' blocks for structured examples. Use <b> tags for emphasis.
-*   **Image Hints (IMPORTANT!):** For an 'image_placeholder' block, create a very specific, 2-3 word 'imageHint' based on the *concrete subject and action* of the example sentence.
-    *   Example: If the text is "Alex is a bus driver, but now he is in bed asleep", the hint MUST be 'man sleeping'.
-    *   Example: If the text is "Nurses look after patients", the hint MUST be 'nurse with patient'.
-*   **Content:** The main 'content_en' field should be a very short, one-sentence summary of the lesson.
+    1.  **Explanation:** Use 'contentBlocks' for clear explanations with usage rules for IELTS contexts.
+    2.  **Examples:** Provide at least 5 example sentences in 'contentBlocks' related to common IELTS essay topics (e.g., globalization, environment, education).
+    3.  **Practice:** Generate 5 practice exercises (e.g., gap-fill or sentence transformation) in the 'exercises' array, complete with an answer key.
 
-*   **GOLDEN EXAMPLE for a Grammar Lesson about "Present continuous and present simple":**
-    \`\`\`json
-    {
-      "id": "GRAMMAR_p9q3r7t2",
-      "type": "Grammar",
-      "title": "Present continuous and present simple 2 (I am doing and I do)",
-      "level": "Intermediate",
-      "content_en": "Learn when to use continuous forms for actions vs. simple forms for states with verbs like 'know', 'like', 'think', and 'see'.",
-      "contentBlocks": [
-        {
-          "type": "explanation",
-          "sectionTitle": "A Stative Verbs",
-          "content": "We use continuous forms (<b>I’m waiting, it’s raining</b> etc.) for actions and happenings that have started but not finished. <br/><br/>Some verbs (for example, <b>know</b> and <b>like</b>) are not normally used in this way. We don’t say ‘I am knowing’, ‘they are liking’. We say ‘I know’, ‘they like’."
-        },
-        {
-          "type": "example_list",
-          "examples": [
-            "I’m hungry. I <b>want</b> something to eat. (<i>not</i> I’m wanting)",
-            "Do you <b>understand</b> what I <b>mean</b>?",
-            "Anna <b>doesn’t seem</b> very happy right now."
-          ]
-        },
-        {
-          "type": "explanation",
-          "sectionTitle": "B Think",
-          "content": "When <b>think</b> means ‘believe’ or ‘have an opinion’, we do not use the continuous:<br/><i>I <b>think</b> Mary is Canadian, but I’m not sure.</i><br/><br/>When <b>think</b> means ‘consider’, the continuous is possible:"
-        },
-        {
-          "type": "image_placeholder",
-          "content": "Nicky <b>is thinking</b> of giving up her job.",
-          "imageHint": "woman thinking job"
-        },
-        {
-          "type": "explanation",
-          "sectionTitle": "C See, hear, smell, taste",
-          "content": "We normally use the present simple (not continuous) with <b>see, hear, smell, taste</b>:<br/><i><b>Do you see</b> that man over there?</i><br/><i>This soup <b>doesn’t taste</b> very good.</i><br/><br/>You can use the present simple or continuous to say how somebody <b>looks</b> or <b>feels</b> now:<br/><i>You <b>look</b> well today. or You’<b>re looking</b> well today.</i>"
-        },
-        {
-          "type": "explanation",
-          "sectionTitle": "D am/is/are being",
-          "content": "You can say <b>he’s being</b> …, <b>you’re being</b> … etc. to say how somebody is behaving now:"
-        },
-        {
-          "type": "image_placeholder",
-          "content": "I can’t understand why he’<b>s being</b> so selfish. He isn’t usually like that.",
-          "imageHint": "man being selfish"
-        },
-        {
-          "type": "explanation",
-          "content": "Compare:<br/><i>He never thinks about other people. He <b>is</b> very selfish. (= he is selfish generally, not only now)</i><br/><br/>We use <b>am/is/are being</b> to say how a person is behaving. It is not usually possible in other situations:<br/><i>Sam <b>is</b> ill. (not is being ill)</i>"
-        }
-      ]
-    }
-    \`\`\`
-
-**IF contentType is 'Lesson' AND rawText is a 'Vocabulary' topic:**
-*   **Role:** Expert Lexicographer and IELTS coach.
-*   **Task:** Create a vocabulary list from the topic. For each word, provide a simple definition and a clear example sentence relevant to IELTS.
-*   **Structure:** Create multiple 'contentBlocks'. Each block should have the vocabulary word as the 'sectionTitle', and the definition and example sentence in the 'content'.
-
-**IF contentType is 'Lesson' AND rawText is a 'Tips' topic:**
-*   **Role:** Senior IELTS Examiner giving advice.
-*   **Task:** Expand the topic into a concise, actionable tip.
-*   **Structure:** Use a 'tip' type 'contentBlock'. The 'content' should be the full, detailed tip.
-
-**IF contentType is 'SpeakingPrompt':**
-*   **Role:** IELTS Speaking Test Designer.
-*   **Task:** Based on the 'rawText' topic, generate a set of related speaking prompts for all three parts of the test.
-*   **Structure:** Create three separate 'Lesson' objects in the output, one for each part ('Part 1', 'Part 2', 'Part 3'). Each lesson's 'content_en' will contain the respective prompts.
+**IF contentType is 'Lesson' AND the rawText indicates a 'Vocabulary' topic:**
+*   **Role:** IELTS vocabulary expert.
+*   **Task:** Generate a comprehensive vocabulary lesson on the topic from 'rawText'.
+*   **Structure Requirements:**
+    1.  **Word List:** Generate a list of 10 high-frequency, Band 7+ words/phrases relevant to the topic. Use 'contentBlocks' to present each word, its collocations, and synonyms.
+    2.  **Examples:** Provide 5 sentence examples for each word demonstrating its use in an academic (Writing Task 2) style within the 'contentBlocks'.
+    3.  **Practice:** Generate 5 short practice exercises (e.g., matching or sentence building) in the 'exercises' array, with an answer key.
 
 **IF contentType is 'WritingTest':**
-*   **Role:** IELTS Test Creator.
-*   **Task:** Generate a realistic IELTS Writing Test based on the 'rawText' topic.
-*   **Structure:** Generate one question for Task 1 and one for Task 2. For Task 1 (Academic), include an 'imageUrl' hint describing a chart or graph (e.g., 'line graph showing visitor numbers').
+*   **Role:** Highly experienced IELTS Writing Examiner.
+*   **Task:** Generate a complete, unique IELTS Writing Test (Academic Module). The test must consist of two tasks. The 'rawText' will contain two topics separated by a semicolon (e.g., "Topic for Task 1; Topic for Task 2").
+*   **Structure Requirements:**
+    1.  **Task 1:** Generate a task based on the analysis of a visual representation (e.g., bar chart, line graph, process diagram, or table) about the first topic from the 'rawText'. The task prompt must clearly instruct the student to select and report the main features, make comparisons, and summarize the data, keeping the response over 150 words. Do not generate the visual itself, only the prompt.
+    2.  **Task 2:** Generate a full essay prompt for a Task 2 essay (250+ words) on the second topic from the 'rawText'. The essay question must be a common IELTS type (e.g., Agree/Disagree, Discussion of Both Views, Problem/Solution, or Advantages/Disadvantages).
 
 **IF contentType is 'ReadingTest':**
-*   **Role:** Academic Test Designer and IELTS Expert.
-*   **Task & Rules:**
-    1.  **Generate Passage:** Take the 'rawText' topic and expand it into a comprehensive passage suitable for an IELTS test (approx. 600-800 words).
-    2.  **Generate Questions:** Create around **13-14** relevant questions of various types (multiple-choice, true-false-not-given, fill-in-the-blank) based STRICTLY on the passage you just wrote. For 'true-false-not-given' questions, the options array MUST be \`["True", "False", "Not Given"]\`.
-    3.  **Handle Unrealistic Requests:** If the user's 'rawText' asks for an unrealistic number of questions (e.g., 40 questions for one passage), you MUST explain the real IELTS format. Add a note at the beginning of the generated 'passage' text like: "(Note for the user: A real IELTS Reading test has 3 passages and 40 questions in total. A single passage, like this one, typically has 13-14 questions. I have generated a realistic set of questions for this single passage.)" Then, proceed to generate the standard 13-14 questions.
-
-**IF contentType is 'ListeningTest':**
-*   **Role:** Academic Test Designer.
-*   **Task:** The 'rawText' will contain the transcript. If it doesn't exist, create it. Then generate 5-7 relevant questions of various types (multiple-choice, fill-in-the-blank) based STRICTLY on the provided text.
-*   **Structure:** The 'transcript' field should contain the full text. The 'questions' array should be populated with questions and their correct answers. The 'audioUrl' should be left as a placeholder.
+*   **Role:** Senior IELTS Exam Content Creator.
+*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Passage 1 Topic; Passage 2 Topic; Passage 3 Topic"). Generate a Full IELTS Academic Reading Test containing 3 distinct passages and 40 questions in total. Follow this strict structure:
+*   **Structure Requirements:**
+    1.  **PASSAGE 1 (Factual):** 700–750 words. Style: Descriptive, factual. Questions 1–7: "note-completion". Questions 8–13: "true-false-not-given".
+    2.  **PASSAGE 2 (Discursive):** 750–800 words. Style: Argumentative, sociologic. Questions 14–19: "matching-headings" (provide 8 headings for 6 paragraphs). Questions 20–23: "matching-information". Questions 24–26: "multiple-choice" (4 options).
+    3.  **PASSAGE 3 (Abstract):** 850–900 words. Style: Complex, scientific. Questions 27–32: "summary-completion" (select words from a box). Questions 33–36: "yes-no-not-given". Questions 37–40: "matching-sentence-endings".
+    4.  The final output must be a single 'ReadingTest' object with 3 items in the 'parts' array.
 
 ---
 ## General Rules:
@@ -236,7 +182,7 @@ If the 'rawText' is a short topic (less than 50 words), you MUST EXPAND it into 
 ---
 `,
   config: {
-    temperature: 0.2, // Lower temperature for more predictable, structured output
+    temperature: 0.4, 
   }
 });
 
@@ -336,5 +282,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    

@@ -29,14 +29,22 @@ export type ContentBlock = {
   examples?: string[]; // For example_list
 };
 
+export type PracticeExercise = {
+  type: 'gap-fill' | 'sentence-transformation' | 'matching' | 'sentence-building';
+  instructions: string;
+  questions: { question: string, answer: string }[];
+}
+
 export interface Lesson {
   id: string;
   type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening' | 'Speaking';
   title: string;
   level: 'Basic' | 'Intermediate' | 'Advanced' | 'All Levels' | "Part 1" | "Part 2" | "Part 3";
   contentBlocks: ContentBlock[];
+  exercises?: PracticeExercise[]; // New field for exercises
   content_en: string; // Brief summary
 }
+
 
 export interface MockTest {
   id: string;
@@ -45,23 +53,29 @@ export interface MockTest {
   questions: Array<WritingQuestion>;
 }
 
-export interface ReadingTest {
+export interface ReadingQuestion {
     id: string;
+    question: string;
+    type: 'multiple-choice' | 'true-false-not-given' | 'note-completion' | 'matching-headings' | 'matching-information' | 'summary-completion' | 'yes-no-not-given' | 'matching-sentence-endings' | 'fill-in-the-blank';
+    options?: string[];
+    answer: string;
+    answerBox?: string[]; // For summary-completion
+}
+
+export interface ReadingTestPart {
+    part: number;
     title: string;
-    skill: 'Reading';
     passage: string;
     questions: ReadingQuestion[];
 }
 
-export type ReadingQuestionType = 'multiple-choice' | 'true-false-not-given' | 'fill-in-the-blank';
-
-export interface ReadingQuestion {
+export interface ReadingTest {
     id: string;
-    question: string;
-    type: ReadingQuestionType;
-    options?: string[];
-    answer: string;
+    title: string;
+    skill: 'Reading';
+    parts: ReadingTestPart[];
 }
+
 
 export interface ListeningTest {
     id: string;

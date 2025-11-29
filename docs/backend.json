@@ -80,6 +80,28 @@
         "content_en": {
           "type": "string",
           "description": "Full lesson content in English."
+        },
+        "exercises": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string", "enum": ["gap-fill", "sentence-transformation", "matching", "sentence-building"]},
+                    "instructions": {"type": "string"},
+                    "questions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "question": {"type": "string"},
+                                "answer": {"type": "string"}
+                            },
+                            "required": ["question", "answer"]
+                        }
+                    }
+                },
+                "required": ["type", "instructions", "questions"]
+            }
         }
       },
       "required": [
@@ -138,11 +160,11 @@
         "questions"
       ]
     },
-    "ReadingTest": {
+     "ReadingTest": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "ReadingTest",
         "type": "object",
-        "description": "Represents a reading test with passages and questions.",
+        "description": "Represents a full reading test with multiple passages and questions.",
         "properties": {
             "id": {
                 "type": "string",
@@ -156,33 +178,45 @@
                 "type": "string",
                 "enum": ["Reading"]
             },
-            "passage": {
-                "type": "string",
-                "description": "The full text of the reading passage."
-            },
-            "questions": {
+            "parts": {
                 "type": "array",
-                "description": "An array of questions for the passage.",
+                "description": "An array of test parts, each containing a passage and questions.",
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "string"},
-                        "question": {"type": "string"},
-                        "type": {
-                            "type": "string",
-                            "enum": ["multiple-choice", "true-false-not-given"]
-                        },
-                        "options": {
+                        "part": {"type": "number"},
+                        "title": {"type": "string"},
+                        "passage": {"type": "string"},
+                        "questions": {
                             "type": "array",
-                            "items": {"type": "string"}
-                        },
-                        "answer": {"type": "string"}
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {"type": "string"},
+                                    "question": {"type": "string"},
+                                    "type": {
+                                        "type": "string",
+                                        "enum": ["multiple-choice", "true-false-not-given", "note-completion", "matching-headings", "matching-information", "summary-completion", "yes-no-not-given", "matching-sentence-endings", "fill-in-the-blank"]
+                                    },
+                                    "options": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    },
+                                    "answer": {"type": "string"},
+                                    "answerBox": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    }
+                                },
+                                "required": ["id", "question", "type", "answer"]
+                            }
+                        }
                     },
-                    "required": ["id", "question", "type", "answer"]
+                    "required": ["part", "title", "passage", "questions"]
                 }
             }
         },
-        "required": ["id", "title", "skill", "passage", "questions"]
+        "required": ["id", "title", "skill", "parts"]
     },
     "ListeningTest": {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -393,5 +427,3 @@
     }
   }
 }
-
-    

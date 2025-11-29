@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, Lightbulb, Loader2, BookOpen, List } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, Lightbulb, Loader2, BookOpen } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -38,15 +38,23 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const [score, setScore] = useState(0);
     const [explanations, setExplanations] = useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
+    
+    if (!test || !test.parts) {
+      // This check prevents the flatMap error if test.parts is not yet loaded or is undefined.
+      return <TestPageSkeleton />;
+    }
+
+    const allQuestions = test.parts.flatMap(p => p.questions);
+    const totalQuestions = allQuestions.length;
 
     const methods = useForm<UserAnswers>({
-        defaultValues: test.questions.reduce((acc, q) => ({ ...acc, [q.id]: '' }), {})
+        defaultValues: allQuestions.reduce((acc, q) => ({ ...acc, [q.id]: '' }), {})
     });
     const { watch, handleSubmit: handleFormSubmit, control } = methods;
 
     const userAnswers = watch();
     const answeredQuestions = Object.values(userAnswers).filter(Boolean).length;
-    const progress = (answeredQuestions / test.questions.length) * 100;
+    const progress = (answeredQuestions / totalQuestions) * 100;
 
     useEffect(() => {
         startTimeRef.current = new Date();
@@ -56,22 +64,22 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         if (!test) return;
         
         let correctCount = 0;
-        test.questions.forEach(q => {
+        allQuestions.forEach(q => {
              const userAnswer = data[q.id] || '';
-             const isCorrect = q.type === 'fill-in-the-blank'
+             const isCorrect = q.type === 'fill-in-the-blank' || q.type === 'note-completion'
                 ? userAnswer.trim().toLowerCase() === q.answer.toLowerCase()
                 : userAnswer === q.answer;
             if (isCorrect) {
                 correctCount++;
             }
         });
-        const finalScore = (correctCount / test.questions.length) * 9.0;
+        const finalScore = (correctCount / totalQuestions) * 9.0;
         setScore(finalScore);
         setIsGraded(true);
 
-        const incorrectAnswers = test.questions.filter(q => {
+        const incorrectAnswers = allQuestions.filter(q => {
              const userAnswer = data[q.id] || '';
-             return q.type === 'fill-in-the-blank'
+             return (q.type === 'fill-in-the-blank' || q.type === 'note-completion')
                 ? userAnswer.trim().toLowerCase() !== q.answer.toLowerCase()
                 : userAnswer !== q.answer;
         });
@@ -79,15 +87,16 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         let newExplanations: AnswerExplanations = {};
         if (incorrectAnswers.length > 0) {
             setIsGeneratingExplanations(true);
-            const explanationPromises = incorrectAnswers.map(q => 
-                generateTestCorrectionExplanation({
-                    context: test.passage,
+            const explanationPromises = incorrectAnswers.map(q => {
+                 const relevantPassage = test.parts.find(p => p.questions.some(pq => pq.id === q.id))?.passage || '';
+                 return generateTestCorrectionExplanation({
+                    context: relevantPassage,
                     question: q.question,
                     userAnswer: data[q.id] || "No answer",
                     correctAnswer: q.answer
                 }).then(result => ({ id: q.id, explanation: result.explanation }))
                   .catch(err => ({id: q.id, explanation: 'Could not generate explanation.'}))
-            );
+            });
 
             const results = await Promise.all(explanationPromises);
             results.forEach(res => {
@@ -111,11 +120,11 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
             });
 
             const userRef = doc(firestore, 'users', authUser.uid);
-            const newTotalSubmissions = (userProfile.totalPracticeTime / 20 || 0) + 1;
+            const newTotalSubmissions = (userProfile.totalPracticeTime / 60 || 0) + 1;
             const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + finalScore) / newTotalSubmissions;
 
             updateDocumentNonBlocking(userRef, {
-                totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 20),
+                totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 60),
                 currentBand: newAverageBand
             });
 
@@ -129,7 +138,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const renderQuestion = (question: ReadingQuestion, index: number) => {
         const userAnswer = userAnswers[question.id] || '';
         const isCorrect = isGraded ? (
-            question.type === 'fill-in-the-blank' 
+            question.type === 'fill-in-the-blank' || question.type === 'note-completion'
             ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
             : userAnswer === question.answer
        ) : undefined;
@@ -143,10 +152,10 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         };
 
         return (
-            <Card key={question.id} className={`p-4 ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
+            <div key={question.id} className={`p-4 rounded-lg border ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
                 <div className="flex items-start gap-3 mb-4">
                     <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{index + 1}</div>
-                    <p className="flex-1 font-medium">{question.question}</p>
+                    <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
                      {isGraded && (
                         isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
                     )}
@@ -157,8 +166,8 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     control={control}
                     render={({ field }) => (
                          <>
-                            {(question.type === 'multiple-choice' || question.type === 'true-false-not-given') && (
-                                <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                            {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given') && (
+                                <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded} className="pl-10">
                                     {question.options?.map((option, index) => (
                                         <div key={index} className="flex items-center space-x-2">
                                             <RadioGroupItem value={option} id={`${question.id}-${index}`} />
@@ -170,8 +179,8 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                 </RadioGroup>
                             )}
 
-                            {question.type === 'fill-in-the-blank' && (
-                                <div className="relative">
+                            {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && (
+                                <div className="relative pl-10">
                                     <Input {...field} disabled={isGraded} />
                                     {isGraded && !isCorrect && (
                                         <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
@@ -183,7 +192,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 />
                 
                  {isGraded && !isCorrect && (
-                    <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                    <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
                         <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
                             {isGeneratingExplanations && !explanation ? (
@@ -197,141 +206,128 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                         </div>
                     </div>
                 )}
-            </Card>
+            </div>
         );
     };
 
-    const PassageCard = () => (
-        <Card className="flex flex-col h-full">
-            <CardHeader>
-                <CardTitle>{test.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full pr-4">
-                    <p className="prose dark:prose-invert max-w-none text-foreground/80 whitespace-pre-line">
-                        {test.passage}
-                    </p>
-                </ScrollArea>
-            </CardContent>
-        </Card>
+    const TestView = () => (
+        <FormProvider {...methods}>
+            <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-6">
+                {!isGraded && (
+                     <Card>
+                        <CardHeader>
+                            <Progress value={progress} />
+                            <CardDescription className="text-center pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
+                        </CardHeader>
+                     </Card>
+                )}
+               
+                <Tabs defaultValue="part-1" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="part-1">Part 1</TabsTrigger>
+                        <TabsTrigger value="part-2">Part 2</TabsTrigger>
+                        <TabsTrigger value="part-3">Part 3</TabsTrigger>
+                    </TabsList>
+                    {test.parts.map((part, partIndex) => (
+                        <TabsContent key={part.part} value={`part-${part.part}`}>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-20rem)]">
+                                <Card className="flex flex-col h-full">
+                                    <CardHeader><CardTitle>{part.title}</CardTitle></CardHeader>
+                                    <CardContent className="flex-1 overflow-hidden">
+                                        <ScrollArea className="h-full pr-4">
+                                            <p className="prose dark:prose-invert max-w-none text-foreground/80 whitespace-pre-line">{part.passage}</p>
+                                        </ScrollArea>
+                                    </CardContent>
+                                </Card>
+                                 <Card className="flex flex-col h-full">
+                                    <CardHeader><CardTitle>Questions {part.questions[0].id} - {part.questions[part.questions.length - 1].id}</CardTitle></CardHeader>
+                                    <CardContent className="flex-1 overflow-hidden">
+                                        <ScrollArea className="h-full pr-4">
+                                             <div className="space-y-4">
+                                                {part.questions.map((q) => renderQuestion(q, parseInt(q.id.replace('q',''))))}
+                                            </div>
+                                        </ScrollArea>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </TabsContent>
+                    ))}
+                </Tabs>
+                
+                 {!isGraded && (
+                    <div className="flex justify-center">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full md:w-1/2"
+                            disabled={answeredQuestions !== totalQuestions}
+                        >
+                            Submit & Grade Full Test
+                        </Button>
+                    </div>
+                )}
+            </form>
+        </FormProvider>
     );
 
-    const QuestionsCard = () => (
-        <Card className="flex flex-col h-full">
-            <CardHeader>
-                <CardTitle>Questions</CardTitle>
-                {!isGraded && <CardDescription>Answer all questions before submitting.</CardDescription>}
-                {isGraded && <CardDescription>Review your results below.</CardDescription>}
-            </CardHeader>
-            <FormProvider {...methods}>
-                <form onSubmit={handleFormSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-                    <CardContent className="flex-1 overflow-y-auto">
-                        {!isGraded ? (
-                            <>
-                                <div className="mb-4">
-                                    <Progress value={progress} />
-                                    <p className="text-xs text-muted-foreground text-center mt-1">{answeredQuestions} of {test.questions.length} answered</p>
-                                </div>
-                                <div className="space-y-4">
-                                    {test.questions.map((q, i) => renderQuestion(q, i))}
-                                </div>
-                            </>
-                        ) : (
-                            <div className="flex flex-col h-full">
-                                <div className="flex flex-col items-center justify-center text-center bg-muted rounded-lg p-6 mb-4">
-                                    <CardTitle className="text-xl">Practice Complete!</CardTitle>
-                                    <p className="text-muted-foreground mt-2">You scored</p>
-                                    <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
-                                    <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
-                                    <Button asChild className="mt-6">
-                                        <Link href="/dashboard">
-                                            Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
-                                        </Link>
-                                    </Button>
-                                </div>
-                                <ScrollArea className="h-full pr-4 mt-2">
-                                    <div className="space-y-4">
-                                        {test.questions.map((q, i) => renderQuestion(q, i))}
-                                    </div>
-                                </ScrollArea>
-                            </div>
-                        )}
-                    </CardContent>
-                    {!isGraded && (
-                        <CardFooter>
-                            <Button
-                                type="submit"
-                                className="w-full"
-                                disabled={answeredQuestions !== test.questions.length}
-                            >
-                                Submit & Grade
-                            </Button>
-                        </CardFooter>
-                    )}
-                </form>
-            </FormProvider>
-        </Card>
-    );
+    const GradedView = () => (
+         <div className="flex flex-col h-full items-center justify-center">
+            <Card className="w-full max-w-2xl">
+                <CardHeader className="text-center">
+                    <CardTitle className="text-3xl">Test Complete!</CardTitle>
+                    <CardDescription>You scored</CardDescription>
+                    <p className="text-7xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
+                    <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}% accuracy)</p>
+                </CardHeader>
+                 <CardContent className="text-center">
+                     <p className="text-muted-foreground mb-6">You can review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
+                    <Button onClick={() => router.push('/dashboard')} size="lg">
+                        Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    )
 
     return (
-        <>
-            <div className="block lg:hidden">
-                <Tabs defaultValue="passage" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="passage"><BookOpen className="mr-2"/> Passage</TabsTrigger>
-                        <TabsTrigger value="questions"><List className="mr-2"/> Questions</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="passage">
-                        <PassageCard />
-                    </TabsContent>
-                    <TabsContent value="questions">
-                        <QuestionsCard />
-                    </TabsContent>
-                </Tabs>
+        <div className="animate-in fade-in-50">
+             <div className="flex items-center justify-between mb-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
+                    <p className="text-muted-foreground">A full-length reading mock test.</p>
+                </div>
             </div>
-
-            <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
-                <PassageCard />
-                <QuestionsCard />
-            </div>
-        </>
+            {isGraded ? <GradedView /> : <TestView />}
+        </div>
     );
 }
 
 function TestPageSkeleton() {
     return (
-         <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
-            <Card className="flex flex-col h-full">
-                <CardHeader>
-                    <Skeleton className="h-8 w-3/4" />
-                </CardHeader>
-                <CardContent className="flex-1 space-y-4">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-[80%]" />
-                    <Skeleton className="h-4 w-full mt-4" />
-                    <Skeleton className="h-4 w-[90%]" />
-                </CardContent>
-            </Card>
-             <Card className="flex flex-col h-full">
-                <CardHeader>
-                    <Skeleton className="h-8 w-1/2" />
-                    <Skeleton className="h-4 w-3/4" />
-                </CardHeader>
-                <CardContent className="flex-1 space-y-6">
-                    <div className="space-y-3">
-                        <Skeleton className="h-5 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                    </div>
-                     <div className="space-y-3">
-                        <Skeleton className="h-5 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                    </div>
-                </CardContent>
-             </Card>
-        </div>
+         <div className="space-y-6">
+            <div className="space-y-2">
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-4 w-1/4" />
+            </div>
+            <Skeleton className="h-10 w-full" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-20rem)]">
+                <Card className="flex flex-col h-full">
+                    <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
+                    <CardContent className="flex-1 space-y-4">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-[80%]" />
+                    </CardContent>
+                </Card>
+                <Card className="flex flex-col h-full">
+                    <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
+                    <CardContent className="flex-1 space-y-4">
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-20 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+         </div>
     )
 }
 
