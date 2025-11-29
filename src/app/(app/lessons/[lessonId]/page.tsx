@@ -2,9 +2,9 @@
 'use client';
 import { use } from 'react';
 import { notFound } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Languages, Loader2 } from "lucide-react";
+import { Languages, Loader2, RotateCcw } from "lucide-react";
 import type { Lesson, ContentBlock, GrammarTableRow } from '@/lib/types';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getTranslation } from '@/ai/flows/multilingual-support';
+import { cn } from '@/lib/utils';
 
 function LessonPageSkeleton() {
     return (
@@ -29,6 +30,7 @@ function LessonPageSkeleton() {
                              <Skeleton className="h-9 w-80" />
                              <Skeleton className="h-5 w-40" />
                         </div>
+                         <Skeleton className="h-10 w-28" />
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -39,9 +41,6 @@ function LessonPageSkeleton() {
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-[90%]" />
                 </CardContent>
-                <CardFooter>
-                    <Skeleton className="h-10 w-32" />
-                </CardFooter>
             </Card>
         </div>
     )
@@ -79,11 +78,79 @@ function ExampleList({ examples }: { examples: string[] }) {
     )
 }
 
-function RenderContentBlock({ block, index, translatedContent }: { block: ContentBlock, index: number, translatedContent?: string }) {
-    
-    // Determine which content to display for explanations
-    const displayContent = (block.type === 'explanation' && translatedContent) ? translatedContent : block.content;
+function ExplanationBlock({ block }: { block: ContentBlock }) {
+    const { user } = useUserProfile();
+    const { toast } = useToast();
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [isTranslated, setIsTranslated] = useState(false);
+    const [translatedContent, setTranslatedContent] = useState<string | null>(null);
+    const canTranslate = user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && block.content;
 
+    const handleTranslateToggle = async () => {
+        if (isTranslating) return;
+
+        // If content is already translated, revert it.
+        if (isTranslated) {
+            setIsTranslated(false);
+            return;
+        }
+
+        // If we have a cached translation, just show it.
+        if (translatedContent) {
+            setIsTranslated(true);
+            return;
+        }
+
+        // Otherwise, fetch the translation.
+        if (!canTranslate) return;
+        
+        setIsTranslating(true);
+        try {
+            const result = await getTranslation({
+                text: block.content!.replace(/<[^>]*>?/gm, ''), // Strip HTML for translation
+                nativeLanguage: user.nativeLanguage,
+            });
+            setTranslatedContent(result.translatedText);
+            setIsTranslated(true);
+        } catch (error) {
+            console.error('Translation error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Translation Failed',
+                description: 'Could not translate the content at this time.',
+            });
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+    
+    const displayContent = isTranslated ? translatedContent : block.content;
+
+    return (
+        <div className="group relative">
+             {canTranslate && (
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("absolute -top-2 right-0 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity", isTranslated && "opacity-100")}
+                    onClick={handleTranslateToggle}
+                    disabled={isTranslating}
+                    aria-label={isTranslated ? 'Revert to original' : 'Translate'}
+                >
+                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                     isTranslated ? <RotateCcw className="h-4 w-4 text-primary" /> : <Languages className="h-4 w-4" />}
+                </Button>
+            )}
+            <p 
+                className="text-foreground/80 leading-relaxed" 
+                dangerouslySetInnerHTML={{ __html: displayContent || '' }} 
+            />
+        </div>
+    )
+}
+
+
+function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
     return (
         <div className="space-y-4 py-6">
              {index > 0 && <Separator />}
@@ -91,9 +158,7 @@ function RenderContentBlock({ block, index, translatedContent }: { block: Conten
                 <h3 className="text-xl font-semibold tracking-tight" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
-            {(block.type === 'explanation' && displayContent) && (
-                 <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: displayContent }} />
-            )}
+            {block.type === 'explanation' && <ExplanationBlock block={block} />}
             
              {block.type === 'image_placeholder' && (
                 <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
@@ -134,67 +199,6 @@ function RenderContentBlock({ block, index, translatedContent }: { block: Conten
 
 
 function LessonComponent({ lesson }: { lesson: Lesson }) {
-    const { user } = useUserProfile();
-    const { toast } = useToast();
-    const [isTranslating, setIsTranslating] = useState(false);
-    const [isTranslated, setIsTranslated] = useState(false);
-    const [translatedBlocks, setTranslatedBlocks] = useState<Record<number, string>>({});
-    
-    const canTranslate = user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && lesson.contentBlocks?.some(b => b.type === 'explanation' && b.content);
-
-    const handleTranslateToggle = async () => {
-        if (isTranslating) return;
-
-        // If it's already translated, revert to English
-        if (isTranslated) {
-            setIsTranslated(false);
-            return;
-        }
-
-        // If we have translations cached, just show them
-        if (Object.keys(translatedBlocks).length > 0) {
-            setIsTranslated(true);
-            return;
-        }
-
-        // Otherwise, fetch translations
-        setIsTranslating(true);
-        try {
-            const translationPromises = lesson.contentBlocks
-                .map((block, index) => {
-                    if (block.type === 'explanation' && block.content) {
-                        return getTranslation({
-                            text: block.content.replace(/<[^>]*>?/gm, ''), // Strip HTML tags
-                            nativeLanguage: user!.nativeLanguage,
-                        }).then(result => ({ index, text: result.translatedText }));
-                    }
-                    return null;
-                })
-                .filter(p => p !== null);
-            
-            const results = await Promise.all(translationPromises as Promise<{ index: number, text: string }>[]);
-            
-            const newTranslations: Record<number, string> = {};
-            results.forEach(result => {
-                newTranslations[result.index] = result.text;
-            });
-            
-            setTranslatedBlocks(newTranslations);
-            setIsTranslated(true);
-
-        } catch (error) {
-            console.error('Translation error:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Translation Failed',
-                description: 'Could not translate the content at this time.',
-            });
-        } finally {
-            setIsTranslating(false);
-        }
-    };
-
-
      return (
         <div className="max-w-4xl mx-auto animate-in fade-in-50">
             <Card>
@@ -210,24 +214,12 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                 <CardContent className="divide-y">
                      {(lesson.contentBlocks && lesson.contentBlocks.length > 0) ? (
                         lesson.contentBlocks.map((block, index) => (
-                           <RenderContentBlock key={index} block={block} index={index} translatedContent={isTranslated ? translatedBlocks[index] : undefined}/>
+                           <RenderContentBlock key={index} block={block} index={index}/>
                         ))
                      ) : (
                          <p className="prose dark:prose-invert max-w-none text-base text-foreground/80 pt-4" dangerouslySetInnerHTML={{ __html: lesson.content_en }} />
                      )}
                 </CardContent>
-                 {canTranslate && (
-                    <CardFooter>
-                        <Button variant="outline" onClick={handleTranslateToggle} disabled={isTranslating}>
-                             {isTranslating ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                             ) : (
-                                <Languages className="mr-2 h-4 w-4" />
-                            )}
-                            {isTranslated ? 'Show Original' : `Translate to ${user?.nativeLanguage}`}
-                        </Button>
-                    </CardFooter>
-                )}
             </Card>
         </div>
     );
