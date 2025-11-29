@@ -212,7 +212,7 @@ If the 'rawText' is a short topic (less than 50 words), you MUST EXPAND it into 
 *   **Role:** Academic Test Designer and IELTS Expert.
 *   **Task & Rules:**
     1.  **Generate Passage:** Take the 'rawText' topic and expand it into a comprehensive passage suitable for an IELTS test (approx. 600-800 words).
-    2.  **Generate Questions:** Create around **13-14** relevant questions of various types (multiple-choice, true-false-not-given, fill-in-the-blank) based STRICTLY on the passage you just wrote. For 'true-false-not-given' questions, the options array MUST be `["True", "False", "Not Given"]`.
+    2.  **Generate Questions:** Create around **13-14** relevant questions of various types (multiple-choice, true-false-not-given, fill-in-the-blank) based STRICTLY on the passage you just wrote. For 'true-false-not-given' questions, the options array MUST be \`["True", "False", "Not Given"]\`.
     3.  **Handle Unrealistic Requests:** If the user's 'rawText' asks for an unrealistic number of questions (e.g., 40 questions for one passage), you MUST explain the real IELTS format. Add a note at the beginning of the generated 'passage' text like: "(Note for the user: A real IELTS Reading test has 3 passages and 40 questions in total. A single passage, like this one, typically has 13-14 questions. I have generated a realistic set of questions for this single passage.)" Then, proceed to generate the standard 13-14 questions.
 
 **IF contentType is 'ListeningTest':**
