@@ -109,7 +109,7 @@ const prompt = ai.definePrompt({
   input: { schema: z.object({
     contentType: ProcessContentInputSchema.shape.contentType,
     rawText: ProcessContentInputSchema.shape.rawText,
-    knowledge: z.string().optional().describe("Relevant information retrieved from the knowledge base."),
+    knowledge: z.string().optional().describe("Relevant information from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
   prompt: `You are a world-class AI curriculum designer for IELTS and ESL students.
@@ -209,9 +209,11 @@ If the 'rawText' is a short topic (less than 50 words), you MUST EXPAND it into 
 *   **Structure:** Generate one question for Task 1 and one for Task 2. For Task 1 (Academic), include an 'imageUrl' hint describing a chart or graph (e.g., 'line graph showing visitor numbers').
 
 **IF contentType is 'ReadingTest':**
-*   **Role:** Academic Test Designer.
-*   **Task:** The 'rawText' will contain the passage or transcript. If it doesn't exist, create it. Then generate 8-10 relevant questions of various types (multiple-choice, true-false-not-given, fill-in-the-blank) based STRICTLY on the provided text. For 'true-false-not-given' questions, ensure the options array is \`["True", "False", "Not Given"]\`.
-*   **Structure:** The 'passage' or 'transcript' field should contain the full text. The 'questions' array should be populated with questions and their correct answers.
+*   **Role:** Academic Test Designer and IELTS Expert.
+*   **Task & Rules:**
+    1.  **Generate Passage:** Take the 'rawText' topic and expand it into a comprehensive passage suitable for an IELTS test (approx. 600-800 words).
+    2.  **Generate Questions:** Create around **13-14** relevant questions of various types (multiple-choice, true-false-not-given, fill-in-the-blank) based STRICTLY on the passage you just wrote. For 'true-false-not-given' questions, the options array MUST be `["True", "False", "Not Given"]`.
+    3.  **Handle Unrealistic Requests:** If the user's 'rawText' asks for an unrealistic number of questions (e.g., 40 questions for one passage), you MUST explain the real IELTS format. Add a note at the beginning of the generated 'passage' text like: "(Note for the user: A real IELTS Reading test has 3 passages and 40 questions in total. A single passage, like this one, typically has 13-14 questions. I have generated a realistic set of questions for this single passage.)" Then, proceed to generate the standard 13-14 questions.
 
 **IF contentType is 'ListeningTest':**
 *   **Role:** Academic Test Designer.
