@@ -355,5 +355,3 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     
     return <ReadingTestComponent test={test} />;
 }
-
-    
