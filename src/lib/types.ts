@@ -53,7 +53,7 @@ export interface ReadingTest {
     questions: ReadingQuestion[];
 }
 
-export type ReadingQuestionType = 'multiple-choice' | 'true-false-not-given';
+export type ReadingQuestionType = 'multiple-choice' | 'true-false-not-given' | 'fill-in-the-blank';
 
 export interface ReadingQuestion {
     id: string;
