@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, use } from 'react';
+import { useState, useRef, useEffect, useCallback, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
@@ -267,7 +267,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                     <span>Generating explanation...</span>
                                 </div>
                             ) : (
-                                <p className="text-xs">{explanation}</p>
+                                <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
                             )}
                         </div>
                     </div>

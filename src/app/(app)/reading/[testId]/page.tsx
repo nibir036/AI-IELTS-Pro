@@ -176,7 +176,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 
                  {isGraded && !isCorrect && (
                     <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs font-semibold text-green-600 mb-1">Correct answer: {question.answer}</p>
                         <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
                             {isGeneratingExplanations && !explanation ? (
@@ -185,7 +184,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     <span>Generating explanation...</span>
                                 </div>
                             ) : (
-                                <p className="text-xs">{explanation}</p>
+                                <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
                             )}
                         </div>
                     </div>
