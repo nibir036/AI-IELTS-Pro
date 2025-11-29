@@ -1,11 +1,12 @@
 
 'use client';
 
+import * as React from 'react';
 import { use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, increment } from 'firebase/firestore';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,10 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const [explanations, setExplanations] = React.useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    
+    if (!test.parts) {
+        return <p>This test is not configured correctly.</p>;
+    }
     
     const allQuestions = test.parts.flatMap(p => p.questions);
     const totalQuestions = allQuestions.length;
@@ -116,6 +121,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
             });
 
             const userRef = doc(firestore, 'users', authUser.uid);
+            // Rough estimate of 60 mins for a full reading test.
             const newTotalSubmissions = (userProfile.totalPracticeTime / 60 || 0) + 1;
             const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + finalScore) / newTotalSubmissions;
 
