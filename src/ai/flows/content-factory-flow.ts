@@ -40,11 +40,11 @@ const GrammarTableRowSchema = z.object({
 const ContentBlockSchema = z.object({
     type: z.enum(['explanation', 'example', 'tip', 'image_placeholder', 'grammar_table', 'example_list']),
     sectionTitle: z.string().optional().describe("A title for this block, e.g., 'A', 'B', 'Study this example situation'"),
-    content: z.string().optional().describe("The text content for this block."),
-    imageHint: z.string().optional().describe("A 1-2 word hint for finding an image. MUST be derived from the concrete subject and action of the content, not abstract grammar rules."),
+    content: z.string().optional().describe("The text content for this block. Can contain HTML tags like <b> for emphasis."),
+    imageHint: z.string().optional().describe("A 2-3 word hint for finding an image. MUST be derived from the concrete subject and action of the content, not abstract grammar rules."),
     generatedImageUrl: z.string().url().optional().describe("The URL of the AI-generated image for this block."),
     tableRows: z.array(GrammarTableRowSchema).optional().describe("An array of structured grammar table rows."),
-    examples: z.array(z.string()).optional().describe("An array of example sentences for a list."),
+    examples: z.array(z.string()).optional().describe("An array of example sentences for a list. Can contain HTML tags like <b> for emphasis."),
 });
 
 
@@ -123,15 +123,70 @@ If the 'rawText' is a short topic (less than 50 words), you MUST EXPAND it into 
 ## Persona & Task Instructions by Content Type:
 
 **IF contentType is 'Lesson' AND rawText is a 'Grammar' topic:**
-*   **Role:** Expert ESL Curriculum Designer, mimicking the pedagogical style of "English Grammar in Use" (Raymond Murphy).
+*   **Role:** Expert ESL Curriculum Designer, mimicking the pedagogical style of "English Grammar in Use" by Raymond Murphy.
 *   **Task:** Expand the grammar topic into a complete, structured lesson. Invent high-quality, simple, and clear examples.
 *   **Structure Requirements:**
-    1.  **Concept Context (Section A):** Start with an 'image_placeholder' block that provides a short scenario introducing the grammar point.
-    2.  **The Rules (Section B, C, etc.):** Use 'explanation' blocks for rules and 'example_list' or 'grammar_table' blocks for structured examples.
+    1.  **Concept Context (Section A):** Start with an 'explanation' or 'image_placeholder' block that provides a short scenario introducing the grammar point.
+    2.  **The Rules (Section B, C, etc.):** Use 'explanation' blocks for rules and 'example_list' or 'grammar_table' blocks for structured examples. Use <b> tags for emphasis.
 *   **Image Hints (IMPORTANT!):** For an 'image_placeholder' block, create a very specific, 2-3 word 'imageHint' based on the *concrete subject and action* of the example sentence.
     *   Example: If the text is "Alex is a bus driver, but now he is in bed asleep", the hint MUST be 'man sleeping'.
     *   Example: If the text is "Nurses look after patients", the hint MUST be 'nurse with patient'.
 *   **Content:** The main 'content_en' field should be a very short, one-sentence summary of the lesson.
+
+*   **GOLDEN EXAMPLE for a Grammar Lesson about "Present continuous and present simple":**
+    \`\`\`json
+    {
+      "id": "GRAMMAR_p9q3r7t2",
+      "type": "Grammar",
+      "title": "Present continuous and present simple 2 (I am doing and I do)",
+      "level": "Intermediate",
+      "content_en": "Learn when to use continuous forms for actions vs. simple forms for states with verbs like 'know', 'like', 'think', and 'see'.",
+      "contentBlocks": [
+        {
+          "type": "explanation",
+          "sectionTitle": "A Stative Verbs",
+          "content": "We use continuous forms (<b>I’m waiting, it’s raining</b> etc.) for actions and happenings that have started but not finished. <br/><br/>Some verbs (for example, <b>know</b> and <b>like</b>) are not normally used in this way. We don’t say ‘I am knowing’, ‘they are liking’. We say ‘I know’, ‘they like’."
+        },
+        {
+          "type": "example_list",
+          "examples": [
+            "I’m hungry. I <b>want</b> something to eat. (<i>not</i> I’m wanting)",
+            "Do you <b>understand</b> what I <b>mean</b>?",
+            "Anna <b>doesn’t seem</b> very happy right now."
+          ]
+        },
+        {
+          "type": "explanation",
+          "sectionTitle": "B Think",
+          "content": "When <b>think</b> means ‘believe’ or ‘have an opinion’, we do not use the continuous:<br/><i>I <b>think</b> Mary is Canadian, but I’m not sure.</i><br/><br/>When <b>think</b> means ‘consider’, the continuous is possible:"
+        },
+        {
+          "type": "image_placeholder",
+          "content": "Nicky <b>is thinking</b> of giving up her job.",
+          "imageHint": "woman thinking job"
+        },
+        {
+          "type": "explanation",
+          "sectionTitle": "C See, hear, smell, taste",
+          "content": "We normally use the present simple (not continuous) with <b>see, hear, smell, taste</b>:<br/><i><b>Do you see</b> that man over there?</i><br/><i>This soup <b>doesn’t taste</b> very good.</i><br/><br/>You can use the present simple or continuous to say how somebody <b>looks</b> or <b>feels</b> now:<br/><i>You <b>look</b> well today. or You’<b>re looking</b> well today.</i>"
+        },
+        {
+          "type": "explanation",
+          "sectionTitle": "D am/is/are being",
+          "content": "You can say <b>he’s being</b> …, <b>you’re being</b> … etc. to say how somebody is behaving now:"
+        },
+        {
+          "type": "image_placeholder",
+          "content": "I can’t understand why he’<b>s being</b> so selfish. He isn’t usually like that.",
+          "imageHint": "man being selfish"
+        },
+        {
+          "type": "explanation",
+          "content": "Compare:<br/><i>He never thinks about other people. He <b>is</b> very selfish. (= he is selfish generally, not only now)</i><br/><br/>We use <b>am/is/are being</b> to say how a person is behaving. It is not usually possible in other situations:<br/><i>Sam <b>is</b> ill. (not is being ill)</i>"
+        }
+      ]
+    }
+    \`\`\`
 
 **IF contentType is 'Lesson' AND rawText is a 'Vocabulary' topic:**
 *   **Role:** Expert Lexicographer and IELTS coach.
@@ -174,7 +229,7 @@ If the 'rawText' is a short topic (less than 50 words), you MUST EXPAND it into 
 ---
 `,
   config: {
-    temperature: 0.7,
+    temperature: 0.2, // Lower temperature for more predictable, structured output
   }
 });
 
@@ -222,19 +277,10 @@ const contentFactoryFlow = ai.defineFlow(
     if ('contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
         console.log("Generating images for lesson blocks...");
         const imageGenerationPromises = structuredContent.contentBlocks.map(async (block, index) => {
-            let imagePrompt : string | undefined = undefined;
-
-            // More aggressive image generation trigger
-            if (block.type === 'image_placeholder') {
-                imagePrompt = block.content || block.imageHint;
-            } else if (block.imageHint) {
-                imagePrompt = block.imageHint;
-            }
-
-            if (imagePrompt) {
+            if (block.type === 'image_placeholder' && block.imageHint) {
                 try {
-                    console.log(`Generating image for prompt: "${imagePrompt}"`);
-                    const imageResult = await generateLessonImage(imagePrompt);
+                    console.log(`Generating image for prompt: "${block.imageHint}"`);
+                    const imageResult = await generateLessonImage(block.imageHint);
                     
                     const [header, base64Data] = imageResult.imageDataUri.split(',');
                     const contentType = header.split(':')[1].split(';')[0];
@@ -242,10 +288,9 @@ const contentFactoryFlow = ai.defineFlow(
                     
                     const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
                     block.generatedImageUrl = publicUrl;
-                    console.log(`Image for prompt "${imagePrompt}" uploaded to ${publicUrl}`);
+                    console.log(`Image for prompt "${block.imageHint}" uploaded to ${publicUrl}`);
                 } catch (imgError) {
-                    console.error(`Failed to generate or upload image for prompt: "${imagePrompt}"`, imgError);
-                    // Leave the block as is, without a generatedImageUrl
+                    console.error(`Failed to generate or upload image for prompt: "${block.imageHint}"`, imgError);
                 }
             }
             return block;
@@ -282,3 +327,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    

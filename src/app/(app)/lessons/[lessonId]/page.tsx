@@ -81,10 +81,10 @@ function ExampleList({ examples }: { examples: string[] }) {
 
 function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
     return (
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-6">
              {index > 0 && <Separator />}
              {block.sectionTitle && (
-                <h3 className="text-xl font-semibold" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
+                <h3 className="text-xl font-semibold tracking-tight" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
             {block.type === 'explanation' && block.content && (
@@ -99,12 +99,12 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                                 src={block.generatedImageUrl}
                                 alt={block.imageHint || 'Lesson image'}
                                 fill
-                                className="rounded-lg shadow-md object-contain"
+                                className="rounded-lg shadow-md object-cover"
                             />
                         </div>
                     ) :  <Skeleton className="aspect-video w-full" />}
                      {block.content && (
-                         <div className="p-4 bg-muted/50 rounded-lg">
+                         <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
                             <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />
                         </div>
                     )}
@@ -178,7 +178,7 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                             <CardTitle className="text-3xl font-bold">{lesson.title}</CardTitle>
                             <CardDescription>Level: {lesson.level}</CardDescription>
                         </div>
-                        {user?.nativeLanguage && user.nativeLanguage !== 'English' && (
+                        {user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && (
                              <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" onClick={handleTranslate}>
@@ -190,12 +190,14 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                                         Translate
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent className="max-h-[80vh]">
                                     <DialogHeader>
                                         <DialogTitle>Translation to {user.nativeLanguage}</DialogTitle>
                                     </DialogHeader>
-                                    {isTranslating && <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin"/></div>}
-                                    {translatedText && <p className="text-muted-foreground whitespace-pre-wrap">{translatedText}</p>}
+                                    <div className="overflow-y-auto pr-4">
+                                        {isTranslating && <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin"/></div>}
+                                        {translatedText && <p className="text-muted-foreground whitespace-pre-wrap">{translatedText}</p>}
+                                    </div>
                                 </DialogContent>
                             </Dialog>
                         )}
@@ -237,3 +239,5 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
     
     return <LessonComponent lesson={lesson} />;
 }
+
+    
