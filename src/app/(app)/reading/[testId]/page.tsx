@@ -64,7 +64,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
              const userAnswer = data[q.id] || '';
              const isCorrect = q.type === 'fill-in-the-blank' || q.type === 'note-completion'
                 ? userAnswer.trim().toLowerCase() === q.answer.toLowerCase()
-                : userAnswer === q.answer;
+                : userAnswer.trim().toLowerCase() === q.answer.toLowerCase();
             if (isCorrect) {
                 correctCount++;
             }
@@ -76,7 +76,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
              const userAnswer = data[q.id] || '';
              return (q.type === 'fill-in-the-blank' || q.type === 'note-completion')
                 ? userAnswer.trim().toLowerCase() !== q.answer.toLowerCase()
-                : userAnswer !== q.answer;
+                : userAnswer.trim().toLowerCase() !== q.answer.toLowerCase();
         });
 
         let newExplanations: AnswerExplanations = {};
@@ -136,28 +136,28 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
     const renderQuestion = (question: ReadingQuestion, index: number) => {
         const userAnswer = userAnswers[question.id] || '';
-        const questionNumber = index + 1;
+        const questionNumber = parseInt(question.id.replace('q', ''));
         const isCorrect = isGraded ? (
-            question.type === 'fill-in-the-blank' || question.type === 'note-completion'
+            (question.type === 'fill-in-the-blank' || question.type === 'note-completion')
             ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
-            : userAnswer === question.answer
+            : userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
        ) : undefined;
         const explanation = explanations[question.id];
 
         const getOptionClass = (option: string) => {
             if (!isGraded) return '';
-            if (option === question.answer) return 'text-green-600 font-bold';
-            if (option === userAnswer && option !== question.answer) return 'text-red-600';
+            if (option.toLowerCase() === question.answer.toLowerCase()) return 'text-green-600 font-bold';
+            if (option.toLowerCase() === userAnswer.toLowerCase() && option.toLowerCase() !== question.answer.toLowerCase()) return 'text-red-600';
             return 'text-muted-foreground';
         };
 
-        const getOptionsForType = (type: ReadingQuestion['type']) => {
-            if (type === 'true-false-not-given') return ['True', 'False', 'Not Given'];
-            if (type === 'yes-no-not-given') return ['Yes', 'No', 'Not Given'];
-            return question.options || [];
+        const getOptionsForType = (q: ReadingQuestion) => {
+            if (q.type === 'true-false-not-given') return ['True', 'False', 'Not Given'];
+            if (q.type === 'yes-no-not-given') return ['Yes', 'No', 'Not Given'];
+            return q.options || [];
         }
 
-        const options = getOptionsForType(question.type);
+        const options = getOptionsForType(question);
 
         return (
              <div key={question.id} className="space-y-4">
@@ -167,8 +167,8 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                            <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
                            <div dangerouslySetInnerHTML={{ __html: question.instructions }} />
                         </div>
-                        {question.type === 'matching-headings' && question.options && (
-                             <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 p-3 border-t">
+                        {(question.type === 'matching-headings' || question.type === 'matching-sentence-endings') && question.options && (
+                             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 p-3 border-t">
                                 {question.options.map((opt, idx) => <p key={idx} className="text-xs text-muted-foreground">{opt}</p>)}
                             </div>
                         )}
@@ -203,7 +203,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
                                 {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion' || question.type === 'matching-information' || question.type === 'matching-headings') && (
                                     <div className="relative">
-                                        <Input {...field} disabled={isGraded} />
+                                        <Input {...field} disabled={isGraded} placeholder="Your answer"/>
                                         {isGraded && !isCorrect && (
                                             <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
                                         )}
@@ -272,7 +272,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                          <Button
                             type="submit"
                             size="lg"
-                            disabled={isSubmitting}
                         >
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             Submit & Grade Full Test
@@ -298,11 +297,11 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     </CardContent>
                                 </Card>
                                  <Card className="flex flex-col h-full">
-                                    <CardHeader><CardTitle>Questions {part.questions[0].id.replace('q','')} - {part.questions[part.questions.length - 1].id.replace('q','')}</CardTitle></CardHeader>
+                                    <CardHeader><CardTitle>Questions</CardTitle></CardHeader>
                                     <CardContent className="flex-1 overflow-hidden">
                                         <ScrollArea className="h-full pr-4">
                                              <div className="space-y-4">
-                                                {part.questions.map((q, i) => renderQuestion(q, parseInt(q.id.replace('q','')) - 1))}
+                                                {part.questions.map((q, i) => renderQuestion(q, i))}
                                             </div>
                                         </ScrollArea>
                                     </CardContent>
@@ -383,3 +382,5 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
         </div>
     );
 }
+
+    

@@ -29,7 +29,7 @@ const PracticeQuestionSchema = z.object({
   instructions: z.string().optional().describe("Instructions for this block of questions, e.g., 'Choose the correct heading for each paragraph.'"),
   question: z.string().describe("The question text."),
   type: z.enum(["multiple-choice", "true-false-not-given", "note-completion", "matching-headings", "matching-information", "summary-completion", "yes-no-not-given", "matching-sentence-endings", "fill-in-the-blank"]).describe("The type of question."),
-  options: z.array(z.string()).optional().describe("A list of options for the question."),
+  options: z.array(z.string()).optional().describe("A list of options for the question (e.g., for multiple-choice, or the list of headings for matching)."),
   answer: z.string().describe("The correct answer to the question."),
   answerBox: z.array(z.string()).optional().describe("For summary-completion, a box of words to choose from."),
 });
@@ -160,21 +160,16 @@ Your task is to take a raw text input and a desired content type, and generate a
 
 **IF contentType is 'ReadingTest':**
 *   **Role:** Senior IELTS Exam Content Creator.
-*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Passage 1 Topic; Passage 2 Topic; Passage 3 Topic"). Generate a Full IELTS Academic Reading Test containing 3 distinct passages and 40 questions in total. Follow this strict structure:
-*   **Structure Requirements:**
-    1.  **PASSAGE 1 (Factual):** 700–750 words. Style: Descriptive, factual.
-        *   **Questions 1–7:** "note-completion". The 'instructions' field MUST be 'Complete the notes below. Choose NO MORE THAN TWO WORDS from the passage for each answer.'.
-        *   **Questions 8–13:** "true-false-not-given". The 'instructions' field MUST be 'Do the following statements agree with the information given in the reading passage? Write TRUE, FALSE, or NOT GIVEN.'.
-    2.  **PASSAGE 2 (Discursive):** 750–800 words. Style: Argumentative, sociologic.
-        *   **Questions 14–19:** "matching-headings". The 'instructions' field MUST contain the list of headings.
-        *   **Questions 20–23:** "matching-information". The 'instructions' field MUST be 'Look at the following statements and the paragraphs in Reading Passage 2. Match each statement with the correct paragraph.'.
-        *   **Questions 24–26:** "multiple-choice". The 'instructions' field MUST be 'Choose the correct letter, A, B, C or D.'.
-    3.  **PASSAGE 3 (Abstract):** 850–900 words. Style: Complex, scientific.
-        *   **Questions 27–32:** "summary-completion". The 'instructions' field MUST be 'Complete the summary using the list of words, A-J, below.'. The 'answerBox' MUST contain the list of words.
-        *   **Questions 33–36:** "yes-no-not-given". The 'instructions' field MUST be 'Do the following statements agree with the views of the writer in Reading Passage 3? Write YES, NO, or NOT GIVEN.'.
-        *   **Questions 37–40:** "matching-sentence-endings". The 'instructions' field MUST be 'Complete each sentence with the correct ending, A-G, below.'. The 'options' array for these questions must contain the list of sentence endings.
-    4.  **CRITICAL:** The 'instructions' field must ONLY be present on the FIRST question of a new question type block (e.g., on question 1, 8, 14, 20, 24, etc.).
-    5.  The final output must be a single 'ReadingTest' object with 3 items in the 'parts' array.
+*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Passage 1 Topic; Passage 2 Topic; Passage 3 Topic"). Generate a Full IELTS Academic Reading Test containing 3 distinct passages and a total of around 12-14 questions for each passage.
+*   **Structure Requirements for EACH PASSAGE:**
+    1.  **Passage Generation:** Generate a passage of 700-900 words on the given topic. The first passage should be factual/descriptive, the second more discursive/argumentative, and the third more abstract/scientific.
+    2.  **Question Generation:** For each passage, create 2-3 blocks of different question types.
+    3.  **Instructions:** For EACH block of questions, you MUST provide a clear 'instructions' field. For example: "Choose the correct heading for each paragraph." or "Do the following statements agree with the information given?".
+    4.  **'matching-headings' Type:** If you create this type, the 'question' field for each item in the array should be the paragraph identifier (e.g., "Paragraph A", "Paragraph B"). The 'options' field MUST contain the list of heading choices.
+    5.  **'matching-information' Type:** The 'question' field should be the statement to find (e.g., "A reference to the decline in bee populations"). The 'answer' is the paragraph letter (A, B, C, etc.).
+    6.  **'true-false-not-given' / 'yes-no-not-given' Type:** The 'question' field should be the statement. The 'answer' must be one of 'True', 'False', 'Not Given', 'Yes', or 'No'.
+    7.  **'multiple-choice' Type:** The 'question' field is the question stem. The 'options' field MUST contain the list of choices (A, B, C, D).
+    8.  **Final Output:** The final output must be a single 'ReadingTest' object with 3 items in the 'parts' array. Ensure question IDs are unique across the entire test (e.g., q1, q2, ... q40).
 
 ---
 ## General Rules:
@@ -292,3 +287,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
