@@ -101,7 +101,7 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
         setIsTranslating(true);
         try {
             const result = await getTranslation({
-                text: block.content!.replace(/<[^>]*>?/gm, ''), // Strip HTML for translation
+                text: block.content!, // Pass content with HTML tags
                 nativeLanguage: user.nativeLanguage,
             });
             setTranslatedContent(result.translatedText);
@@ -148,7 +148,7 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
     // Frontend Safeguard: Ensure the URL is valid and not a placeholder that would crash Next/Image
     const isImageUrlValid = block.generatedImageUrl && !block.generatedImageUrl.includes('example.com');
     const safeImageUrl = isImageUrlValid ? block.generatedImageUrl : "https://picsum.photos/seed/placeholder/600/400";
-
+    
     return (
         <div className="space-y-4 py-6">
              {index > 0 && <Separator />}
@@ -245,5 +245,3 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
     
     return <LessonComponent lesson={lesson} />;
 }
-
-    

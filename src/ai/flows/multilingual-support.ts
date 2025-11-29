@@ -14,7 +14,7 @@ import {z} from 'genkit';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 
 const GetTranslationInputSchema = z.object({
-  text: z.string().describe('The English text to translate.'),
+  text: z.string().describe('The English text to translate, which may contain HTML <b> tags.'),
   nativeLanguage: z.string().describe('The native language to translate to.'),
 });
 export type GetTranslationInput = z.infer<typeof GetTranslationInputSchema>;
@@ -38,8 +38,9 @@ Your task is to translate an English grammatical explanation into a helpful, mix
 
 **Rules:**
 1.  **Preserve English Keywords:** Do NOT translate common, universal English grammatical terms. For example, keep words like "verb", "noun", "adjective", "Present Simple", "Past Continuous", "Progressive Tense", etc., in English.
-2.  **Translate Explanations:** Translate the conceptual explanations and descriptive text surrounding the English keywords into {{{nativeLanguage}}}.
-3.  **Create a Natural Mix:** The final output should be a natural blend of {{{nativeLanguage}}} and English, making it easy for a learner to understand the concept while learning the correct English terminology.
+2.  **Preserve HTML Formatting:** The input text may contain bold tags like "<b>perfect tenses</b>". When you translate the text, you MUST wrap the corresponding translated phrase in bold tags as well. For example, if "perfect tenses" translates to "পারফেক্ট টেন্স", the output must contain "<b>পারফেক্ট টেন্স</b>".
+3.  **Translate Explanations:** Translate the conceptual explanations and descriptive text surrounding the English keywords and bolded phrases into {{{nativeLanguage}}}.
+4.  **Create a Natural Mix:** The final output should be a natural blend of {{{nativeLanguage}}} and English, making it easy for a learner to understand the concept while learning the correct English terminology.
 
 **Example for a Bengali speaker:**
 *   **English Input:** "Continuous tenses, also known as progressive tenses, describe actions that are in progress at a specific point in time."
