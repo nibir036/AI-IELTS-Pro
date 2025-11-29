@@ -32,13 +32,14 @@ const generateLessonImageFlow = ai.defineFlow(
     outputSchema: GenerateLessonImageOutputSchema,
   },
   async (prompt) => {
-    const fullPrompt = `A cute, cartoonish, simple, doodle-style illustration of: ${prompt}. The style should be minimalist, with clean lines and a friendly feel, suitable for an educational app.`;
+    const fullPrompt = `A cute, cartoonish, simple, minimalist, doodle-style illustration that literally depicts the following scene: "${prompt}". The style should have clean lines and a friendly feel, suitable for an educational app.`;
 
     const { media } = await withRetry(() => ai.generate({
       model: 'googleai/gemini-2.5-flash-image-preview',
       prompt: fullPrompt,
       config: {
         responseModalities: ['IMAGE'],
+        temperature: 0.2, // Lower temperature for less randomness and more literal interpretation
       },
     }), {
         retryOn: isRetryableGoogleAIError
