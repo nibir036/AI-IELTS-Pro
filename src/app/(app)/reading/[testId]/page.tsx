@@ -29,15 +29,19 @@ type AnswerExplanations = Record<string, string>;
 
 function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) {
     const { control, formState: { isSubmitted: isGraded } } = useFormContext();
+    // Assuming the answer is a comma-separated string for summary completions
     const correctAnswers = question.answer.split(',').map(a => a.trim().toLowerCase());
 
     const questionTextWithInputs = React.useMemo(() => {
         const parts = question.question.split(/(__\(\d+\)__)/g);
+        let questionCounter = 0;
         return parts.map((part, index) => {
             const match = /__\((\d+)\)__/.exec(part);
             if (match) {
                 const questionNumber = match[1];
                 const questionId = `q${questionNumber}`;
+                const answerIndex = questionCounter++;
+
                 return (
                     <Controller
                         key={questionId}
@@ -45,7 +49,7 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
                         control={control}
                         defaultValue=""
                         render={({ field }) => {
-                             const isCorrect = isGraded ? field.value?.trim().toLowerCase() === correctAnswers[parseInt(questionNumber) - correctAnswers.length] : undefined;
+                             const isCorrect = isGraded ? field.value?.trim().toLowerCase() === correctAnswers[answerIndex] : undefined;
                              return (
                                 <Input
                                     {...field}
@@ -67,7 +71,7 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
 
     return (
         <div className="p-4 rounded-lg border bg-background">
-            <p className="font-medium mb-4">{questionTextWithInputs}</p>
+            <p className="font-medium">{questionTextWithInputs}</p>
         </div>
     );
 }
@@ -89,7 +93,8 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
     const totalQuestions = allQuestions.reduce((acc, q) => {
          if (q.type === 'summary-completion') {
-            return acc + (q.answer.split(',').length);
+            const numBlanks = q.question.match(/__\(\d+\)__/g)?.length || 0;
+            return acc + numBlanks;
         }
         return acc + 1;
     }, 0);
@@ -101,7 +106,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const { watch, handleSubmit: handleFormSubmit, control } = methods;
 
     const userAnswers = watch();
-    const answeredQuestions = Object.values(userAnswers).filter(Boolean).length;
+    const answeredQuestions = Object.values(userAnswers).filter(val => val && val.trim() !== '').length;
     const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
 
     React.useEffect(() => {
@@ -135,9 +140,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         
         const incorrectAnswers = allQuestions.filter(q => {
              const userAnswer = data[q.id] || '';
-             return (q.type === 'fill-in-the-blank' || q.type === 'note-completion')
-                ? userAnswer.trim().toLowerCase() !== q.answer.toLowerCase()
-                : userAnswer.trim().toLowerCase() !== q.answer.toLowerCase();
+             return (q.type !== 'summary-completion' && userAnswer.trim().toLowerCase() !== q.answer.toLowerCase());
         });
 
         let newExplanations: AnswerExplanations = {};
@@ -195,7 +198,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         setIsSubmitting(false);
     };
 
-    const renderQuestion = (question: ReadingQuestion, index: number) => {
+    const renderQuestion = (question: ReadingQuestion) => {
         const userAnswer = userAnswers[question.id] || '';
         const questionNumber = parseInt(question.id.replace('q', ''));
         const isCorrect = isGraded ? (
@@ -334,6 +337,14 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                         <p className="text-muted-foreground">A full-length reading mock test.</p>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            Submit & Grade Full Test
+                        </Button>
                         <div>
                             <Progress value={progress} className="w-48" />
                             <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
@@ -363,7 +374,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     <CardContent className="flex-1 overflow-hidden">
                                         <ScrollArea className="h-full pr-4">
                                              <div className="space-y-4">
-                                                {part.questions.map((q, i) => renderQuestion(q, i))}
+                                                {part.questions.map((q) => renderQuestion(q))}
                                             </div>
                                         </ScrollArea>
                                     </CardContent>
@@ -372,16 +383,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                         </TabsContent>
                     ))}
                 </Tabs>
-                 <div className="py-4">
-                    <Button
-                        type="submit"
-                        size="lg"
-                        className="w-full"
-                    >
-                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                        Submit & Grade Full Test
-                    </Button>
-                </div>
             </form>
         </FormProvider>
     );
