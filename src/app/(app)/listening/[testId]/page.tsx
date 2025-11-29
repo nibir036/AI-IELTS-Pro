@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect, useCallback, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
+import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
 import type { ListeningTest, ListeningQuestion } from '@/lib/types';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb, List, Headphones } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, Play, Pause, Loader2, Lightbulb, List, Headphones } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -99,11 +100,19 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const [hasPlayed, setHasPlayed] = useState(false);
     const startTimeRef = useRef<Date | null>(null);
 
-    const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
     const [score, setScore] = useState(0);
     const [explanations, setExplanations] = useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
+
+    const methods = useForm<UserAnswers>({
+        defaultValues: test.questions.reduce((acc, q) => ({ ...acc, [q.id]: '' }), {})
+    });
+    const { watch, handleSubmit: handleFormSubmit, control } = methods;
+
+    const userAnswers = watch();
+    const answeredQuestions = Object.values(userAnswers).filter(Boolean).length;
+    const progress = (answeredQuestions / test.questions.length) * 100;
 
     const handlePlayerReady = (player: WaveSurfer) => {
         wavesurferRef.current = player;
@@ -122,22 +131,17 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         }
     };
     
-    const handleAnswerChange = (questionId: string, answer: string) => {
-        if (isGraded) return;
-        setUserAnswers(prev => ({ ...prev, [questionId]: answer }));
-    };
-
-    const handleSubmit = async () => {
+    const onSubmit = async (data: UserAnswers) => {
         if (!test) return;
 
         let correctCount = 0;
         test.questions.forEach(q => {
             if (q.type === 'fill-in-the-blank') {
-                if (userAnswers[q.id]?.trim().toLowerCase() === q.answer.toLowerCase()) {
+                if (data[q.id]?.trim().toLowerCase() === q.answer.toLowerCase()) {
                     correctCount++;
                 }
             } else {
-                 if (userAnswers[q.id] === q.answer) {
+                 if (data[q.id] === q.answer) {
                     correctCount++;
                 }
             }
@@ -149,7 +153,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         let newExplanations: AnswerExplanations = {};
         if (test.transcript) {
             const incorrectAnswers = test.questions.filter(q => {
-                const userAnswer = userAnswers[q.id]?.trim().toLowerCase();
+                const userAnswer = data[q.id]?.trim().toLowerCase();
                 const correctAnswer = q.answer.toLowerCase();
                 return userAnswer !== correctAnswer;
             });
@@ -160,7 +164,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     generateTestCorrectionExplanation({
                         context: test.transcript!,
                         question: q.question,
-                        userAnswer: userAnswers[q.id] || "No answer",
+                        userAnswer: data[q.id] || "No answer",
                         correctAnswer: q.answer
                     }).then(result => ({ id: q.id, explanation: result.explanation }))
                       .catch(err => {
@@ -185,7 +189,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             setDocumentNonBlocking(submissionRef, {
                 skill: 'Listening',
                 testId: test.id,
-                inputData: userAnswers,
+                inputData: data,
                 aiReport: newExplanations,
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
@@ -207,7 +211,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         }
     };
 
-    const progress = (Object.keys(userAnswers).length / test.questions.length) * 100;
 
     const renderQuestion = (question: ListeningQuestion, index: number) => {
         const userAnswer = userAnswers[question.id] || '';
@@ -235,28 +238,36 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     )}
                 </div>
                 
-                {question.type === 'multiple-choice' && (
-                    <RadioGroup value={userAnswer} onValueChange={(value) => handleAnswerChange(question.id, value)} disabled={isGraded}>
-                        {question.options?.map((option, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                                <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                                <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
-                                    {option}
-                                </Label>
-                            </div>
-                        ))}
-                    </RadioGroup>
-                )}
-                
-                {question.type === 'fill-in-the-blank' && (
-                    <div className="relative">
-                        <Input value={userAnswer} onChange={(e) => handleAnswerChange(question.id, e.target.value)} disabled={isGraded} />
-                         {isGraded && !isCorrect && (
-                            <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
-                        )}
-                    </div>
-                )}
-                
+                 <Controller
+                    name={question.id as any}
+                    control={control}
+                    render={({ field }) => (
+                         <>
+                            {question.type === 'multiple-choice' && (
+                                <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                                    {question.options?.map((option, index) => (
+                                        <div key={index} className="flex items-center space-x-2">
+                                            <RadioGroupItem value={option} id={`${question.id}-${index}`} />
+                                            <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
+                                                {option}
+                                            </Label>
+                                        </div>
+                                    ))}
+                                </RadioGroup>
+                            )}
+                            
+                            {question.type === 'fill-in-the-blank' && (
+                                <div className="relative">
+                                    <Input {...field} disabled={isGraded} />
+                                    {isGraded && !isCorrect && (
+                                        <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
+                                    )}
+                                </div>
+                            )}
+                         </>
+                    )}
+                />
+
                  {isGraded && !isCorrect && (
                     <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
                         <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
@@ -289,24 +300,10 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             </div>
             <ScrollArea className="h-full pr-4 mt-2">
                 <div className="space-y-4">
-                    {test.questions.map(renderQuestion)}
+                    {test.questions.map((q, i) => renderQuestion(q, i))}
                 </div>
             </ScrollArea>
         </div>
-    )
-
-    const UngradedView = () => (
-         <>
-            <div className="mb-4">
-                <Progress value={progress} />
-                <p className="text-xs text-muted-foreground text-center mt-1">{Object.keys(userAnswers).length} of {test.questions.length} answered</p>
-            </div>
-            <ScrollArea className="h-[calc(100vh-28rem)] lg:h-full pr-4">
-                <div className="space-y-4">
-                    {test.questions.map(renderQuestion)}
-                </div>
-            </ScrollArea>
-        </>
     )
 
     const QuestionsCard = () => (
@@ -316,20 +313,34 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                 {!isGraded && <CardDescription>Answer all questions before submitting.</CardDescription>}
                 {isGraded && <CardDescription>Review your results below.</CardDescription>}
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden">
-                { isGraded ? <GradedView /> : <UngradedView /> }
-            </CardContent>
-            {!isGraded && (
-                <CardFooter>
-                    <Button 
-                        className="w-full" 
-                        onClick={handleSubmit} 
-                        disabled={Object.keys(userAnswers).length !== test.questions.length}
-                    >
-                        Submit & Grade
-                    </Button>
-                </CardFooter>
-            )}
+             <FormProvider {...methods}>
+                <form onSubmit={handleFormSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+                    <CardContent className="flex-1 overflow-y-auto">
+                        {!isGraded ? (
+                            <>
+                                <div className="mb-4">
+                                    <Progress value={progress} />
+                                    <p className="text-xs text-muted-foreground text-center mt-1">{answeredQuestions} of {test.questions.length} answered</p>
+                                </div>
+                                <div className="space-y-4">
+                                    {test.questions.map((q, i) => renderQuestion(q, i))}
+                                </div>
+                            </>
+                        ) : <GradedView />}
+                    </CardContent>
+                    {!isGraded && (
+                        <CardFooter>
+                            <Button 
+                                type="submit"
+                                className="w-full" 
+                                disabled={answeredQuestions !== test.questions.length}
+                            >
+                                Submit & Grade
+                            </Button>
+                        </CardFooter>
+                    )}
+                </form>
+            </FormProvider>
         </Card>
     )
 
