@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, use } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { CheckCircle, XCircle, ChevronRight, HelpCircle, Lightbulb, Loader2, BookOpen, List } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,6 +28,7 @@ type AnswerExplanations = Record<string, string>;
 function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
+    const router = useRouter();
     const { toast } = useToast();
     const startTimeRef = useRef<Date | null>(null);
 
@@ -50,16 +52,27 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
         let correctCount = 0;
         test.questions.forEach(q => {
-            if (userAnswers[q.id] === q.answer) {
-                correctCount++;
+            if (q.type === 'fill-in-the-blank') {
+                if (userAnswers[q.id]?.trim().toLowerCase() === q.answer.toLowerCase()) {
+                    correctCount++;
+                }
+            } else {
+                if (userAnswers[q.id] === q.answer) {
+                    correctCount++;
+                }
             }
         });
         const finalScore = (correctCount / test.questions.length) * 9.0;
         setScore(finalScore);
         setIsGraded(true);
 
-        // Generate explanations for incorrect answers first
-        const incorrectAnswers = test.questions.filter(q => userAnswers[q.id] !== q.answer);
+        const incorrectAnswers = test.questions.filter(q => {
+            const userAnswer = userAnswers[q.id] || '';
+            return q.type === 'fill-in-the-blank' 
+                ? userAnswer.trim().toLowerCase() !== q.answer.toLowerCase() 
+                : userAnswer !== q.answer;
+        });
+
         let newExplanations: AnswerExplanations = {};
         if (incorrectAnswers.length > 0) {
             setIsGeneratingExplanations(true);
@@ -81,7 +94,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
             setIsGeneratingExplanations(false);
         }
 
-        // Now save everything to Firestore
         if (authUser && firestore && userProfile) {
             const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
             
@@ -89,8 +101,8 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
             setDocumentNonBlocking(submissionRef, {
                 skill: 'Reading',
                 testId: test.id,
-                inputData: userAnswers, // Save the user's answers
-                aiReport: newExplanations, // Save the generated explanations
+                inputData: userAnswers,
+                aiReport: newExplanations,
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
             });
@@ -114,8 +126,12 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const progress = (Object.keys(userAnswers).length / test.questions.length) * 100;
 
     const renderQuestion = (question: ReadingQuestion) => {
-        const userAnswer = userAnswers[question.id];
-        const isCorrect = isGraded ? userAnswer === question.answer : undefined;
+        const userAnswer = userAnswers[question.id] || '';
+        const isCorrect = isGraded ? (
+            question.type === 'fill-in-the-blank' 
+            ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
+            : userAnswer === question.answer
+       ) : undefined;
         const explanation = explanations[question.id];
 
         const getOptionClass = (option: string) => {
@@ -127,27 +143,35 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
         return (
             <Card key={question.id} className={`p-4 ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2 mb-4">
                      {isGraded ? (
                         isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
                     ) : <HelpCircle className="h-5 w-5 text-muted-foreground mt-1" />}
-                    <p className="flex-1 font-medium mb-4">{question.question}</p>
+                    <p className="flex-1 font-medium">{question.question}</p>
                 </div>
                 
-                <RadioGroup
-                    value={userAnswer}
-                    onValueChange={(value) => handleAnswerChange(question.id, value)}
-                    disabled={isGraded}
-                >
-                    {question.options?.map((option, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                            <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
-                                {option}
-                            </Label>
-                        </div>
-                    ))}
-                </RadioGroup>
+                {(question.type === 'multiple-choice' || question.type === 'true-false-not-given') && (
+                    <RadioGroup value={userAnswer} onValueChange={(value) => handleAnswerChange(question.id, value)} disabled={isGraded}>
+                        {question.options?.map((option, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                                <RadioGroupItem value={option} id={`${question.id}-${index}`} />
+                                <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
+                                    {option}
+                                </Label>
+                            </div>
+                        ))}
+                    </RadioGroup>
+                )}
+
+                {question.type === 'fill-in-the-blank' && (
+                    <div className="relative">
+                        <Input value={userAnswer} onChange={(e) => handleAnswerChange(question.id, e.target.value)} disabled={isGraded} />
+                         {isGraded && !isCorrect && (
+                            <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
+                        )}
+                    </div>
+                )}
+                
                  {isGraded && !isCorrect && (
                     <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
                         <p className="text-xs font-semibold text-green-600 mb-1">Correct answer: {question.answer}</p>
@@ -321,3 +345,4 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     
     return <ReadingTestComponent test={test} />;
 }
+ 
