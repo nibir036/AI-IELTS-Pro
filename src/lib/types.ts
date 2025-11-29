@@ -55,6 +55,7 @@ export interface MockTest {
 
 export interface ReadingQuestion {
     id: string;
+    instructions?: string; // Optional instructions for a block of questions
     question: string;
     type: 'multiple-choice' | 'true-false-not-given' | 'note-completion' | 'matching-headings' | 'matching-information' | 'summary-completion' | 'yes-no-not-given' | 'matching-sentence-endings' | 'fill-in-the-blank';
     options?: string[];
@@ -90,6 +91,7 @@ export type ListeningQuestionType = 'multiple-choice' | 'fill-in-the-blank';
 
 export interface ListeningQuestion {
     id: string;
+    instructions?: string;
     question: string;
     type: ListeningQuestionType;
     options?: string[];

@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, Lightbulb, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, Lightbulb, Loader2, Info } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -39,11 +39,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const [isGeneratingExplanations, setIsGeneratingExplanations] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-    if (!test.parts) {
-        return <p>This test is not configured correctly.</p>;
-    }
-    
-    const allQuestions = test.parts.flatMap(p => p.questions);
+    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
     const totalQuestions = allQuestions.length;
 
     const methods = useForm<UserAnswers>({
@@ -53,7 +49,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
     const userAnswers = watch();
     const answeredQuestions = Object.values(userAnswers).filter(Boolean).length;
-    const progress = (answeredQuestions / totalQuestions) * 100;
+    const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
 
     React.useEffect(() => {
         startTimeRef.current = new Date();
@@ -73,7 +69,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 correctCount++;
             }
         });
-        const finalScore = (correctCount / totalQuestions) * 9.0;
+        const finalScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 9.0 : 0;
         setScore(finalScore);
         
         const incorrectAnswers = allQuestions.filter(q => {
@@ -138,9 +134,9 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         setIsSubmitting(false);
     };
 
-    const renderQuestion = (question: ReadingQuestion) => {
+    const renderQuestion = (question: ReadingQuestion, index: number) => {
         const userAnswer = userAnswers[question.id] || '';
-        const questionNumber = parseInt(question.id.replace('q',''));
+        const questionNumber = index + 1;
         const isCorrect = isGraded ? (
             question.type === 'fill-in-the-blank' || question.type === 'note-completion'
             ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
@@ -156,60 +152,75 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         };
 
         return (
-            <div key={question.id} className="p-4 rounded-lg border bg-background">
-                <div className="flex items-start gap-3 mb-4">
-                    <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
-                    <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
-                     {isGraded && (
-                        isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
-                    )}
-                </div>
-                
-                 <Controller
-                    name={question.id as any}
-                    control={control}
-                    render={({ field }) => (
-                         <div className="pl-10">
-                            {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-headings' || question.type === 'matching-sentence-endings') && (
-                                <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
-                                    {question.options?.map((option, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
-                                            <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                                            <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
-                                                {option}
-                                            </Label>
-                                        </div>
-                                    ))}
-                                </RadioGroup>
-                            )}
-
-                            {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion' || question.type === 'matching-information') && (
-                                <div className="relative">
-                                    <Input {...field} disabled={isGraded} />
-                                    {isGraded && !isCorrect && (
-                                        <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
-                                    )}
-                                </div>
-                            )}
+             <div key={question.id} className="space-y-4">
+                {question.instructions && (
+                    <div className="bg-muted/50 p-3 rounded-lg border text-sm text-foreground">
+                        <div className="flex items-start gap-2">
+                           <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                           <div dangerouslySetInnerHTML={{ __html: question.instructions }} />
                         </div>
-                    )}
-                />
-                
-                 {isGraded && !isCorrect && (
-                    <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
-                        <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                           <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            {isGeneratingExplanations && !explanation ? (
-                                <div className="flex items-center gap-2 text-xs">
-                                    <Loader2 className="h-3 w-3 animate-spin"/>
-                                    <span>Generating explanation...</span>
-                                </div>
-                            ) : (
-                                <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
-                            )}
-                        </div>
+                        {question.type === 'matching-headings' && question.options && (
+                             <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 p-3 border-t">
+                                {question.options.map((opt, idx) => <p key={idx} className="text-xs text-muted-foreground">{opt}</p>)}
+                            </div>
+                        )}
                     </div>
                 )}
+                <div className="p-4 rounded-lg border bg-background">
+                    <div className="flex items-start gap-3 mb-4">
+                        <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
+                        <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
+                        {isGraded && (
+                            isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
+                        )}
+                    </div>
+                    
+                    <Controller
+                        name={question.id as any}
+                        control={control}
+                        render={({ field }) => (
+                            <div className="pl-10">
+                                {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-sentence-endings') && (
+                                    <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                                        {question.options?.map((option, index) => (
+                                            <div key={index} className="flex items-center space-x-2">
+                                                <RadioGroupItem value={option} id={`${question.id}-${index}`} />
+                                                <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
+                                                    {option}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </RadioGroup>
+                                )}
+
+                                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion' || question.type === 'matching-information' || question.type === 'matching-headings') && (
+                                    <div className="relative">
+                                        <Input {...field} disabled={isGraded} />
+                                        {isGraded && !isCorrect && (
+                                            <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    />
+                    
+                    {isGraded && !isCorrect && (
+                        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
+                            <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                {isGeneratingExplanations && !explanation ? (
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <Loader2 className="h-3 w-3 animate-spin"/>
+                                        <span>Generating explanation...</span>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     };
@@ -221,7 +232,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     <CardTitle className="text-3xl">Test Complete!</CardTitle>
                     <CardDescription>You scored</CardDescription>
                     <p className="text-7xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
-                    <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}% accuracy)</p>
+                    <p className="text-muted-foreground">({(totalQuestions > 0 ? (score / 9.0) * 100 : 0).toFixed(0)}% accuracy)</p>
                 </CardHeader>
                  <CardContent className="text-center">
                      <p className="text-muted-foreground mb-6">You can now review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
@@ -240,20 +251,18 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     return (
         <FormProvider {...methods}>
             <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-6">
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
-                        <p className="text-muted-foreground">A full-length reading mock test.</p>
-                    </div>
+                <div className="mb-4">
+                    <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
+                    <p className="text-muted-foreground">A full-length reading mock test.</p>
                 </div>
 
-                <Card>
+                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <Progress value={progress} className="w-48" />
                             <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
                         </div>
-                        <Button
+                         <Button
                             type="submit"
                             size="lg"
                             disabled={isSubmitting}
@@ -286,7 +295,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     <CardContent className="flex-1 overflow-hidden">
                                         <ScrollArea className="h-full pr-4">
                                              <div className="space-y-4">
-                                                {part.questions.map((q) => renderQuestion(q))}
+                                                {part.questions.map((q, i) => renderQuestion(q, parseInt(q.id.replace('q','')) - 1))}
                                             </div>
                                         </ScrollArea>
                                     </CardContent>
@@ -350,6 +359,14 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
 
     if (!test) {
         notFound();
+    }
+    
+    if (!test.parts) {
+        return (
+             <div className="flex items-center justify-center h-full">
+                <p>This test is not formatted correctly and cannot be displayed.</p>
+            </div>
+        );
     }
     
     return (

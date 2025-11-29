@@ -26,6 +26,7 @@ export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
 
 const PracticeQuestionSchema = z.object({
   id: z.string().describe("A unique ID for the question (e.g., q1, q2)."),
+  instructions: z.string().optional().describe("Instructions for this block of questions, e.g., 'Choose the correct heading for each paragraph.'"),
   question: z.string().describe("The question text."),
   type: z.enum(["multiple-choice", "true-false-not-given", "note-completion", "matching-headings", "matching-information", "summary-completion", "yes-no-not-given", "matching-sentence-endings", "fill-in-the-blank"]).describe("The type of question."),
   options: z.array(z.string()).optional().describe("A list of options for the question."),
@@ -161,10 +162,19 @@ Your task is to take a raw text input and a desired content type, and generate a
 *   **Role:** Senior IELTS Exam Content Creator.
 *   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Passage 1 Topic; Passage 2 Topic; Passage 3 Topic"). Generate a Full IELTS Academic Reading Test containing 3 distinct passages and 40 questions in total. Follow this strict structure:
 *   **Structure Requirements:**
-    1.  **PASSAGE 1 (Factual):** 700–750 words. Style: Descriptive, factual. Questions 1–7: "note-completion". Questions 8–13: "true-false-not-given".
-    2.  **PASSAGE 2 (Discursive):** 750–800 words. Style: Argumentative, sociologic. Questions 14–19: "matching-headings" (provide 8 headings for 6 paragraphs). Questions 20–23: "matching-information". Questions 24–26: "multiple-choice" (4 options).
-    3.  **PASSAGE 3 (Abstract):** 850–900 words. Style: Complex, scientific. Questions 27–32: "summary-completion" (select words from a box). Questions 33–36: "yes-no-not-given". Questions 37–40: "matching-sentence-endings".
-    4.  The final output must be a single 'ReadingTest' object with 3 items in the 'parts' array.
+    1.  **PASSAGE 1 (Factual):** 700–750 words. Style: Descriptive, factual.
+        *   **Questions 1–7:** "note-completion". The 'instructions' field MUST be 'Complete the notes below. Choose NO MORE THAN TWO WORDS from the passage for each answer.'.
+        *   **Questions 8–13:** "true-false-not-given". The 'instructions' field MUST be 'Do the following statements agree with the information given in the reading passage? Write TRUE, FALSE, or NOT GIVEN.'.
+    2.  **PASSAGE 2 (Discursive):** 750–800 words. Style: Argumentative, sociologic.
+        *   **Questions 14–19:** "matching-headings". The 'instructions' field MUST contain the list of headings.
+        *   **Questions 20–23:** "matching-information". The 'instructions' field MUST be 'Look at the following statements and the paragraphs in Reading Passage 2. Match each statement with the correct paragraph.'.
+        *   **Questions 24–26:** "multiple-choice". The 'instructions' field MUST be 'Choose the correct letter, A, B, C or D.'.
+    3.  **PASSAGE 3 (Abstract):** 850–900 words. Style: Complex, scientific.
+        *   **Questions 27–32:** "summary-completion". The 'instructions' field MUST be 'Complete the summary using the list of words, A-J, below.'. The 'answerBox' MUST contain the list of words.
+        *   **Questions 33–36:** "yes-no-not-given". The 'instructions' field MUST be 'Do the following statements agree with the views of the writer in Reading Passage 3? Write YES, NO, or NOT GIVEN.'.
+        *   **Questions 37–40:** "matching-sentence-endings". The 'instructions' field MUST be 'Complete each sentence with the correct ending, A-G, below.'. The 'options' array for these questions must contain the list of sentence endings.
+    4.  **CRITICAL:** The 'instructions' field must ONLY be present on the FIRST question of a new question type block (e.g., on question 1, 8, 14, 20, 24, etc.).
+    5.  The final output must be a single 'ReadingTest' object with 3 items in the 'parts' array.
 
 ---
 ## General Rules:
