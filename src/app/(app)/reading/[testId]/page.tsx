@@ -84,9 +84,11 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         if (incorrectAnswers.length > 0) {
             setIsGeneratingExplanations(true);
             const explanationPromises = incorrectAnswers.map(q => {
-                 const relevantPassage = test.parts.find(p => p.questions.some(pq => pq.id === q.id))?.passage || '';
+                 const relevantPart = test.parts.find(p => p.questions.some(pq => pq.id === q.id));
+                 if (!relevantPart) return Promise.resolve({ id: q.id, explanation: 'Could not find relevant passage.' });
+
                  return generateTestCorrectionExplanation({
-                    context: relevantPassage,
+                    context: relevantPart.passage,
                     question: q.question,
                     userAnswer: data[q.id] || "No answer",
                     correctAnswer: q.answer
@@ -131,8 +133,9 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         }
     };
 
-    const renderQuestion = (question: ReadingQuestion, index: number) => {
+    const renderQuestion = (question: ReadingQuestion) => {
         const userAnswer = userAnswers[question.id] || '';
+        const questionNumber = parseInt(question.id.replace('q',''));
         const isCorrect = isGraded ? (
             question.type === 'fill-in-the-blank' || question.type === 'note-completion'
             ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
@@ -150,7 +153,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         return (
             <div key={question.id} className="p-4 rounded-lg border bg-background">
                 <div className="flex items-start gap-3 mb-4">
-                    <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{index + 1}</div>
+                    <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
                     <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
                      {isGraded && (
                         isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
@@ -240,7 +243,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     <CardContent className="flex-1 overflow-hidden">
                                         <ScrollArea className="h-full pr-4">
                                              <div className="space-y-4">
-                                                {part.questions.map((q, i) => renderQuestion(q, parseInt(q.id.replace('q','')) - 1))}
+                                                {part.questions.map((q) => renderQuestion(q))}
                                             </div>
                                         </ScrollArea>
                                     </CardContent>
@@ -277,8 +280,8 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 </CardHeader>
                  <CardContent className="text-center">
                      <p className="text-muted-foreground mb-6">You can now review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
-                    <Button onClick={() => router.push('/dashboard')} size="lg">
-                        Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+                    <Button onClick={() => router.push(`/submissions`)} size="lg">
+                        View My Submissions <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                 </CardContent>
             </Card>

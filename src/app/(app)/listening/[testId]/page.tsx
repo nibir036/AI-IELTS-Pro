@@ -298,7 +298,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
             </div>
-            <ScrollArea className="h-full pr-4 mt-2">
+            <ScrollArea className="flex-1 pr-4 mt-2">
                 <div className="space-y-4">
                     {test.questions.map((q, i) => renderQuestion(q, i))}
                 </div>

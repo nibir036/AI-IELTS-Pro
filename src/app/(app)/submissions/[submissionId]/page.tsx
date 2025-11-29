@@ -1,7 +1,8 @@
+
 'use client';
 
 import { use } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import type { Submission, AiPoweredWritingEvaluationOutput, AiPoweredSpeakingEvaluationOutput, ReadingTest, ListeningTest, ReadingQuestion, ListeningQuestion } from '@/lib/types';
@@ -44,7 +45,13 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
         return <p>Test content could not be found for this submission.</p>;
     }
     
-    const questions = test.questions || [];
+    let allQuestions: (ReadingQuestion | ListeningQuestion)[] = [];
+    if ('parts' in test && Array.isArray(test.parts)) {
+        allQuestions = test.parts.flatMap(p => p.questions);
+    } else if ('questions' in test && Array.isArray(test.questions)) {
+        allQuestions = test.questions;
+    }
+
 
     const userAnswers = submission.inputData as Record<string, string>;
     const explanations = submission.aiReport as Record<string, string> | null;
@@ -60,9 +67,9 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
             <CardContent>
                 <ScrollArea className="h-[60vh] pr-4">
                     <div className="space-y-4">
-                    {questions.map(q => {
+                    {allQuestions.map(q => {
                         const userAnswer = userAnswers[q.id] || '';
-                        const isCorrect = q.type === 'fill-in-the-blank' 
+                        const isCorrect = (q.type === 'fill-in-the-blank' || q.type === 'note-completion')
                             ? userAnswer.trim().toLowerCase() === q.answer.toLowerCase()
                             : userAnswer === q.answer;
                         const explanation = explanations?.[q.id];
@@ -80,24 +87,24 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
                             <p className="flex-1 font-medium">{q.question}</p>
                             </div>
 
-                            {q.type === 'multiple-choice' && (
-                            <RadioGroup value={userAnswer} disabled>
-                                {q.options?.map((option, index) => (
-                                <div key={index} className="flex items-center space-x-2">
-                                    <RadioGroupItem value={option} id={`${q.id}-${index}`} />
-                                    <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
-                                    {option}
-                                    </Label>
-                                </div>
-                                ))}
-                            </RadioGroup>
+                            {(q.type === 'multiple-choice' || q.type === 'true-false-not-given' || q.type === 'yes-no-not-given' || q.type === 'matching-headings' || q.type === 'matching-sentence-endings') && (
+                                <RadioGroup value={userAnswer} disabled>
+                                    {q.options?.map((option, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                        <RadioGroupItem value={option} id={`${q.id}-${index}`} />
+                                        <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
+                                        {option}
+                                        </Label>
+                                    </div>
+                                    ))}
+                                </RadioGroup>
                             )}
 
-                            {q.type === 'fill-in-the-blank' && (
-                            <div>
-                                <Input value={userAnswer} disabled />
-                                {!isCorrect && <p className="text-xs text-green-600 mt-1">Correct answer: {q.answer}</p>}
-                            </div>
+                             {(q.type === 'fill-in-the-blank' || q.type === 'note-completion' || q.type === 'summary-completion' || q.type === 'matching-information') && (
+                                <div>
+                                    <Input value={userAnswer} disabled />
+                                    {!isCorrect && <p className="text-xs text-green-600 mt-1">Correct answer: {q.answer}</p>}
+                                </div>
                             )}
                             
                             {!isCorrect && explanation && (
