@@ -291,6 +291,8 @@ const contentFactoryFlow = ai.defineFlow(
                     console.log(`Image for prompt "${block.imageHint}" uploaded to ${publicUrl}`);
                 } catch (imgError) {
                     console.error(`Failed to generate or upload image for prompt: "${block.imageHint}"`, imgError);
+                    // IMPORTANT: Fallback to a valid, whitelisted URL to prevent client-side crashes.
+                    block.generatedImageUrl = "https://picsum.photos/seed/error/600/400";
                 }
             }
             return block;

@@ -145,6 +145,10 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
 
 
 function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
+    // Frontend Safeguard: Ensure the URL is valid and not a placeholder that would crash Next/Image
+    const isImageUrlValid = block.generatedImageUrl && !block.generatedImageUrl.includes('example.com');
+    const safeImageUrl = isImageUrlValid ? block.generatedImageUrl : "https://picsum.photos/seed/placeholder/600/400";
+
     return (
         <div className="space-y-4 py-6">
              {index > 0 && <Separator />}
@@ -159,7 +163,7 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                     {block.generatedImageUrl ? (
                         <div className="relative aspect-video">
                             <Image
-                                src={block.generatedImageUrl}
+                                src={safeImageUrl}
                                 alt={block.imageHint || 'Lesson image'}
                                 fill
                                 className="rounded-lg shadow-md object-cover"
@@ -241,3 +245,5 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
     
     return <LessonComponent lesson={lesson} />;
 }
+
+    
