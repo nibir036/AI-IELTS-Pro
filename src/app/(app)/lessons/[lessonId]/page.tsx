@@ -4,14 +4,20 @@ import { use } from 'react';
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle } from "lucide-react";
+import { Languages, Loader2 } from "lucide-react";
 import type { Lesson, ContentBlock, GrammarTableRow } from '@/lib/types';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Separator } from '@/components/ui/separator';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { getTranslation } from '@/ai/flows/multilingual-support';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 function LessonPageSkeleton() {
     return (
@@ -24,7 +30,7 @@ function LessonPageSkeleton() {
                              <Skeleton className="h-9 w-80" />
                              <Skeleton className="h-5 w-40" />
                         </div>
-                         <Skeleton className="h-16 w-16" />
+                         <Skeleton className="h-10 w-28" />
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -124,6 +130,44 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
 
 
 function LessonComponent({ lesson }: { lesson: Lesson }) {
+     const { user } = useUserProfile();
+    const { toast } = useToast();
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [translatedText, setTranslatedText] = useState('');
+
+    const combinedContent = lesson.contentBlocks?.map(b => b.content).join('\n\n') || lesson.content_en;
+
+    const handleTranslate = async () => {
+        if (!user?.nativeLanguage) {
+            toast({
+                variant: 'destructive',
+                title: 'Language not set',
+                description: 'Please set your native language in settings.',
+            });
+            return;
+        }
+        if (translatedText) return; // Don't re-translate
+
+        setIsTranslating(true);
+        try {
+            const result = await getTranslation({
+                text: combinedContent,
+                nativeLanguage: user.nativeLanguage,
+            });
+            setTranslatedText(result.translatedText);
+        } catch (error) {
+            console.error('Translation error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Translation Failed',
+                description: 'Could not translate the lesson at this time.',
+            });
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
+
      return (
         <div className="max-w-4xl mx-auto animate-in fade-in-50">
             <Card>
@@ -134,9 +178,27 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                             <CardTitle className="text-3xl font-bold">{lesson.title}</CardTitle>
                             <CardDescription>Level: {lesson.level}</CardDescription>
                         </div>
-                         <div className="flex items-center justify-center rounded-lg bg-primary/10 text-primary h-16 w-16 text-3xl font-bold">
-                           {lesson.id.split('_')[0].charAt(0)}
-                        </div>
+                        {user?.nativeLanguage && user.nativeLanguage !== 'English' && (
+                             <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" onClick={handleTranslate}>
+                                        {isTranslating ? (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Languages className="mr-2 h-4 w-4" />
+                                        )}
+                                        Translate
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Translation to {user.nativeLanguage}</DialogTitle>
+                                    </DialogHeader>
+                                    {isTranslating && <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin"/></div>}
+                                    {translatedText && <p className="text-muted-foreground whitespace-pre-wrap">{translatedText}</p>}
+                                </DialogContent>
+                            </Dialog>
+                        )}
                     </div>
                 </CardHeader>
                 <CardContent className="divide-y">

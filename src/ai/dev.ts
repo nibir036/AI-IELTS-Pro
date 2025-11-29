@@ -22,7 +22,7 @@ import { getFirebaseAdmin } from '@/firebase/admin';
         import('@/ai/flows/text-to-speech-flow.ts');
         import('@/ai/flows/process-pdf-flow.ts');
         import('@/ai/flows/generate-lesson-image-flow.ts');
-        import('@ai/flows/process-image-flow.ts');
+        import('@/ai/flows/process-image-flow.ts');
     } catch (e) {
         console.error("Failed to initialize Firebase Admin for Genkit dev server:", e);
         process.exit(1);
