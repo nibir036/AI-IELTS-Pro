@@ -17,7 +17,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getTranslation } from '@/ai/flows/multilingual-support';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 function LessonPageSkeleton() {
     return (
@@ -78,6 +77,56 @@ function ExampleList({ examples }: { examples: string[] }) {
     )
 }
 
+function ExplanationBlock({ block }: { block: ContentBlock }) {
+    const { user } = useUserProfile();
+    const { toast } = useToast();
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [translatedContent, setTranslatedContent] = useState<string | null>(null);
+    const canTranslate = user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && block.content;
+
+    const handleTranslate = async () => {
+        if (!canTranslate || translatedContent) return;
+
+        setIsTranslating(true);
+        try {
+            const result = await getTranslation({
+                text: block.content!.replace(/<[^>]*>?/gm, ''), // Strip HTML for translation
+                nativeLanguage: user.nativeLanguage,
+            });
+            setTranslatedContent(result.translatedText);
+        } catch (error) {
+            console.error('Translation error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Translation Failed',
+                description: 'Could not translate the content at this time.',
+            });
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+    
+    return (
+        <div className="group relative">
+             {canTranslate && (
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute -top-2 right-0 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={handleTranslate}
+                    disabled={isTranslating}
+                >
+                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                </Button>
+            )}
+            <p 
+                className="text-foreground/80 leading-relaxed" 
+                dangerouslySetInnerHTML={{ __html: translatedContent || block.content || '' }} 
+            />
+        </div>
+    )
+}
+
 
 function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
     return (
@@ -87,9 +136,7 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                 <h3 className="text-xl font-semibold tracking-tight" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
-            {block.type === 'explanation' && block.content && (
-                <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />
-            )}
+            {block.type === 'explanation' && <ExplanationBlock block={block} />}
             
              {block.type === 'image_placeholder' && (
                 <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
@@ -130,44 +177,6 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
 
 
 function LessonComponent({ lesson }: { lesson: Lesson }) {
-     const { user } = useUserProfile();
-    const { toast } = useToast();
-    const [isTranslating, setIsTranslating] = useState(false);
-    const [translatedText, setTranslatedText] = useState('');
-
-    const combinedContent = lesson.contentBlocks?.map(b => b.content).join('\n\n') || lesson.content_en;
-
-    const handleTranslate = async () => {
-        if (!user?.nativeLanguage) {
-            toast({
-                variant: 'destructive',
-                title: 'Language not set',
-                description: 'Please set your native language in settings.',
-            });
-            return;
-        }
-        if (translatedText) return; // Don't re-translate
-
-        setIsTranslating(true);
-        try {
-            const result = await getTranslation({
-                text: combinedContent,
-                nativeLanguage: user.nativeLanguage,
-            });
-            setTranslatedText(result.translatedText);
-        } catch (error) {
-            console.error('Translation error:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Translation Failed',
-                description: 'Could not translate the lesson at this time.',
-            });
-        } finally {
-            setIsTranslating(false);
-        }
-    };
-
-
      return (
         <div className="max-w-4xl mx-auto animate-in fade-in-50">
             <Card>
@@ -178,29 +187,6 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                             <CardTitle className="text-3xl font-bold">{lesson.title}</CardTitle>
                             <CardDescription>Level: {lesson.level}</CardDescription>
                         </div>
-                        {user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && (
-                             <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" onClick={handleTranslate}>
-                                        {isTranslating ? (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Languages className="mr-2 h-4 w-4" />
-                                        )}
-                                        Translate
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-h-[80vh]">
-                                    <DialogHeader>
-                                        <DialogTitle>Translation to {user.nativeLanguage}</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="overflow-y-auto pr-4">
-                                        {isTranslating && <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin"/></div>}
-                                        {translatedText && <p className="text-muted-foreground whitespace-pre-wrap">{translatedText}</p>}
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-                        )}
                     </div>
                 </CardHeader>
                 <CardContent className="divide-y">
@@ -239,5 +225,3 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
     
     return <LessonComponent lesson={lesson} />;
 }
-
-    
