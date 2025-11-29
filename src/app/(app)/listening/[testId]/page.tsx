@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, use } from 'react';
@@ -208,7 +209,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
     const progress = (Object.keys(userAnswers).length / test.questions.length) * 100;
 
-    const renderQuestion = (question: ListeningQuestion) => {
+    const renderQuestion = (question: ListeningQuestion, index: number) => {
         const userAnswer = userAnswers[question.id] || '';
         const isCorrect = isGraded ? (
              question.type === 'fill-in-the-blank' 
@@ -226,11 +227,12 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
         return (
             <Card key={question.id} className={`p-4 ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
-                <div className="flex items-start gap-2 mb-4">
-                     {isGraded ? (
-                        isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
-                    ) : <HelpCircle className="h-5 w-5 text-muted-foreground mt-1" />}
+                <div className="flex items-start gap-3 mb-4">
+                    <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{index + 1}</div>
                     <p className="flex-1 font-medium">{question.question}</p>
+                     {isGraded && (
+                        isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
+                    )}
                 </div>
                 
                 {question.type === 'multiple-choice' && (
