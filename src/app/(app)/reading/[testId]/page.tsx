@@ -4,11 +4,11 @@
 import * as React from 'react';
 import { use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
-import { useForm, FormProvider, Controller } from 'react-hook-form';
+import { useForm, FormProvider, Controller, useFormContext } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, increment } from 'firebase/firestore';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -22,9 +22,56 @@ import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
+
+function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) {
+    const { control, formState: { isSubmitted: isGraded } } = useFormContext();
+    const correctAnswers = question.answer.split(',').map(a => a.trim().toLowerCase());
+
+    const questionTextWithInputs = React.useMemo(() => {
+        const parts = question.question.split(/(__\(\d+\)__)/g);
+        return parts.map((part, index) => {
+            const match = /__\((\d+)\)__/.exec(part);
+            if (match) {
+                const questionNumber = match[1];
+                const questionId = `q${questionNumber}`;
+                return (
+                    <Controller
+                        key={questionId}
+                        name={questionId}
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => {
+                             const isCorrect = isGraded ? field.value?.trim().toLowerCase() === correctAnswers[parseInt(questionNumber) - correctAnswers.length] : undefined;
+                             return (
+                                <Input
+                                    {...field}
+                                    disabled={isGraded}
+                                    placeholder={`${questionNumber}`}
+                                    className={cn(
+                                        "inline-block w-32 h-7 p-1 mx-1 text-center",
+                                        isGraded && (isCorrect ? "border-green-500" : "border-red-500")
+                                    )}
+                                />
+                            );
+                        }}
+                    />
+                );
+            }
+            return <span key={index}>{part}</span>;
+        });
+    }, [question.question, control, isGraded, correctAnswers]);
+
+    return (
+        <div className="p-4 rounded-lg border bg-background">
+            <p className="font-medium mb-4">{questionTextWithInputs}</p>
+        </div>
+    );
+}
+
 
 function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const { firestore, user: authUser } = useFirebase();
@@ -40,7 +87,13 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
-    const totalQuestions = allQuestions.length;
+    const totalQuestions = allQuestions.reduce((acc, q) => {
+         if (q.type === 'summary-completion') {
+            return acc + (q.answer.split(',').length);
+        }
+        return acc + 1;
+    }, 0);
+
 
     const methods = useForm<UserAnswers>({
         defaultValues: allQuestions.reduce((acc, q) => ({ ...acc, [q.id]: '' }), {})
@@ -61,12 +114,20 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
         let correctCount = 0;
         allQuestions.forEach(q => {
-             const userAnswer = data[q.id] || '';
-             const isCorrect = q.type === 'fill-in-the-blank' || q.type === 'note-completion'
-                ? userAnswer.trim().toLowerCase() === q.answer.toLowerCase()
-                : userAnswer.trim().toLowerCase() === q.answer.toLowerCase();
-            if (isCorrect) {
-                correctCount++;
+            if (q.type === 'summary-completion') {
+                 const correctAnswers = q.answer.split(',').map(a => a.trim().toLowerCase());
+                 const questionNumbers = q.question.match(/__\((\d+)\)__/g)?.map(m => `q${m.match(/\d+/)?.[0]}`) || [];
+                 questionNumbers.forEach((qid, index) => {
+                     if (data[qid]?.trim().toLowerCase() === correctAnswers[index]) {
+                         correctCount++;
+                     }
+                 });
+            } else {
+                 const userAnswer = data[q.id] || '';
+                 const isCorrect = userAnswer.trim().toLowerCase() === q.answer.toLowerCase();
+                if (isCorrect) {
+                    correctCount++;
+                }
             }
         });
         const finalScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 9.0 : 0;
@@ -138,9 +199,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         const userAnswer = userAnswers[question.id] || '';
         const questionNumber = parseInt(question.id.replace('q', ''));
         const isCorrect = isGraded ? (
-            (question.type === 'fill-in-the-blank' || question.type === 'note-completion')
-            ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
-            : userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
+             userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
        ) : undefined;
         const explanation = explanations[question.id];
 
@@ -167,68 +226,78 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                            <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
                            <div dangerouslySetInnerHTML={{ __html: question.instructions }} />
                         </div>
-                        {(question.type === 'matching-headings' || question.type === 'matching-sentence-endings') && question.options && (
+                        {(question.type === 'matching-headings' || question.type === 'summary-completion') && question.answerBox && (
+                             <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1 p-3 border-t">
+                                {question.answerBox.map((opt, idx) => <p key={idx} className="text-xs text-muted-foreground">{opt}</p>)}
+                            </div>
+                        )}
+                         {(question.type === 'matching-sentence-endings' || question.type === 'matching-headings') && question.options && (
                              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 p-3 border-t">
                                 {question.options.map((opt, idx) => <p key={idx} className="text-xs text-muted-foreground">{opt}</p>)}
                             </div>
                         )}
                     </div>
                 )}
-                <div className="p-4 rounded-lg border bg-background">
-                    <div className="flex items-start gap-3 mb-4">
-                        <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
-                        <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
-                        {isGraded && (
-                            isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
+                 
+                 {question.type === 'summary-completion' ? (
+                    <SummaryCompletionQuestion question={question} />
+                 ) : (
+                    <div className="p-4 rounded-lg border bg-background">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
+                            <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
+                            {isGraded && (
+                                isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
+                            )}
+                        </div>
+                        
+                        <Controller
+                            name={question.id as any}
+                            control={control}
+                            render={({ field }) => (
+                                <div className="pl-10">
+                                    {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-sentence-endings') && (
+                                        <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                                            {options.map((option, index) => (
+                                                <div key={index} className="flex items-center space-x-2">
+                                                    <RadioGroupItem value={option} id={`${question.id}-${index}`} />
+                                                    <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
+                                                        {option}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </RadioGroup>
+                                    )}
+
+                                    {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'matching-information' || question.type === 'matching-headings') && (
+                                        <div className="relative">
+                                            <Input {...field} disabled={isGraded} placeholder="Your answer"/>
+                                            {isGraded && !isCorrect && (
+                                                <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        />
+                        
+                        {isGraded && !isCorrect && (
+                            <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
+                                <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                                <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                    {isGeneratingExplanations && !explanation ? (
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <Loader2 className="h-3 w-3 animate-spin"/>
+                                            <span>Generating explanation...</span>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
+                                    )}
+                                </div>
+                            </div>
                         )}
                     </div>
-                    
-                    <Controller
-                        name={question.id as any}
-                        control={control}
-                        render={({ field }) => (
-                            <div className="pl-10">
-                                {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-sentence-endings') && (
-                                    <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
-                                        {options.map((option, index) => (
-                                            <div key={index} className="flex items-center space-x-2">
-                                                <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                                                <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
-                                                    {option}
-                                                </Label>
-                                            </div>
-                                        ))}
-                                    </RadioGroup>
-                                )}
-
-                                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion' || question.type === 'matching-information' || question.type === 'matching-headings') && (
-                                    <div className="relative">
-                                        <Input {...field} disabled={isGraded} placeholder="Your answer"/>
-                                        {isGraded && !isCorrect && (
-                                            <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    />
-                    
-                    {isGraded && !isCorrect && (
-                        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
-                            <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                {isGeneratingExplanations && !explanation ? (
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <Loader2 className="h-3 w-3 animate-spin"/>
-                                        <span>Generating explanation...</span>
-                                    </div>
-                                ) : (
-                                    <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                 )}
             </div>
         );
     };
@@ -260,22 +329,15 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         <FormProvider {...methods}>
             <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-6">
                 <Card>
-                    <CardHeader>
+                     <CardHeader>
                         <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
                         <p className="text-muted-foreground">A full-length reading mock test.</p>
                     </CardHeader>
-                     <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div>
                             <Progress value={progress} className="w-48" />
                             <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
                         </div>
-                         <Button
-                            type="submit"
-                            size="lg"
-                        >
-                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            Submit & Grade Full Test
-                        </Button>
                     </CardContent>
                 </Card>
                
@@ -310,6 +372,16 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                         </TabsContent>
                     ))}
                 </Tabs>
+                 <div className="py-4">
+                    <Button
+                        type="submit"
+                        size="lg"
+                        className="w-full"
+                    >
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        Submit & Grade Full Test
+                    </Button>
+                </div>
             </form>
         </FormProvider>
     );

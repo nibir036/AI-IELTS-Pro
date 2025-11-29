@@ -27,7 +27,7 @@ export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
 const PracticeQuestionSchema = z.object({
   id: z.string().describe("A unique ID for the question (e.g., q1, q2)."),
   instructions: z.string().optional().describe("Instructions for this block of questions, e.g., 'Choose the correct heading for each paragraph.'"),
-  question: z.string().describe("The question text."),
+  question: z.string().describe("The question text. For 'summary-completion', this should be the full paragraph with placeholders like '__(27)__', '__(28)__'."),
   type: z.enum(["multiple-choice", "true-false-not-given", "note-completion", "matching-headings", "matching-information", "summary-completion", "yes-no-not-given", "matching-sentence-endings", "fill-in-the-blank"]).describe("The type of question."),
   options: z.array(z.string()).optional().describe("A list of options for the question (e.g., for multiple-choice, or the list of headings for matching)."),
   answer: z.string().describe("The correct answer to the question."),
@@ -167,9 +167,10 @@ Your task is to take a raw text input and a desired content type, and generate a
     3.  **Instructions:** For EACH block of questions, you MUST provide a clear 'instructions' field. For example: "Choose the correct heading for each paragraph." or "Do the following statements agree with the information given?".
     4.  **'matching-headings' Type:** If you create this type, the 'question' field for each item in the array should be the paragraph identifier (e.g., "Paragraph A", "Paragraph B"). The 'options' field MUST contain the list of heading choices.
     5.  **'matching-information' Type:** The 'question' field should be the statement to find (e.g., "A reference to the decline in bee populations"). The 'answer' is the paragraph letter (A, B, C, etc.).
-    6.  **'true-false-not-given' / 'yes-no-not-given' Type:** The 'question' field should be the statement. The 'answer' must be one of 'True', 'False', 'Not Given', 'Yes', or 'No'.
-    7.  **'multiple-choice' Type:** The 'question' field is the question stem. The 'options' field MUST contain the list of choices (A, B, C, D).
-    8.  **Final Output:** The final output must be a single 'ReadingTest' object with 3 items in the 'parts' array. Ensure question IDs are unique across the entire test (e.g., q1, q2, ... q40).
+    6.  **'summary-completion' Type:** This MUST be a single question object. The 'question' field must contain the entire summary paragraph with placeholders for the blanks, formatted as '__(27)__', '__(28)__', etc. The 'answer' field should be a comma-separated list of the correct words in order (e.g., "word1,word2,word3"). The 'answerBox' field MUST contain a list of possible words for the user to choose from.
+    7.  **'true-false-not-given' / 'yes-no-not-given' Type:** The 'question' field should be the statement. The 'answer' must be one of 'True', 'False', 'Not Given', 'Yes', or 'No'.
+    8.  **'multiple-choice' Type:** The 'question' field is the question stem. The 'options' field MUST contain the list of choices (A, B, C, D).
+    9.  **Final Output:** The final output must be a single 'ReadingTest' object with 3 items in the 'parts' array. Ensure question IDs are unique across the entire test (e.g., q1, q2, ... q40).
 
 ---
 ## General Rules:
