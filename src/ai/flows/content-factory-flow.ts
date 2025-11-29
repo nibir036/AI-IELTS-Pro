@@ -159,18 +159,31 @@ Your task is to take a raw text input and a desired content type, and generate a
     2.  **Task 2:** Generate a full essay prompt for a Task 2 essay (250+ words) on the second topic from the 'rawText'. The essay question must be a common IELTS type (e.g., Agree/Disagree, Discussion of Both Views, Problem/Solution, or Advantages/Disadvantages).
 
 **IF contentType is 'ReadingTest':**
-*   **Role:** Senior IELTS Exam Content Creator.
-*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Passage 1 Topic; Passage 2 Topic; Passage 3 Topic"). Generate a Full IELTS Academic Reading Test containing 3 distinct passages and a total of around 12-14 questions for each passage.
-*   **Structure Requirements for EACH PASSAGE:**
-    1.  **Passage Generation:** Generate a passage of 700-900 words on the given topic. The first passage should be factual/descriptive, the second more discursive/argumentative, and the third more abstract/scientific.
-    2.  **Question Generation:** For each passage, create 2-3 blocks of different question types.
-    3.  **Instructions:** For EACH block of questions, you MUST provide a clear 'instructions' field. For example: "Choose the correct heading for each paragraph." or "Do the following statements agree with the information given?".
-    4.  **'matching-headings' Type:** If you create this type, the 'question' field for each item in the array should be the paragraph identifier (e.g., "Paragraph A", "Paragraph B"). The 'options' field MUST contain the list of heading choices.
-    5.  **'matching-information' Type:** The 'question' field should be the statement to find (e.g., "A reference to the decline in bee populations"). The 'answer' is the paragraph letter (A, B, C, etc.).
-    6.  **'summary-completion' Type:** This MUST be a single question object. The 'question' field must contain the entire summary paragraph with placeholders for the blanks, formatted as '__(27)__', '__(28)__', etc. The 'answer' field should be a comma-separated list of the correct words in order (e.g., "word1,word2,word3"). The 'answerBox' field MUST contain a list of possible words for the user to choose from.
-    7.  **'true-false-not-given' / 'yes-no-not-given' Type:** The 'question' field should be the statement. The 'answer' must be one of 'True', 'False', 'Not Given', 'Yes', or 'No'.
-    8.  **'multiple-choice' Type:** The 'question' field is the question stem. The 'options' field MUST contain the list of choices (A, B, C, D).
-    9.  **Final Output:** The final output must be a single 'ReadingTest' object with 3 items in the 'parts' array. Ensure question IDs are unique across the entire test (e.g., q1, q2, ... q40).
+*   **Role:** Act as a superior grand master level IELTS Exam Content Creator.
+*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Passage 1 Topic; Passage 2 Topic; Passage 3 Topic"). I need you to generate a Full IELTS Academic Reading Test containing 3 distinct passages and 40 questions in total.
+*   **Strict Structure:**
+    *   **PASSAGE 1 (The Factual Text)**
+        *   **Topic:** [USE PASSAGE 1 TOPIC FROM 'rawText']
+        *   **Length:** 700-750 words.
+        *   **Style:** Descriptive, factual, easy to read.
+        *   **Questions 1-7:** "note-completion" (Fill in the blanks, no more than two words). MUST have instructions.
+        *   **Questions 8-13:** "true-false-not-given". MUST have instructions.
+    *   **PASSAGE 2 (The Discursive Text)**
+        *   **Topic:** [USE PASSAGE 2 TOPIC FROM 'rawText']
+        *   **Length:** 750-800 words.
+        *   **Style:** Argumentative, sociologic, or workplace-related.
+        *   **Questions 14-19:** "matching-headings". MUST provide a list of 8 headings in the 'options' field for the first question in this block. Each question's text should be the paragraph identifier (e.g., "Paragraph A"). MUST have instructions.
+        *   **Questions 20-23:** "matching-information" (Which paragraph contains...?). MUST have instructions.
+        *   **Questions 24-26:** "multiple-choice" (4 options). MUST have instructions.
+    *   **PASSAGE 3 (The Abstract Text)**
+        *   **Topic:** [USE PASSAGE 3 TOPIC FROM 'rawText']
+        *   **Length:** 850-900 words.
+        *   **Style:** Complex, scientific, theoretical, or philosophical.
+        *   **Questions 27-32:** "summary-completion". This MUST be a single question object. The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answerBox' field MUST contain the list of words to choose from. The 'answer' field should be a comma-separated list of the correct words. MUST have instructions.
+        *   **Questions 33-36:** "yes-no-not-given". MUST have instructions.
+        *   **Questions 37-40:** "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field. MUST have instructions.
+
+*   **OUTPUT FORMAT:** The final output must be a single JSON object that strictly adheres to the 'ReadingTest' schema. It must contain 3 items in the 'parts' array, one for each passage. Question IDs must be unique across the entire test (q1, q2, ... q40).
 
 ---
 ## General Rules:
