@@ -154,7 +154,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         return (
             <div key={question.id} className={`p-4 rounded-lg border ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
                 <div className="flex items-start gap-3 mb-4">
-                    <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{index + 1}</div>
+                    <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{index}</div>
                     <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
                      {isGraded && (
                         isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
@@ -224,13 +224,13 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                
                 <Tabs defaultValue="part-1" className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="part-1">Part 1</TabsTrigger>
-                        <TabsTrigger value="part-2">Part 2</TabsTrigger>
-                        <TabsTrigger value="part-3">Part 3</TabsTrigger>
+                        {test.parts.map(part => (
+                             <TabsTrigger key={part.part} value={`part-${part.part}`}>Part {part.part}</TabsTrigger>
+                        ))}
                     </TabsList>
-                    {test.parts.map((part, partIndex) => (
+                    {test.parts.map((part) => (
                         <TabsContent key={part.part} value={`part-${part.part}`}>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-20rem)]">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-23rem)]">
                                 <Card className="flex flex-col h-full">
                                     <CardHeader><CardTitle>{part.title}</CardTitle></CardHeader>
                                     <CardContent className="flex-1 overflow-hidden">
@@ -240,7 +240,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     </CardContent>
                                 </Card>
                                  <Card className="flex flex-col h-full">
-                                    <CardHeader><CardTitle>Questions {part.questions[0].id} - {part.questions[part.questions.length - 1].id}</CardTitle></CardHeader>
+                                    <CardHeader><CardTitle>Questions {part.questions[0].id.replace('q','')} - {part.questions[part.questions.length - 1].id.replace('q','')}</CardTitle></CardHeader>
                                     <CardContent className="flex-1 overflow-hidden">
                                         <ScrollArea className="h-full pr-4">
                                              <div className="space-y-4">
@@ -255,7 +255,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 </Tabs>
                 
                  {!isGraded && (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center pt-4">
                         <Button
                             type="submit"
                             size="lg"
@@ -280,7 +280,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}% accuracy)</p>
                 </CardHeader>
                  <CardContent className="text-center">
-                     <p className="text-muted-foreground mb-6">You can review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
+                     <p className="text-muted-foreground mb-6">You can now review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
                     <Button onClick={() => router.push('/dashboard')} size="lg">
                         Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
