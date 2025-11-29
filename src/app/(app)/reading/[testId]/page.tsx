@@ -38,7 +38,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const [explanations, setExplanations] = React.useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
-    
+
     if (!test.parts) {
         return <p>This test is not configured correctly.</p>;
     }
@@ -240,12 +240,29 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     return (
         <FormProvider {...methods}>
             <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-6">
-                 <Card>
-                    <CardHeader>
-                        <Progress value={progress} />
-                        <CardDescription className="text-center pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
+                        <p className="text-muted-foreground">A full-length reading mock test.</p>
+                    </div>
+                </div>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <Progress value={progress} className="w-48" />
+                            <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
+                        </div>
+                        <Button
+                            type="submit"
+                            size="lg"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            Submit & Grade Full Test
+                        </Button>
                     </CardHeader>
-                 </Card>
+                </Card>
                
                 <Tabs defaultValue="part-1" className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
@@ -278,18 +295,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                         </TabsContent>
                     ))}
                 </Tabs>
-                
-                <div className="flex justify-center pt-4">
-                    <Button
-                        type="submit"
-                        size="lg"
-                        className="w-full md:w-1/2"
-                        disabled={isSubmitting || answeredQuestions !== totalQuestions}
-                    >
-                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                        Submit & Grade Full Test
-                    </Button>
-                </div>
             </form>
         </FormProvider>
     );
@@ -349,12 +354,6 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     
     return (
          <div className="animate-in fade-in-50">
-             <div className="flex items-center justify-between mb-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
-                    <p className="text-muted-foreground">A full-length reading mock test.</p>
-                </div>
-            </div>
             <ReadingTestComponent test={test} />
         </div>
     );
