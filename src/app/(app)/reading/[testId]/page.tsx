@@ -7,22 +7,20 @@ import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, Lightbulb, Loader2, BookOpen } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, Lightbulb, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-
 
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
@@ -38,7 +36,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const [score, setScore] = useState(0);
     const [explanations, setExplanations] = useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
-    
+
     if (!test || !test.parts) {
       return <TestPageSkeleton />;
     }
@@ -60,8 +58,8 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     }, []);
 
     const onSubmit = async (data: UserAnswers) => {
-        if (!test) return;
-        
+        setIsGraded(true);
+
         let correctCount = 0;
         allQuestions.forEach(q => {
              const userAnswer = data[q.id] || '';
@@ -74,8 +72,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         });
         const finalScore = (correctCount / totalQuestions) * 9.0;
         setScore(finalScore);
-        setIsGraded(true);
-
+        
         const incorrectAnswers = allQuestions.filter(q => {
              const userAnswer = data[q.id] || '';
              return (q.type === 'fill-in-the-blank' || q.type === 'note-completion')
@@ -153,7 +150,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         return (
             <div key={question.id} className="p-4 rounded-lg border bg-background">
                 <div className="flex items-start gap-3 mb-4">
-                    <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{index}</div>
+                    <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{index + 1}</div>
                     <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
                      {isGraded && (
                         isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
@@ -164,9 +161,9 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     name={question.id as any}
                     control={control}
                     render={({ field }) => (
-                         <>
+                         <div className="pl-10">
                             {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-headings' || question.type === 'matching-sentence-endings') && (
-                                <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded} className="pl-10">
+                                <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
                                     {question.options?.map((option, index) => (
                                         <div key={index} className="flex items-center space-x-2">
                                             <RadioGroupItem value={option} id={`${question.id}-${index}`} />
@@ -179,14 +176,14 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                             )}
 
                             {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion' || question.type === 'matching-information') && (
-                                <div className="relative pl-10">
+                                <div className="relative">
                                     <Input {...field} disabled={isGraded} />
                                     {isGraded && !isCorrect && (
                                         <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
                                     )}
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 />
                 
@@ -210,7 +207,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     };
 
     const TestView = () => (
-        <FormProvider {...methods}>
+         <FormProvider {...methods}>
             <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-6">
                 {!isGraded && (
                      <Card>
@@ -243,7 +240,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     <CardContent className="flex-1 overflow-hidden">
                                         <ScrollArea className="h-full pr-4">
                                              <div className="space-y-4">
-                                                {part.questions.map((q) => renderQuestion(q, parseInt(q.id.replace('q',''))))}
+                                                {part.questions.map((q, i) => renderQuestion(q, parseInt(q.id.replace('q','')) - 1))}
                                             </div>
                                         </ScrollArea>
                                     </CardContent>
@@ -316,13 +313,17 @@ function TestPageSkeleton() {
                         <Skeleton className="h-4 w-full" />
                         <Skeleton className="h-4 w-full" />
                         <Skeleton className="h-4 w-[80%]" />
+                         <Skeleton className="h-4 w-full mt-4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-[70%]" />
                     </CardContent>
                 </Card>
                 <Card className="flex flex-col h-full">
                     <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
                     <CardContent className="flex-1 space-y-4">
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
                     </CardContent>
                 </Card>
             </div>
@@ -351,7 +352,3 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     
     return <ReadingTestComponent test={test} />;
 }
-
-    
-
-    
