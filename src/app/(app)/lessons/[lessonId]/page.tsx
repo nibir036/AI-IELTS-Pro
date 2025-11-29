@@ -4,7 +4,7 @@ import { use } from 'react';
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Languages, Loader2 } from "lucide-react";
+import { Languages, Loader2, RotateCcw } from "lucide-react";
 import type { Lesson, ContentBlock, GrammarTableRow } from '@/lib/types';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getTranslation } from '@/ai/flows/multilingual-support';
+import { cn } from '@/lib/utils';
 
 function LessonPageSkeleton() {
     return (
@@ -81,12 +82,22 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
     const { user } = useUserProfile();
     const { toast } = useToast();
     const [isTranslating, setIsTranslating] = useState(false);
+    const [isTranslated, setIsTranslated] = useState(false);
     const [translatedContent, setTranslatedContent] = useState<string | null>(null);
     const canTranslate = user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && block.content;
 
-    const handleTranslate = async () => {
-        if (!canTranslate || translatedContent) return;
+    const handleTranslateToggle = async () => {
+        if (isTranslating) return;
 
+        // If we already have a translation, just toggle the view.
+        if (translatedContent) {
+            setIsTranslated(!isTranslated);
+            return;
+        }
+
+        // If we don't have a translation yet, fetch it.
+        if (!canTranslate) return;
+        
         setIsTranslating(true);
         try {
             const result = await getTranslation({
@@ -94,6 +105,7 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
                 nativeLanguage: user.nativeLanguage,
             });
             setTranslatedContent(result.translatedText);
+            setIsTranslated(true); // Show the translation immediately
         } catch (error) {
             console.error('Translation error:', error);
             toast({
@@ -106,22 +118,26 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
         }
     };
     
+    const displayContent = isTranslated ? translatedContent : block.content;
+
     return (
         <div className="group relative">
              {canTranslate && (
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="absolute -top-2 right-0 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={handleTranslate}
+                    className={cn("absolute -top-2 right-0 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity", isTranslated && "opacity-100")}
+                    onClick={handleTranslateToggle}
                     disabled={isTranslating}
+                    aria-label={isTranslated ? 'Revert to original' : 'Translate'}
                 >
-                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                     isTranslated ? <RotateCcw className="h-4 w-4 text-primary" /> : <Languages className="h-4 w-4" />}
                 </Button>
             )}
             <p 
                 className="text-foreground/80 leading-relaxed" 
-                dangerouslySetInnerHTML={{ __html: translatedContent || block.content || '' }} 
+                dangerouslySetInnerHTML={{ __html: displayContent || '' }} 
             />
         </div>
     )
@@ -129,6 +145,10 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
 
 
 function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
+    // Frontend Safeguard: Ensure the URL is valid and not a placeholder that would crash Next/Image
+    const isImageUrlValid = block.generatedImageUrl && !block.generatedImageUrl.includes('example.com');
+    const safeImageUrl = isImageUrlValid ? block.generatedImageUrl : "https://picsum.photos/seed/placeholder/600/400";
+    
     return (
         <div className="space-y-4 py-6">
              {index > 0 && <Separator />}
@@ -143,7 +163,7 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                     {block.generatedImageUrl ? (
                         <div className="relative aspect-video">
                             <Image
-                                src={block.generatedImageUrl}
+                                src={safeImageUrl}
                                 alt={block.imageHint || 'Lesson image'}
                                 fill
                                 className="rounded-lg shadow-md object-cover"
