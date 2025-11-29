@@ -40,7 +40,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
     
     if (!test || !test.parts) {
-      // This check prevents the flatMap error if test.parts is not yet loaded or is undefined.
       return <TestPageSkeleton />;
     }
 
@@ -152,7 +151,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         };
 
         return (
-            <div key={question.id} className={`p-4 rounded-lg border ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
+            <div key={question.id} className="p-4 rounded-lg border bg-background">
                 <div className="flex items-start gap-3 mb-4">
                     <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{index}</div>
                     <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
@@ -166,7 +165,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     control={control}
                     render={({ field }) => (
                          <>
-                            {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given') && (
+                            {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-headings' || question.type === 'matching-sentence-endings') && (
                                 <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded} className="pl-10">
                                     {question.options?.map((option, index) => (
                                         <div key={index} className="flex items-center space-x-2">
@@ -179,7 +178,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                 </RadioGroup>
                             )}
 
-                            {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && (
+                            {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion' || question.type === 'matching-information') && (
                                 <div className="relative pl-10">
                                     <Input {...field} disabled={isGraded} />
                                     {isGraded && !isCorrect && (
@@ -229,8 +228,8 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                         ))}
                     </TabsList>
                     {test.parts.map((part) => (
-                        <TabsContent key={part.part} value={`part-${part.part}`}>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-23rem)]">
+                        <TabsContent key={part.part} value={`part-${part.part}`} className="mt-4">
+                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-28rem)]">
                                 <Card className="flex flex-col h-full">
                                     <CardHeader><CardTitle>{part.title}</CardTitle></CardHeader>
                                     <CardContent className="flex-1 overflow-hidden">
@@ -352,4 +351,5 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     
     return <ReadingTestComponent test={test} />;
 }
- 
+
+    
