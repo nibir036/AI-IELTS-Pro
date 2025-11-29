@@ -2,16 +2,21 @@
 'use client';
 import { use } from 'react';
 import { notFound } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle } from "lucide-react";
+import { Languages, Loader2 } from "lucide-react";
 import type { Lesson, ContentBlock, GrammarTableRow } from '@/lib/types';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Separator } from '@/components/ui/separator';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { getTranslation } from '@/ai/flows/multilingual-support';
 
 function LessonPageSkeleton() {
     return (
@@ -24,7 +29,6 @@ function LessonPageSkeleton() {
                              <Skeleton className="h-9 w-80" />
                              <Skeleton className="h-5 w-40" />
                         </div>
-                         <Skeleton className="h-16 w-16" />
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -35,6 +39,9 @@ function LessonPageSkeleton() {
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-[90%]" />
                 </CardContent>
+                <CardFooter>
+                    <Skeleton className="h-10 w-32" />
+                </CardFooter>
             </Card>
         </div>
     )
@@ -72,17 +79,20 @@ function ExampleList({ examples }: { examples: string[] }) {
     )
 }
 
+function RenderContentBlock({ block, index, translatedContent }: { block: ContentBlock, index: number, translatedContent?: string }) {
+    
+    // Determine which content to display for explanations
+    const displayContent = (block.type === 'explanation' && translatedContent) ? translatedContent : block.content;
 
-function RenderContentBlock({ block, index }: { block: ContentBlock, index: number }) {
     return (
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-6">
              {index > 0 && <Separator />}
              {block.sectionTitle && (
-                <h3 className="text-xl font-semibold" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
+                <h3 className="text-xl font-semibold tracking-tight" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
-            {block.type === 'explanation' && block.content && (
-                <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />
+            {(block.type === 'explanation' && displayContent) && (
+                 <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: displayContent }} />
             )}
             
              {block.type === 'image_placeholder' && (
@@ -93,12 +103,12 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                                 src={block.generatedImageUrl}
                                 alt={block.imageHint || 'Lesson image'}
                                 fill
-                                className="rounded-lg shadow-md object-contain"
+                                className="rounded-lg shadow-md object-cover"
                             />
                         </div>
                     ) :  <Skeleton className="aspect-video w-full" />}
                      {block.content && (
-                         <div className="p-4 bg-muted/50 rounded-lg">
+                         <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
                             <p className="text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />
                         </div>
                     )}
@@ -124,6 +134,67 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
 
 
 function LessonComponent({ lesson }: { lesson: Lesson }) {
+    const { user } = useUserProfile();
+    const { toast } = useToast();
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [isTranslated, setIsTranslated] = useState(false);
+    const [translatedBlocks, setTranslatedBlocks] = useState<Record<number, string>>({});
+    
+    const canTranslate = user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && lesson.contentBlocks?.some(b => b.type === 'explanation' && b.content);
+
+    const handleTranslateToggle = async () => {
+        if (isTranslating) return;
+
+        // If it's already translated, revert to English
+        if (isTranslated) {
+            setIsTranslated(false);
+            return;
+        }
+
+        // If we have translations cached, just show them
+        if (Object.keys(translatedBlocks).length > 0) {
+            setIsTranslated(true);
+            return;
+        }
+
+        // Otherwise, fetch translations
+        setIsTranslating(true);
+        try {
+            const translationPromises = lesson.contentBlocks
+                .map((block, index) => {
+                    if (block.type === 'explanation' && block.content) {
+                        return getTranslation({
+                            text: block.content.replace(/<[^>]*>?/gm, ''), // Strip HTML tags
+                            nativeLanguage: user!.nativeLanguage,
+                        }).then(result => ({ index, text: result.translatedText }));
+                    }
+                    return null;
+                })
+                .filter(p => p !== null);
+            
+            const results = await Promise.all(translationPromises as Promise<{ index: number, text: string }>[]);
+            
+            const newTranslations: Record<number, string> = {};
+            results.forEach(result => {
+                newTranslations[result.index] = result.text;
+            });
+            
+            setTranslatedBlocks(newTranslations);
+            setIsTranslated(true);
+
+        } catch (error) {
+            console.error('Translation error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Translation Failed',
+                description: 'Could not translate the content at this time.',
+            });
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
+
      return (
         <div className="max-w-4xl mx-auto animate-in fade-in-50">
             <Card>
@@ -134,20 +205,29 @@ function LessonComponent({ lesson }: { lesson: Lesson }) {
                             <CardTitle className="text-3xl font-bold">{lesson.title}</CardTitle>
                             <CardDescription>Level: {lesson.level}</CardDescription>
                         </div>
-                         <div className="flex items-center justify-center rounded-lg bg-primary/10 text-primary h-16 w-16 text-3xl font-bold">
-                           {lesson.id.split('_')[0].charAt(0)}
-                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="divide-y">
                      {(lesson.contentBlocks && lesson.contentBlocks.length > 0) ? (
                         lesson.contentBlocks.map((block, index) => (
-                           <RenderContentBlock key={index} block={block} index={index}/>
+                           <RenderContentBlock key={index} block={block} index={index} translatedContent={isTranslated ? translatedBlocks[index] : undefined}/>
                         ))
                      ) : (
                          <p className="prose dark:prose-invert max-w-none text-base text-foreground/80 pt-4" dangerouslySetInnerHTML={{ __html: lesson.content_en }} />
                      )}
                 </CardContent>
+                 {canTranslate && (
+                    <CardFooter>
+                        <Button variant="outline" onClick={handleTranslateToggle} disabled={isTranslating}>
+                             {isTranslating ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                             ) : (
+                                <Languages className="mr-2 h-4 w-4" />
+                            )}
+                            {isTranslated ? 'Show Original' : `Translate to ${user?.nativeLanguage}`}
+                        </Button>
+                    </CardFooter>
+                )}
             </Card>
         </div>
     );
