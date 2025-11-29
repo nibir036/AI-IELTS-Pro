@@ -229,7 +229,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     </TabsList>
                     {test.parts.map((part) => (
                         <TabsContent key={part.part} value={`part-${part.part}`} className="mt-4">
-                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-28rem)]">
+                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-32rem)]">
                                 <Card className="flex flex-col h-full">
                                     <CardHeader><CardTitle>{part.title}</CardTitle></CardHeader>
                                     <CardContent className="flex-1 overflow-hidden">
@@ -355,3 +355,5 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     
     return <ReadingTestComponent test={test} />;
 }
+
+    
