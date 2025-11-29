@@ -151,6 +151,14 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
             return 'text-muted-foreground';
         };
 
+        const getOptionsForType = (type: ReadingQuestion['type']) => {
+            if (type === 'true-false-not-given') return ['True', 'False', 'Not Given'];
+            if (type === 'yes-no-not-given') return ['Yes', 'No', 'Not Given'];
+            return question.options || [];
+        }
+
+        const options = getOptionsForType(question.type);
+
         return (
              <div key={question.id} className="space-y-4">
                 {question.instructions && (
@@ -182,7 +190,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                             <div className="pl-10">
                                 {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-sentence-endings') && (
                                     <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
-                                        {question.options?.map((option, index) => (
+                                        {options.map((option, index) => (
                                             <div key={index} className="flex items-center space-x-2">
                                                 <RadioGroupItem value={option} id={`${question.id}-${index}`} />
                                                 <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
@@ -251,13 +259,12 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     return (
         <FormProvider {...methods}>
             <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-6">
-                <div className="mb-4">
-                    <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
-                    <p className="text-muted-foreground">A full-length reading mock test.</p>
-                </div>
-
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
+                <Card>
+                    <CardHeader>
+                        <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
+                        <p className="text-muted-foreground">A full-length reading mock test.</p>
+                    </CardHeader>
+                     <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div>
                             <Progress value={progress} className="w-48" />
                             <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
@@ -270,7 +277,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             Submit & Grade Full Test
                         </Button>
-                    </CardHeader>
+                    </CardContent>
                 </Card>
                
                 <Tabs defaultValue="part-1" className="w-full">
@@ -316,8 +323,9 @@ function TestPageSkeleton() {
                 <Skeleton className="h-8 w-3/4" />
                 <Skeleton className="h-4 w-1/4" />
             </div>
+            <Skeleton className="h-24 w-full" />
             <Skeleton className="h-10 w-full" />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-20rem)]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-30rem)]">
                 <Card className="flex flex-col h-full">
                     <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
                     <CardContent className="flex-1 space-y-4">
