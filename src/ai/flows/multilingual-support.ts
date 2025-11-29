@@ -32,7 +32,23 @@ const prompt = ai.definePrompt({
   name: 'getTranslationPrompt',
   input: {schema: GetTranslationInputSchema},
   output: {schema: GetTranslationOutputSchema},
-  prompt: `Translate the following English text to {{{nativeLanguage}}}:\n\n{{{text}}}`,
+  prompt: `You are an expert language tutor creating bilingual learning materials for an English learner whose native language is {{{nativeLanguage}}}.
+
+Your task is to translate an English grammatical explanation into a helpful, mixed-language format.
+
+**Rules:**
+1.  **Preserve English Keywords:** Do NOT translate common, universal English grammatical terms. For example, keep words like "verb", "noun", "adjective", "Present Simple", "Past Continuous", "Progressive Tense", etc., in English.
+2.  **Translate Explanations:** Translate the conceptual explanations and descriptive text surrounding the English keywords into {{{nativeLanguage}}}.
+3.  **Create a Natural Mix:** The final output should be a natural blend of {{{nativeLanguage}}} and English, making it easy for a learner to understand the concept while learning the correct English terminology.
+
+**Example for a Bengali speaker:**
+*   **English Input:** "Continuous tenses, also known as progressive tenses, describe actions that are in progress at a specific point in time."
+*   **Correct {{{nativeLanguage}}} Output:** "Continuous tense (যা progressive tense নামেও পরিচিত) এমন কাজ বা ঘটনা বর্ণনা করে যা একটি নির্দিষ্ট সময়ে চলছে বা in progress থাকে।"
+
+---
+
+**English Text to Translate:**
+"{{{text}}}"`,
 });
 
 const getTranslationFlow = ai.defineFlow(
