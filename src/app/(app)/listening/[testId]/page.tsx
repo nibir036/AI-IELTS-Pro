@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useCallback, use } from 'react';
+import { use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
@@ -49,10 +49,10 @@ function AudioPlayer({
     onPause: () => void;
     onFinish: () => void;
 }) {
-    const waveformRef = useRef<HTMLDivElement>(null);
-    const wavesurferRef = useRef<WaveSurfer | null>(null);
+    const waveformRef = React.useRef<HTMLDivElement>(null);
+    const wavesurferRef = React.useRef<WaveSurfer | null>(null);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!waveformRef.current) return;
         let isMounted = true;
 
@@ -94,16 +94,17 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const router = useRouter();
     const { toast } = useToast();
 
-    const wavesurferRef = useRef<WaveSurfer | null>(null);
-    const [isPlayerReady, setIsPlayerReady] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [hasPlayed, setHasPlayed] = useState(false);
-    const startTimeRef = useRef<Date | null>(null);
+    const wavesurferRef = React.useRef<WaveSurfer | null>(null);
+    const [isPlayerReady, setIsPlayerReady] = React.useState(false);
+    const [isPlaying, setIsPlaying] = React.useState(false);
+    const [hasPlayed, setHasPlayed] = React.useState(false);
+    const startTimeRef = React.useRef<Date | null>(null);
 
-    const [isGraded, setIsGraded] = useState(false);
-    const [score, setScore] = useState(0);
-    const [explanations, setExplanations] = useState<AnswerExplanations>({});
-    const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
+    const [isGraded, setIsGraded] = React.useState(false);
+    const [score, setScore] = React.useState(0);
+    const [explanations, setExplanations] = React.useState<AnswerExplanations>({});
+    const [isGeneratingExplanations, setIsGeneratingExplanations] = React.useState(false);
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const methods = useForm<UserAnswers>({
         defaultValues: test.questions.reduce((acc, q) => ({ ...acc, [q.id]: '' }), {})
@@ -133,6 +134,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     
     const onSubmit = async (data: UserAnswers) => {
         if (!test) return;
+        setIsSubmitting(true);
+        setIsGraded(true);
 
         let correctCount = 0;
         test.questions.forEach(q => {
@@ -148,7 +151,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         });
         const finalScore = (correctCount / test.questions.length) * 9.0;
         setScore(finalScore);
-        setIsGraded(true);
 
         let newExplanations: AnswerExplanations = {};
         if (test.transcript) {
@@ -209,6 +211,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                 description: `Your listening score of ${finalScore.toFixed(1)} has been saved.`,
             });
         }
+        setIsSubmitting(false);
     };
 
 
@@ -333,8 +336,9 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                             <Button 
                                 type="submit"
                                 className="w-full" 
-                                disabled={answeredQuestions !== test.questions.length}
+                                disabled={isSubmitting || answeredQuestions !== test.questions.length}
                             >
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Submit & Grade
                             </Button>
                         </CardFooter>
@@ -414,30 +418,39 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
 function TestPageSkeleton() {
     return (
-         <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
-            <Card className="flex flex-col h-full">
-                <CardHeader>
-                    <Skeleton className="h-8 w-3/4" />
-                    <Skeleton className="h-4 w-full" />
-                </CardHeader>
-                <CardContent className="flex-1 space-y-4">
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-10 w-40" />
-                </CardContent>
-            </Card>
-             <Card className="flex flex-col h-full">
-                <CardHeader>
-                    <Skeleton className="h-8 w-1/2" />
-                    <Skeleton className="h-4 w-3/4" />
-                </CardHeader>
-                <CardContent className="flex-1 space-y-6">
-                    <div className="space-y-3">
-                        <Skeleton className="h-5 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                    </div>
-                </CardContent>
-             </Card>
+         <div className="space-y-6">
+            <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
+                <Card className="flex flex-col h-full">
+                    <CardHeader>
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                    </CardHeader>
+                    <CardContent className="flex-1 space-y-4">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-10 w-40" />
+                    </CardContent>
+                </Card>
+                 <Card className="flex flex-col h-full">
+                    <CardHeader>
+                        <Skeleton className="h-8 w-1/2" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </CardHeader>
+                    <CardContent className="flex-1 space-y-6">
+                        <div className="space-y-3">
+                            <Skeleton className="h-5 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                        </div>
+                    </CardContent>
+                 </Card>
+            </div>
+            <div className="lg:hidden space-y-4">
+                 <Skeleton className="h-10 w-full" />
+                 <Card>
+                    <CardHeader><Skeleton className="h-8 w-3/4" /></CardHeader>
+                    <CardContent><Skeleton className="h-32 w-full" /></CardContent>
+                 </Card>
+            </div>
         </div>
     )
 }

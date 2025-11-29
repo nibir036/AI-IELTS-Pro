@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, use } from 'react';
+import { use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
@@ -30,17 +30,14 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
-    const startTimeRef = useRef<Date | null>(null);
+    const startTimeRef = React.useRef<Date | null>(null);
 
-    const [isGraded, setIsGraded] = useState(false);
-    const [score, setScore] = useState(0);
-    const [explanations, setExplanations] = useState<AnswerExplanations>({});
-    const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
-
-    if (!test || !test.parts) {
-      return <TestPageSkeleton />;
-    }
-
+    const [isGraded, setIsGraded] = React.useState(false);
+    const [score, setScore] = React.useState(0);
+    const [explanations, setExplanations] = React.useState<AnswerExplanations>({});
+    const [isGeneratingExplanations, setIsGeneratingExplanations] = React.useState(false);
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+    
     const allQuestions = test.parts.flatMap(p => p.questions);
     const totalQuestions = allQuestions.length;
 
@@ -53,11 +50,12 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const answeredQuestions = Object.values(userAnswers).filter(Boolean).length;
     const progress = (answeredQuestions / totalQuestions) * 100;
 
-    useEffect(() => {
+    React.useEffect(() => {
         startTimeRef.current = new Date();
     }, []);
 
     const onSubmit = async (data: UserAnswers) => {
+        setIsSubmitting(true);
         setIsGraded(true);
 
         let correctCount = 0;
@@ -131,6 +129,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 description: `Your reading score of ${finalScore.toFixed(1)} has been saved.`,
             });
         }
+        setIsSubmitting(false);
     };
 
     const renderQuestion = (question: ReadingQuestion) => {
@@ -209,17 +208,38 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         );
     };
 
-    const TestView = () => (
-         <FormProvider {...methods}>
+    const GradedView = () => (
+         <div className="flex flex-col h-full items-center justify-center">
+            <Card className="w-full max-w-2xl">
+                <CardHeader className="text-center">
+                    <CardTitle className="text-3xl">Test Complete!</CardTitle>
+                    <CardDescription>You scored</CardDescription>
+                    <p className="text-7xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
+                    <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}% accuracy)</p>
+                </CardHeader>
+                 <CardContent className="text-center">
+                     <p className="text-muted-foreground mb-6">You can now review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
+                    <Button onClick={() => router.push(`/submissions`)} size="lg">
+                        View My Submissions <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    );
+
+    if (isGraded) {
+        return <GradedView />;
+    }
+
+    return (
+        <FormProvider {...methods}>
             <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-6">
-                {!isGraded && (
-                     <Card>
-                        <CardHeader>
-                            <Progress value={progress} />
-                            <CardDescription className="text-center pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
-                        </CardHeader>
-                     </Card>
-                )}
+                 <Card>
+                    <CardHeader>
+                        <Progress value={progress} />
+                        <CardDescription className="text-center pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
+                    </CardHeader>
+                 </Card>
                
                 <Tabs defaultValue="part-1" className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
@@ -253,51 +273,19 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     ))}
                 </Tabs>
                 
-                 {!isGraded && (
-                    <div className="flex justify-center pt-4">
-                        <Button
-                            type="submit"
-                            size="lg"
-                            className="w-full md:w-1/2"
-                            disabled={answeredQuestions !== totalQuestions}
-                        >
-                            Submit & Grade Full Test
-                        </Button>
-                    </div>
-                )}
+                <div className="flex justify-center pt-4">
+                    <Button
+                        type="submit"
+                        size="lg"
+                        className="w-full md:w-1/2"
+                        disabled={isSubmitting || answeredQuestions !== totalQuestions}
+                    >
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        Submit & Grade Full Test
+                    </Button>
+                </div>
             </form>
         </FormProvider>
-    );
-
-    const GradedView = () => (
-         <div className="flex flex-col h-full items-center justify-center">
-            <Card className="w-full max-w-2xl">
-                <CardHeader className="text-center">
-                    <CardTitle className="text-3xl">Test Complete!</CardTitle>
-                    <CardDescription>You scored</CardDescription>
-                    <p className="text-7xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
-                    <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}% accuracy)</p>
-                </CardHeader>
-                 <CardContent className="text-center">
-                     <p className="text-muted-foreground mb-6">You can now review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
-                    <Button onClick={() => router.push(`/submissions`)} size="lg">
-                        View My Submissions <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
-    )
-
-    return (
-        <div className="animate-in fade-in-50">
-             <div className="flex items-center justify-between mb-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
-                    <p className="text-muted-foreground">A full-length reading mock test.</p>
-                </div>
-            </div>
-            {isGraded ? <GradedView /> : <TestView />}
-        </div>
     );
 }
 
@@ -353,5 +341,15 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
         notFound();
     }
     
-    return <ReadingTestComponent test={test} />;
+    return (
+         <div className="animate-in fade-in-50">
+             <div className="flex items-center justify-between mb-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
+                    <p className="text-muted-foreground">A full-length reading mock test.</p>
+                </div>
+            </div>
+            <ReadingTestComponent test={test} />
+        </div>
+    );
 }
