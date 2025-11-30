@@ -14,9 +14,9 @@ export default function CreateReadingTestPage() {
                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                         <Wrench className="h-8 w-8 text-primary" />
                     </div>
-                    <CardTitle className="mt-4 text-2xl">Manual Creation Unavailable</CardTitle>
+                    <CardTitle className="mt-4 text-2xl">AI Generation Recommended</CardTitle>
                     <CardDescription className="text-base">
-                        Reading tests are best generated using the AI Content Factory.
+                        Due to their complexity, reading tests are best generated using the AI Content Factory.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -31,3 +31,5 @@ export default function CreateReadingTestPage() {
         </div>
     );
 }
+
+    

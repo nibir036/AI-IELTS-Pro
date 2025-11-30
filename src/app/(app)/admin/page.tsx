@@ -46,8 +46,8 @@ const creationCards = [
         title: "Reading Test",
         description: "Use the AI Content Factory for this.",
         icon: BookOpen,
-        href: "/admin",
-        isReady: false,
+        href: "/admin/create/reading",
+        isReady: true,
     }
 ];
 
@@ -81,17 +81,37 @@ export default function AdminPage() {
       setResult(aiResult);
 
       let targetCollection: string;
+      let imageFailed = false;
+
       if ('skill' in aiResult) {
           switch (aiResult.skill) {
               case 'Reading': targetCollection = 'readingTests'; break;
               case 'Listening': targetCollection = 'listeningTests'; break;
-              case 'Writing': targetCollection = 'mockTests'; break;
+              case 'Writing': 
+                targetCollection = 'mockTests';
+                const task1 = aiResult.questions.find(q => q.taskType === 'Task 1');
+                if (!task1?.imageUrl) {
+                    imageFailed = true;
+                }
+                break;
               default: targetCollection = 'lessons';
           }
       } else {
           targetCollection = 'lessons';
       }
       
+      // If image generation failed, don't save. Show the JSON and an error.
+      if (imageFailed) {
+        setError("AI image generation failed. Please copy the Task 1 topic from the JSON output below, generate an image manually, and then use the 'Create Writing Test' form to upload it.");
+        toast({
+            variant: 'destructive',
+            title: "Image Generation Failed",
+            description: "The test was not saved. Please follow the instructions to create it manually.",
+        });
+        setIsProcessing(false);
+        return; // Stop execution
+      }
+
       const docRef = doc(firestore, targetCollection, aiResult.id);
       await setDoc(docRef, aiResult);
 
@@ -99,14 +119,6 @@ export default function AdminPage() {
         title: "Content Saved!",
         description: `New content was successfully saved to '${targetCollection}'.`,
       });
-
-      // Show alert if writing test image failed
-      if (contentType === 'WritingTest' && 'questions' in aiResult) {
-          const task1 = aiResult.questions.find(q => q.taskType === 'Task 1');
-          if (!task1?.imageUrl) {
-              setError("AI image generation failed. The test was saved, but you'll need to edit it to manually add an image for Task 1.");
-          }
-      }
 
     } catch (err: any) {
       console.error("Error processing content:", err);
@@ -306,3 +318,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
