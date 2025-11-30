@@ -19,17 +19,16 @@ async function uploadToStorage(
     await file.save(buffer, {
         metadata: {
             contentType: contentType,
+            // Generate a download token to ensure public access via URL
             metadata: {
               firebaseStorageDownloadTokens: uuidv4(),
             }
         }
     });
     
-    // Make the file public after saving it
-    await file.makePublic();
-
-    // Return the public URL
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+    // The public URL format is different from the gs:// URI
+    const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
+    
     console.log(`Successfully uploaded file. Public URL: ${publicUrl}`);
     return publicUrl;
 }

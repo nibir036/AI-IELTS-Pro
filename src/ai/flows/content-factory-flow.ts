@@ -253,20 +253,24 @@ const contentFactoryFlow = ai.defineFlow(
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
         console.log("Processing Writing Test for image generation...");
         const task1 = structuredContent.questions.find(q => q.taskType === 'Task 1');
-        if (task1) {
+        if (task1 && task1.topic) {
             try {
                 console.log(`Generating image for Task 1 with prompt: "${task1.topic}"`);
                 
                 // Use the new, dedicated flow for writing task images
                 const imageResult = await generateWritingTaskImage(task1.topic);
                 
-                const [header, base64Data] = imageResult.imageDataUri.split(',');
-                const contentType = header.split(':')[1].split(';')[0];
-                const filePath = `writing-tasks/${structuredContent.id}/task1_image.png`;
-                
-                const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
-                task1.imageUrl = publicUrl;
-                console.log(`Task 1 image uploaded to ${publicUrl}`);
+                if (imageResult.imageDataUri.startsWith('data:')) {
+                    const [header, base64Data] = imageResult.imageDataUri.split(',');
+                    const contentType = header.split(':')[1].split(';')[0];
+                    const filePath = `writing-tasks/${structuredContent.id}/task1_image.png`;
+                    
+                    const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
+                    task1.imageUrl = publicUrl;
+                    console.log(`Task 1 image uploaded to ${publicUrl}`);
+                } else {
+                    throw new Error("Generated image data URI is invalid.");
+                }
 
             } catch (imgError) {
                 console.error(`Failed to generate or upload image for Task 1: "${task1.topic}"`, imgError);
@@ -284,13 +288,17 @@ const contentFactoryFlow = ai.defineFlow(
                     console.log(`Generating image for prompt: "${block.imageHint}"`);
                     const imageResult = await generateLessonImage(block.imageHint);
                     
-                    const [header, base64Data] = imageResult.imageDataUri.split(',');
-                    const contentType = header.split(':')[1].split(';')[0];
-                    const filePath = `lesson-images/${structuredContent.id}/block_${index}.png`;
-                    
-                    const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
-                    block.generatedImageUrl = publicUrl;
-                    console.log(`Image for prompt "${block.imageHint}" uploaded to ${publicUrl}`);
+                     if (imageResult.imageDataUri.startsWith('data:')) {
+                        const [header, base64Data] = imageResult.imageDataUri.split(',');
+                        const contentType = header.split(':')[1].split(';')[0];
+                        const filePath = `lesson-images/${structuredContent.id}/block_${index}.png`;
+                        
+                        const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
+                        block.generatedImageUrl = publicUrl;
+                        console.log(`Image for prompt "${block.imageHint}" uploaded to ${publicUrl}`);
+                    } else {
+                        throw new Error("Generated image data URI is invalid.");
+                    }
                 } catch (imgError) {
                     console.error(`Failed to generate or upload image for prompt: "${block.imageHint}"`, imgError);
                     // IMPORTANT: Fallback to a valid, whitelisted URL to prevent client-side crashes.
@@ -309,10 +317,10 @@ const contentFactoryFlow = ai.defineFlow(
         
         try {
             const audioResult = await generateAudioFromText(structuredContent.transcript);
-            const [header, base64Data] = audioResult.audioDataUri.split(',');
-            const contentType = header.split(':')[1].split(';')[0];
-            
-            if (base64Data && contentType) {
+             if (audioResult.audioDataUri.startsWith('data:')) {
+                const [header, base64Data] = audioResult.audioDataUri.split(',');
+                const contentType = header.split(':')[1].split(';')[0];
+                
                 const testId = structuredContent.id;
                 const filePath = `listeningTests/${testId}/${testId}.wav`;
                 console.log(`Uploading ${contentType} to Firebase Storage at path: ${filePath}`);
