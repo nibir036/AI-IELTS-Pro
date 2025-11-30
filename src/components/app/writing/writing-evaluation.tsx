@@ -54,7 +54,7 @@ const chartConfig = {
 
 function EnergyChart() {
     return (
-        <Card className="mb-6">
+        <Card className="mt-6">
             <CardHeader>
                 <CardTitle>Global Energy Sources, 1990 vs 2020</CardTitle>
                 <CardDescription>Percentage of total energy consumption</CardDescription>
@@ -184,7 +184,6 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
 
   return (
     <div className="space-y-6">
-       {task.taskType === 'Task 1' && <EnergyChart />}
       <Card>
         <CardHeader>
           <Badge variant="outline" className="w-fit">{isDiagnosticTest ? 'Diagnostic Test' : task.taskType}</Badge>
@@ -197,6 +196,8 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
             </CardDescription>
         </CardHeader>
       </Card>
+
+      {task.taskType === 'Task 1' && <EnergyChart />}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
