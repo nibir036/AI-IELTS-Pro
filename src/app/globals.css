@@ -83,6 +83,17 @@
   }
 }
 
+@layer utilities {
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+}
+
 @layer components {
   /* Clickable primary button (metallic gradient #412B6B -> #5C3E94) */
   .btn-primary {

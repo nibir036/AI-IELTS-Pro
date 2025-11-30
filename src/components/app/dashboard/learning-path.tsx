@@ -10,11 +10,31 @@ import type { Lesson, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, documentId } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface LearningPathProps {
   user: User;
 }
+
+const ShimmerSkeleton = () => (
+    <div className="space-y-4">
+        {[...Array(2)].map((_, i) => (
+             <div key={i} className="h-16 rounded-lg border flex items-center p-3 gap-4 overflow-hidden relative bg-muted/50">
+                <div 
+                    className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-background/30 to-transparent"
+                />
+                <Skeleton className="h-10 w-10 rounded-md" />
+                <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-3/4 rounded" />
+                    <Skeleton className="h-3 w-1/4 rounded" />
+                </div>
+                <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+        ))}
+    </div>
+);
+
 
 function RecommendedLessons({ lessonIds }: { lessonIds: string[] }) {
     const { firestore } = useFirebase();
@@ -22,30 +42,13 @@ function RecommendedLessons({ lessonIds }: { lessonIds: string[] }) {
     const lessonsQuery = useMemoFirebase(() => {
         if (!firestore || lessonIds.length === 0) return null;
         // Firestore 'in' query is limited to 30 items, but we only show 3.
-        return query(collection(firestore, 'lessons'), where(documentId(), 'in', lessonIds));
+        return query(collection(firestore, 'lessons'), where(documentId(), 'in', lessonIds.slice(0, 10)));
     }, [firestore, lessonIds]);
 
     const { data: recommendedLessons, isLoading } = useCollection<Lesson>(lessonsQuery);
 
     if (isLoading) {
-        return (
-            <div className="space-y-4">
-                <div className="h-16 rounded-lg border flex items-center p-3 gap-4">
-                    <div className="h-10 w-10 bg-muted rounded-md"></div>
-                    <div className="space-y-2 flex-1">
-                        <div className="h-4 bg-muted w-3/4 rounded"></div>
-                        <div className="h-3 bg-muted w-1/4 rounded"></div>
-                    </div>
-                </div>
-                 <div className="h-16 rounded-lg border flex items-center p-3 gap-4">
-                    <div className="h-10 w-10 bg-muted rounded-md"></div>
-                    <div className="space-y-2 flex-1">
-                        <div className="h-4 bg-muted w-3/4 rounded"></div>
-                        <div className="h-3 bg-muted w-1/4 rounded"></div>
-                    </div>
-                </div>
-            </div>
-        );
+        return <ShimmerSkeleton />;
     }
     
     if (!recommendedLessons || recommendedLessons.length === 0) {
@@ -98,7 +101,7 @@ export function LearningPath({ user }: LearningPathProps) {
 
       if (result.lessonIds && result.lessonIds.length > 0) {
           // We only take the top 3 recommendations to display
-          setLessonIds(result.lessonIds.slice(0, 3));
+          setLessonIds(result.lessonIds);
       } else {
           setLessonIds([]);
       }
@@ -127,9 +130,7 @@ export function LearningPath({ user }: LearningPathProps) {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="flex justify-center items-center h-40">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <ShimmerSkeleton />
       );
     }
 
