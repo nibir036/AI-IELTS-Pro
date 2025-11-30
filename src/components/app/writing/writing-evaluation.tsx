@@ -49,12 +49,13 @@ function TaskCard({ task }: { task: WritingQuestion }) {
       {task.taskType === 'Task 1' && (
          <CardContent>
              {isImageUrlValid ? (
-                <div className="relative aspect-video w-full">
+                <div className="w-full mt-4">
                     <Image
                         src={task.imageUrl}
                         alt="Task 1 Chart or Diagram"
-                        fill
-                        className="rounded-md object-contain border p-2"
+                        width={800}
+                        height={600}
+                        className="rounded-md object-contain border p-2 w-full h-auto"
                     />
                 </div>
              ) : (
