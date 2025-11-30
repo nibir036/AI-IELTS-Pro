@@ -30,7 +30,6 @@ const formSchema = z.object({
 
 interface WritingEvaluationProps {
   test: MockTest;
-  isDiagnosticTest?: boolean; // This can be adapted for diagnostic if needed
 }
 
 function TaskCard({ task }: { task: WritingQuestion }) {
