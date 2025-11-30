@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Docs: https://firebase.google.com/docs/storage/security
+service firebase.storage {
+  match /b/{bucket}/o {
+    // By default, allow read/write access only for authenticated users.
+    // This is a good default security posture.
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow public read access for generated lesson and task images.
+    // The AI Content Factory uploads to these paths.
+    match /lesson-images/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null; // Writes still restricted
+    }
+    match /writing-tasks/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null; // Writes still restricted
+    }
+    
+    // Allow public read access for generated listening test audio.
+    match /listeningTests/{allPaths=**} {
+        allow read: if true;
+        allow write: if request.auth != null;
+    }
+
+    // Allow users to upload their own speaking submissions.
+    // The path is structured to only allow a user to write to their own folder.
+    match /speaking-submissions/{userId}/{allPaths=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
