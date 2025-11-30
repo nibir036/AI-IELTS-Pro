@@ -34,7 +34,6 @@ interface WritingEvaluationProps {
 }
 
 function TaskCard({ task }: { task: WritingQuestion }) {
-  // A simple check to see if the URL is valid before rendering.
   const isImageUrlValid = task.imageUrl && (task.imageUrl.startsWith('http://') || task.imageUrl.startsWith('https://'));
 
   return (
@@ -161,10 +160,24 @@ export function WritingEvaluation({ test }: WritingEvaluationProps) {
     return <p>This test is not configured correctly. It must have both Task 1 and Task 2.</p>;
   }
 
+  if (results.task1 && results.task2) {
+      return (
+          <div className="mt-8 space-y-6">
+              <div className="p-4 rounded-lg bg-primary/10 border-l-4 border-primary">
+                <h2 className="text-xl font-bold text-primary">Overall Test Result</h2>
+                <p className="text-2xl font-bold">Your estimated overall writing band is: {((results.task1.overallBand + results.task2.overallBand * 2) / 3).toFixed(1)}</p>
+                <p className="text-sm text-muted-foreground mt-1">Task 2 is weighted more heavily in the official IELTS test.</p>
+              </div>
+             <WritingEvaluationResults result={results.task1} title="Task 1 Analysis" />
+             <WritingEvaluationResults result={results.task2} title="Task 2 Analysis" />
+          </div>
+      );
+  }
+
   return (
     <div className="space-y-6">
        <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-24">
            <Tabs defaultValue="task1">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="task1">Task 1</TabsTrigger>
@@ -216,30 +229,32 @@ export function WritingEvaluation({ test }: WritingEvaluationProps) {
             </TabsContent>
           </Tabs>
 
-           {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+          <div className="fixed bottom-0 left-0 right-0 z-10 border-t bg-background/95 backdrop-blur-sm">
+            <div className="container flex items-center justify-between gap-4 h-20 max-w-4xl mx-auto px-4">
+                {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
-          <div className="flex items-center gap-4 sticky bottom-4">
-             <Button type="submit" disabled={isButtonDisabled} size="lg">
-                {isLoading ? (
-                <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Evaluating Both Tasks...
-                </>
-                ) : (
-                    <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Submit for AI Evaluation
-                    </>
+                {!isValid && !isLoading && (
+                    <div className="flex items-center gap-2 text-sm text-amber-600">
+                        <AlertCircle className="h-4 w-4" />
+                        <p>Please complete both essays to meet the word count requirements.</p>
+                    </div>
                 )}
-            </Button>
-            {!isValid && !isLoading && (
-                <div className="flex items-center gap-2 text-sm text-amber-600">
-                    <AlertCircle className="h-4 w-4" />
-                    <p>Please complete both essays to meet the word count requirements.</p>
-                </div>
-            )}
+                 <div className="flex-grow"></div>
+                 <Button type="submit" disabled={isButtonDisabled} size="lg">
+                    {isLoading ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Evaluating Both Tasks...
+                    </>
+                    ) : (
+                        <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Submit for AI Evaluation
+                        </>
+                    )}
+                </Button>
+            </div>
           </div>
-
         </form>
       </Form>
       
@@ -249,18 +264,6 @@ export function WritingEvaluation({ test }: WritingEvaluationProps) {
             <p className="font-semibold">Our AI is analyzing your essays...</p>
             <p className="text-sm text-muted-foreground">This may take a moment. Please wait.</p>
         </div>
-      )}
-
-      {results.task1 && results.task2 && (
-          <div className="mt-8 space-y-6">
-              <div className="p-4 rounded-lg bg-primary/10 border-l-4 border-primary">
-                <h2 className="text-xl font-bold text-primary">Overall Test Result</h2>
-                <p className="text-2xl font-bold">Your estimated overall writing band is: {((results.task1.overallBand + results.task2.overallBand * 2) / 3).toFixed(1)}</p>
-                <p className="text-sm text-muted-foreground mt-1">Task 2 is weighted more heavily in the official IELTS test.</p>
-              </div>
-             <WritingEvaluationResults result={results.task1} title="Task 1 Analysis" />
-             <WritingEvaluationResults result={results.task2} title="Task 2 Analysis" />
-          </div>
       )}
     </div>
   );
