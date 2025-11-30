@@ -158,18 +158,18 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     *   Question IDs must be unique across the entire test (q1, q2, ... q40).
     *   Each question or group of questions requiring instructions MUST have a complete \`instructions\` field.
 *   **Passage 1 (Factual Text - Questions 1-13):**
-    *   Topic: [USE PASSAGE 1 TOPIC FROM 'rawText']
+    *   Topic: Use the first topic from the 'rawText' input.
     *   Length: 700-750 words.
     *   Questions 1-7: "note-completion". Instructions: "Complete the notes below. Choose NO MORE THAN TWO WORDS from the passage for each answer."
     *   Questions 8-13: "true-false-not-given". Instructions: "Do the following statements agree with the information given in Reading Passage 1? Write TRUE, FALSE, or NOT GIVEN."
 *   **Passage 2 (Discursive Text - Questions 14-26):**
-    *   Topic: [USE PASSAGE 2 TOPIC FROM 'rawText']
+    *   Topic: Use the second topic from the 'rawText' input.
     *   Length: 750-800 words.
     *   Questions 14-19: "matching-headings". Provide a list of 8 headings in the 'options' field for the first question (q14). The question's text should be the paragraph identifier (e.g., "Paragraph A"). Instructions: "Reading Passage 2 has six paragraphs, A-F. Choose the correct heading for each paragraph from the list of headings below."
     *   Questions 20-23: "matching-information". Instructions: "Look at the following statements (Questions 20-23) and the paragraphs of Reading Passage 2. Match each statement with the correct paragraph, A-F." The 'answer' for each should be a single letter (e.g., "A").
     *   Questions 24-26: "multiple-choice". Instructions: "Choose the correct letter, A, B, C or D."
 *   **Passage 3 (Abstract Text - Questions 27-40):**
-    *   Topic: [USE PASSAGE 3 TOPIC FROM 'rawText']
+    *   Topic: Use the third topic from the 'rawText' input.
     *   Length: 850-900 words.
     *   Questions 27-32: "summary-completion". This MUST be a single question object with id "q27". The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answer' field must be a single, comma-separated string of the correct words.
         *   IF instructions are "Choose ONE WORD ONLY from the passage for each answer.", you MUST NOT generate an 'answerBox'.
