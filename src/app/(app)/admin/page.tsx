@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -174,6 +173,7 @@ export default function AdminPage() {
 
           setResult(updatedResult);
           setManualImageFile(null);
+          setError(null); // Clear the error message on success
           toast({
               title: 'Success!',
               description: 'Writing test has been saved with the manually uploaded image.',
@@ -322,10 +322,10 @@ export default function AdminPage() {
                         <pre className="whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
                     </div>
                     {isWritingTestImageFailure && (
-                        <Card className="bg-amber-50 border-amber-200">
+                        <Card className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-amber-800"><FileUp /> Action Required: Upload Image</CardTitle>
-                                <CardDescription className="text-amber-700">The AI failed to generate an image. Please upload one manually for Task 1.</CardDescription>
+                                <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200"><FileUp /> Action Required: Upload Image</CardTitle>
+                                <CardDescription className="text-amber-700 dark:text-amber-300">The AI failed to generate an image. Please upload one manually for Task 1.</CardDescription>
                             </CardHeader>
                             <CardContent className="flex flex-col sm:flex-row items-center gap-4">
                                 <Input 
@@ -385,6 +385,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-
-    
