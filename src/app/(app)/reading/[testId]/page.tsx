@@ -27,48 +27,39 @@ import { cn } from '@/lib/utils';
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
+
 function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) {
     const { control, formState: { isSubmitted: isGraded }, watch } = useFormContext();
-    const correctAnswers = question.answer.split(',').map(a => a.trim().toLowerCase());
+    
+    // This regex now correctly handles potential spaces inside the <b> tags
+    const parts = question.question.split(/(<b>\s*\d+\s*<\/b>)/g);
+    
+    const questionTextWithInputs = parts.map((part, index) => {
+        const match = /<b>\s*(\d+)\s*<\/b>/.exec(part);
+        if (match) {
+            const questionNumber = match[1];
+            const questionId = `q${questionNumber}`;
 
-    const questionTextWithInputs = React.useMemo(() => {
-        const parts = question.question.split(/(<b>\s*\d+\s*<\/b>)/g);
-        let questionCounter = 0;
-        
-        return parts.map((part, index) => {
-            const match = /<b>\s*(\d+)\s*<\/b>/.exec(part);
-            if (match) {
-                const questionNumber = match[1];
-                const questionId = `q${questionNumber}`;
-                const answerIndex = questionCounter++;
-
-                return (
-                    <Controller
-                        key={questionId}
-                        name={questionId}
-                        control={control}
-                        defaultValue=""
-                        render={({ field }) => {
-                             const isCorrect = isGraded ? (watch(field.name) || '').trim().toLowerCase() === correctAnswers[answerIndex] : undefined;
-                             return (
-                                <Input
-                                    {...field}
-                                    disabled={isGraded}
-                                    placeholder={`${questionNumber}`}
-                                    className={cn(
-                                        "inline-block w-32 h-7 p-1 mx-1 text-center",
-                                        isGraded && (isCorrect ? "border-green-500" : "border-red-500")
-                                    )}
-                                />
-                            );
-                        }}
-                    />
-                );
-            }
-            // Use dangerouslySetInnerHTML to render the text part, which may contain HTML
-            return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
-        });
-    }, [question.question, control, isGraded, correctAnswers, watch]);
+            return (
+                <Controller
+                    key={questionId}
+                    name={questionId}
+                    control={control}
+                    defaultValue=""
+                    render={({ field }) => (
+                         <Input
+                            {...field}
+                            disabled={isGraded}
+                            placeholder={`${questionNumber}`}
+                            className="inline-block w-32 h-7 p-1 mx-1 align-baseline"
+                         />
+                    )}
+                />
+            );
+        }
+        // Use dangerouslySetInnerHTML for the text parts to correctly render any HTML within them.
+        return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
+    });
 
     return (
         <div className="p-4 rounded-lg border bg-background">
@@ -76,6 +67,7 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
         </div>
     );
 }
+
 
 
 function ReadingTestComponent({ test }: { test: ReadingTest }) {
@@ -332,6 +324,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     }
     
     const renderPassage = (passageText: string) => {
+        // Split by one or more newlines, which is a common way to separate paragraphs in plain text.
         const paragraphs = passageText.split(/\n\s*\n/).filter(p => p.trim() !== '');
         return paragraphs.map((para, index) => (
             <p key={index} className="text-foreground/80 leading-relaxed mb-4">{para.trim()}</p>
@@ -468,8 +461,3 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
         </div>
     );
 }
-
-    
-
-    
-
