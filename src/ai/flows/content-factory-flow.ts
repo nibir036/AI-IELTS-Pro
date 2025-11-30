@@ -166,22 +166,22 @@ Your task is to take a raw text input and a desired content type, and generate a
         *   **Topic:** [USE PASSAGE 1 TOPIC FROM 'rawText']
         *   **Length:** 700-750 words.
         *   **Style:** Descriptive, factual, easy to read.
-        *   **Questions 1-7:** "note-completion" (Fill in the blanks, no more than two words). MUST have instructions.
-        *   **Questions 8-13:** "true-false-not-given". MUST have instructions.
+        *   **Questions 1-7:** "note-completion". MUST have instructions like "Complete the notes below. Choose NO MORE THAN TWO WORDS from the passage for each answer.".
+        *   **Questions 8-13:** "true-false-not-given". MUST have instructions like "Do the following statements agree with the information given in Reading Passage 1? Write TRUE if the statement agrees with the information, FALSE if the statement contradicts the information, or NOT GIVEN if there is no information on this.".
     *   **PASSAGE 2 (The Discursive Text)**
         *   **Topic:** [USE PASSAGE 2 TOPIC FROM 'rawText']
         *   **Length:** 750-800 words.
         *   **Style:** Argumentative, sociologic, or workplace-related.
-        *   **Questions 14-19:** "matching-headings". MUST provide a list of 8 headings in the 'options' field for the first question in this block. Each question's text should be the paragraph identifier (e.g., "Paragraph A"). MUST have instructions.
-        *   **Questions 20-23:** "matching-information" (Which paragraph contains...?). MUST have instructions.
-        *   **Questions 24-26:** "multiple-choice" (4 options). MUST have instructions.
+        *   **Questions 14-19:** "matching-headings". MUST provide a list of 8 headings in the 'options' field for the first question in this block. Each question's text should be the paragraph identifier (e.g., "Paragraph A"). MUST have instructions like "Reading Passage 2 has six paragraphs, A-F. Choose the correct heading for each paragraph from the list of headings below.".
+        *   **Questions 20-23:** "matching-information". MUST have instructions like "Look at the following statements (Questions 20-23) and the paragraphs of Reading Passage 2. Match each statement with the correct paragraph, A-F.".
+        *   **Questions 24-26:** "multiple-choice". MUST have instructions like "Choose the correct letter, A, B, C or D.".
     *   **PASSAGE 3 (The Abstract Text)**
         *   **Topic:** [USE PASSAGE 3 TOPIC FROM 'rawText']
         *   **Length:** 850-900 words.
         *   **Style:** Complex, scientific, theoretical, or philosophical.
-        *   **Questions 27-32:** "summary-completion". This MUST be a single question object. The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answerBox' field MUST contain the list of words to choose from. The 'answer' field should be a comma-separated list of the correct words. MUST have instructions.
-        *   **Questions 33-36:** "yes-no-not-given". MUST have instructions.
-        *   **Questions 37-40:** "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field. MUST have instructions.
+        *   **Questions 27-32:** "summary-completion". This MUST be a single question object. The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answerBox' field MUST contain the list of words to choose from. The 'answer' field should be a comma-separated list of the correct words. MUST have instructions like "Complete the summary below. Choose ONE WORD ONLY from the passage for each answer.".
+        *   **Questions 33-36:** "yes-no-not-given". MUST have instructions like "Do the following statements agree with the claims of the writer in Reading Passage 3? Write YES if the statement agrees with the claims of the writer, NO if the statement contradicts the claims of the writer, or NOT GIVEN if it is impossible to say what the writer thinks about this.".
+        *   **Questions 37-40:** "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field for the first question of this block. MUST have instructions like "Complete each sentence with the correct ending, A-G, below.".
 
 *   **OUTPUT FORMAT:** The final output must be a single JSON object that strictly adheres to the 'ReadingTest' schema. It must contain 3 items in the 'parts' array, one for each passage. Question IDs must be unique across the entire test (q1, q2, ... q40).
 
@@ -301,5 +301,7 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
 
     
