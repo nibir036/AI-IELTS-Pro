@@ -2,6 +2,26 @@
 {
   "mockTests": [
     {
+      "id": "IELTS_Writing_p1t1",
+      "testType": "IELTS-Academic",
+      "skill": "Writing",
+      "questions": [
+        {
+          "task": 1,
+          "topic": "The chart below shows the changes in global energy sources from 1990 to 2020. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+          "taskType": "Task 1",
+          "wordCountTarget": 150,
+          "imageUrl": "https://storage.googleapis.com/studioprod-51f49.appspot.com/public/energy_sources_chart.png"
+        },
+        {
+          "task": 2,
+          "topic": "Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree?",
+          "taskType": "Task 2",
+          "wordCountTarget": 250
+        }
+      ]
+    },
+    {
       "id": "IELTS_Writing_001",
       "testType": "IELTS-Academic",
       "skill": "Writing",

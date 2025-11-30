@@ -265,5 +265,3 @@ export function WritingEvaluation({ test }: WritingEvaluationProps) {
     </div>
   );
 }
-
-    
