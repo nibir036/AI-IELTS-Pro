@@ -62,7 +62,6 @@ export default function AdminPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // State for the new manual completion flow
   const [partialTestData, setPartialTestData] = useState<MockTest | null>(null);
   const [isSavingManual, setIsSavingManual] = useState(false);
 

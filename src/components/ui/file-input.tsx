@@ -7,30 +7,22 @@ import { cn } from '@/lib/utils';
 import { Input, type InputProps } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface FileInputProps extends Omit<InputProps, 'name'> {
+interface FileInputProps extends Omit<InputProps, 'name' | 'type'> {
   name: string;
 }
 
 const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
   ({ className, name, ...props }, ref) => {
-    // Check if form context exists. If not, this component might be used outside a form.
-    const formContext = useFormContext();
-    const hasFormContext = !!formContext;
+    const { register, watch, setValue, formState: { errors } } = useFormContext();
 
-    const [fileName, setFileName] = React.useState<string | null>(null);
+    const fileList = watch(name) as FileList | null;
+    const fileName = fileList?.[0]?.name;
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      setFileName(file?.name || null);
-      if (hasFormContext) {
-        formContext.setValue(name, e.target.files);
-      }
-      props.onChange?.(e);
-    };
-
-    const inputProps: InputProps = hasFormContext 
-      ? { ...formContext.register(name), ...props, onChange: handleFileChange }
-      : { ...props, name, onChange: handleFileChange };
+    const { ref: fieldRef, ...fieldProps } = register(name, {
+        onChange: (e) => {
+            setValue(name, e.target.files);
+        },
+    });
 
     return (
       <div className={cn('relative w-full', className)}>
@@ -38,7 +30,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
           htmlFor={name}
           className={cn(
             "flex items-center justify-center w-full h-24 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none",
-            formContext?.formState.errors[name] && 'border-destructive text-destructive'
+            errors[name] && 'border-destructive text-destructive'
           )}
         >
           <span className="flex items-center space-x-2">
@@ -52,8 +44,14 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
           id={name}
           type="file"
           className="sr-only"
-          {...inputProps}
-          ref={ref}
+          {...fieldProps}
+          {...props}
+          ref={(e) => {
+            fieldRef(e);
+            if (ref) {
+              (ref as React.MutableRefObject<HTMLInputElement | null>).current = e;
+            }
+          }}
         />
       </div>
     );
