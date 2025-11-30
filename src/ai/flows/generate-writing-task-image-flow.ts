@@ -38,8 +38,11 @@ const generateWritingTaskImageFlow = ai.defineFlow(
       IELTS Prompt: "${prompt}"`;
 
     const { media } = await withRetry(() => ai.generate({
-      model: 'googleai/imagen-4.0-fast-generate-001', // Using the more powerful Imagen model
+      model: 'googleai/gemini-2.5-flash-image-preview', // Switched to a model available on the free tier
       prompt: fullPrompt,
+      config: {
+        responseModalities: ['IMAGE'], // This model requires specifying response modalities
+      }
     }), {
         retryOn: isRetryableGoogleAIError
     });
