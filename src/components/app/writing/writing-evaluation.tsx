@@ -229,12 +229,12 @@ export function WritingEvaluation({ test }: WritingEvaluationProps) {
             </TabsContent>
           </Tabs>
 
-          <div className="fixed bottom-0 left-0 right-0 z-10 border-t bg-background/95 backdrop-blur-sm">
-            <div className="container flex items-center justify-between gap-4 h-20 max-w-4xl mx-auto px-4">
+          <div className="fixed bottom-0 right-0 z-20 border-t bg-background/95 backdrop-blur-sm w-full md:pl-[var(--sidebar-width)] group-data-[collapsible=icon]:md:pl-[var(--sidebar-width-icon)] transition-[padding]">
+            <div className="container flex items-center justify-between gap-4 h-20 max-w-7xl mx-auto px-4">
                 {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
                 {!isValid && !isLoading && (
-                    <div className="flex items-center gap-2 text-sm text-amber-600">
+                    <div className="hidden md:flex items-center gap-2 text-sm text-amber-600">
                         <AlertCircle className="h-4 w-4" />
                         <p>Please complete both essays to meet the word count requirements.</p>
                     </div>
