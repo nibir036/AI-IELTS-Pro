@@ -34,7 +34,8 @@ interface WritingEvaluationProps {
 }
 
 function TaskCard({ task }: { task: WritingQuestion }) {
-  const isImageUrlValid = task.imageUrl && (task.imageUrl.startsWith('http://') || task.imageUrl.startsWith('https://'));
+  // A URL is valid if it starts with http:// or https://
+  const isImageUrlValid = task.imageUrl && (task.imageUrl.startsWith('http'));
 
   return (
     <Card>
@@ -45,16 +46,22 @@ function TaskCard({ task }: { task: WritingQuestion }) {
           {`You should spend about ${task.taskType === 'Task 1' ? '20' : '40'} minutes on this task. Write at least ${task.wordCountTarget} words.`}
         </CardDescription>
       </CardHeader>
-      {task.taskType === 'Task 1' && isImageUrlValid && (
+      {task.taskType === 'Task 1' && (
          <CardContent>
-             <div className="relative aspect-video w-full">
-                <Image
-                    src={task.imageUrl}
-                    alt="Task 1 Chart or Diagram"
-                    fill
-                    className="rounded-md object-contain border p-2"
-                />
-             </div>
+             {isImageUrlValid ? (
+                <div className="relative aspect-video w-full">
+                    <Image
+                        src={task.imageUrl}
+                        alt="Task 1 Chart or Diagram"
+                        fill
+                        className="rounded-md object-contain border p-2"
+                    />
+                </div>
+             ) : (
+                <div className="aspect-video w-full flex items-center justify-center bg-muted rounded-md">
+                    <p className="text-sm text-muted-foreground">No image provided for this task.</p>
+                </div>
+             )}
         </CardContent>
       )}
     </Card>
@@ -269,3 +276,5 @@ export function WritingEvaluation({ test }: WritingEvaluationProps) {
     </div>
   );
 }
+
+    

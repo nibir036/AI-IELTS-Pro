@@ -255,27 +255,25 @@ const contentFactoryFlow = ai.defineFlow(
         const task1 = structuredContent.questions.find(q => q.taskType === 'Task 1');
         if (task1 && task1.topic) {
             try {
-                console.log(`Generating image for Task 1 with prompt: "${task1.topic}"`);
-                
-                // Use the new, dedicated flow for writing task images
+                console.log(`Generating image for Task 1: "${task1.topic}"`);
                 const imageResult = await generateWritingTaskImage(task1.topic);
                 
-                if (imageResult.imageDataUri.startsWith('data:')) {
-                    const [header, base64Data] = imageResult.imageDataUri.split(',');
-                    const contentType = header.split(':')[1].split(';')[0];
-                    const filePath = `writing-tasks/${structuredContent.id}/task1_image.png`;
-                    
-                    const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
-                    task1.imageUrl = publicUrl;
-                    console.log(`Task 1 image uploaded to ${publicUrl}`);
-                } else {
-                    throw new Error("Generated image data URI is invalid.");
+                if (!imageResult.imageDataUri || !imageResult.imageDataUri.startsWith('data:')) {
+                     throw new Error("Invalid image data URI received from image generation flow.");
                 }
 
+                const [header, base64Data] = imageResult.imageDataUri.split(',');
+                const contentType = header.split(':')[1].split(';')[0];
+                const filePath = `writing-tasks/${structuredContent.id}/task1_image.png`;
+                
+                const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
+                task1.imageUrl = publicUrl;
+                console.log(`Task 1 image uploaded to ${publicUrl}`);
+
             } catch (imgError) {
-                console.error(`Failed to generate or upload image for Task 1: "${task1.topic}"`, imgError);
-                // Assign a placeholder on failure to prevent crashes, but log the error.
-                task1.imageUrl = "https://picsum.photos/seed/error/600/400";
+                console.error(`CRITICAL: Failed to generate or upload image for Task 1: "${task1.topic}"`, imgError);
+                // Throw the error to prevent saving a test with a missing image.
+                throw new Error(`Failed to process image for writing task. Reason: ${(imgError as Error).message}`);
             }
         }
     }
@@ -339,3 +337,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
