@@ -3,6 +3,7 @@
 
 /**
  * @fileOverview A Genkit flow for generating a cartoonish image for a lesson.
+ * This is for illustrative, non-data-visualization purposes.
  *
  * - generateLessonImage - A function that takes a prompt and returns an image.
  * - GenerateLessonImageInput - The input type for the function.
@@ -13,7 +14,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 
-const GenerateLessonImageInputSchema = z.string().describe('A short text prompt describing the desired image.');
+const GenerateLessonImageInputSchema = z.string().describe('A short text prompt describing the desired illustrative image.');
 export type GenerateLessonImageInput = z.infer<typeof GenerateLessonImageInputSchema>;
 
 const GenerateLessonImageOutputSchema = z.object({
@@ -32,21 +33,15 @@ const generateLessonImageFlow = ai.defineFlow(
     outputSchema: GenerateLessonImageOutputSchema,
   },
   async (prompt) => {
-    // Check if the prompt is for a chart/graph or a cartoonish illustration
-    const isChartPrompt = /chart|graph|diagram|table|illustrates|showing/i.test(prompt);
-
-    const fullPrompt = isChartPrompt
-      ? `Generate a data visualization for the following IELTS Writing Task 1 prompt. The visualization should be a clean, clear, and simple chart, graph, or diagram. The style must be minimalist, easy to read, with clear labels but no overly complex details, suitable for a textbook.
-      
-      Prompt: "${prompt}"`
-      : `A cute, cartoonish, simple, minimalist, doodle-style illustration that literally depicts the following scene: "${prompt}". The style should have clean lines and a friendly feel, suitable for an educational app.`;
+    // This prompt is for creating fun, cartoonish illustrations.
+    const fullPrompt = `A cute, cartoonish, simple, minimalist, doodle-style illustration that literally depicts the following scene: "${prompt}". The style should have clean lines and a friendly feel, suitable for an educational app. Do NOT create complex charts or graphs.`;
 
     const { media } = await withRetry(() => ai.generate({
       model: 'googleai/gemini-2.5-flash-image-preview',
       prompt: fullPrompt,
       config: {
         responseModalities: ['IMAGE'],
-        temperature: 0.2, // Lower temperature for less randomness and more literal interpretation
+        temperature: 0.3, // A bit of creativity is fine for illustrations.
       },
     }), {
         retryOn: isRetryableGoogleAIError

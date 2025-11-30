@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
 import { generateAudioFromText } from './text-to-speech-flow';
 import { generateLessonImage } from './generate-lesson-image-flow';
+import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
 import { getFirebaseAdmin } from '@/firebase/admin';
 
@@ -254,13 +255,10 @@ const contentFactoryFlow = ai.defineFlow(
         const task1 = structuredContent.questions.find(q => q.taskType === 'Task 1');
         if (task1) {
             try {
-                // Construct the more specific prompt for image generation
-                const imagePrompt = `<"${task1.topic}"> 
+                console.log(`Generating image for Task 1 with prompt: "${task1.topic}"`);
                 
-                generate the image based on the question for IELTS Writing task 1`;
-                console.log(`Generating image for Task 1 with prompt: "${imagePrompt}"`);
-                
-                const imageResult = await generateLessonImage(imagePrompt);
+                // Use the new, dedicated flow for writing task images
+                const imageResult = await generateWritingTaskImage(task1.topic);
                 
                 const [header, base64Data] = imageResult.imageDataUri.split(',');
                 const contentType = header.split(':')[1].split(';')[0];
