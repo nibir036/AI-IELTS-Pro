@@ -33,10 +33,12 @@ const generateLessonImageFlow = ai.defineFlow(
   },
   async (prompt) => {
     // Check if the prompt is for a chart/graph or a cartoonish illustration
-    const isChartPrompt = /chart|graph|diagram|table/i.test(prompt);
+    const isChartPrompt = /chart|graph|diagram|table|illustrates|showing/i.test(prompt);
 
     const fullPrompt = isChartPrompt
-      ? `A clean, clear, and simple data visualization for an IELTS Writing Task 1 prompt. The visualization should be a ${prompt}. The style should be minimalist, easy to read, with clear labels but no complex details. It should look like a professional illustration from a textbook.`
+      ? `Generate a data visualization for the following IELTS Writing Task 1 prompt. The visualization should be a clean, clear, and simple chart, graph, or diagram. The style must be minimalist, easy to read, with clear labels but no overly complex details, suitable for a textbook.
+      
+      Prompt: "${prompt}"`
       : `A cute, cartoonish, simple, minimalist, doodle-style illustration that literally depicts the following scene: "${prompt}". The style should have clean lines and a friendly feel, suitable for an educational app.`;
 
     const { media } = await withRetry(() => ai.generate({

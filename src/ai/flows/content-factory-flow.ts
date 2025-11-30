@@ -254,8 +254,10 @@ const contentFactoryFlow = ai.defineFlow(
         const task1 = structuredContent.questions.find(q => q.taskType === 'Task 1');
         if (task1) {
             try {
-                // The topic itself is the prompt for the image generation.
-                const imagePrompt = `A data visualization for an IELTS Writing Task 1 prompt: ${task1.topic}`;
+                // Construct the more specific prompt for image generation
+                const imagePrompt = `<"${task1.topic}"> 
+                
+                generate the image based on the question for IELTS Writing task 1`;
                 console.log(`Generating image for Task 1 with prompt: "${imagePrompt}"`);
                 
                 const imageResult = await generateLessonImage(imagePrompt);
