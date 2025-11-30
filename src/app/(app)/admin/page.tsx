@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -23,28 +22,28 @@ type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 
 const creationCards = [
     {
         title: "Writing Test",
-        description: "Manually craft a new Writing test.",
+        description: "Manually craft a new Writing test, including image uploads for Task 1.",
         icon: FileText,
         href: "/admin/create/writing",
         isReady: true,
     },
      {
         title: "Listening Test",
-        description: "Upload audio or use AI generation.",
+        description: "Upload audio or use AI to generate audio from a transcript.",
         icon: Headphones,
         href: "/admin/create/listening",
         isReady: true,
     },
     {
         title: "Speaking Test",
-        description: "Build a new Speaking test.",
+        description: "Manually build a new Speaking test with prompts for all three parts.",
         icon: Mic,
         href: "/admin/create/speaking",
         isReady: true,
     },
      {
         title: "Reading Test",
-        description: "Use the AI Content Factory for this.",
+        description: "Use the AI Content Factory to generate complex reading tests.",
         icon: BookOpen,
         href: "/admin/create/reading",
         isReady: true,
@@ -100,7 +99,7 @@ export default function AdminPage() {
           targetCollection = 'lessons';
       }
       
-      // If image generation failed, don't save. Show the JSON and an error.
+      // If image generation failed, show error and JSON, but don't save.
       if (imageFailed) {
         setError("AI image generation failed. Please copy the Task 1 topic from the JSON output below, generate an image manually, and then use the 'Create Writing Test' form to upload it.");
         toast({
@@ -108,17 +107,14 @@ export default function AdminPage() {
             title: "Image Generation Failed",
             description: "The test was not saved. Please follow the instructions to create it manually.",
         });
-        setIsProcessing(false);
-        return; // Stop execution
+      } else {
+        const docRef = doc(firestore, targetCollection, aiResult.id);
+        await setDoc(docRef, aiResult);
+        toast({
+          title: "Content Saved!",
+          description: `New content was successfully saved to '${targetCollection}'.`,
+        });
       }
-
-      const docRef = doc(firestore, targetCollection, aiResult.id);
-      await setDoc(docRef, aiResult);
-
-      toast({
-        title: "Content Saved!",
-        description: `New content was successfully saved to '${targetCollection}'.`,
-      });
 
     } catch (err: any) {
       console.error("Error processing content:", err);
@@ -298,15 +294,21 @@ export default function AdminPage() {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {creationCards.map(card => (
                   <Link key={card.title} href={card.href} className={!card.isReady ? "pointer-events-none" : ""}>
-                    <div className={`p-4 border rounded-lg h-full flex flex-col justify-between transition-all ${card.isReady ? 'hover:border-primary hover:shadow-md' : 'bg-muted/50'}`}>
+                    <div className={cn(
+                        "p-4 border rounded-lg h-full flex flex-col justify-between transition-all",
+                        card.isReady ? 'hover:border-primary hover:shadow-md' : 'bg-muted/50 cursor-not-allowed'
+                    )}>
                         <div>
                             <div className="flex justify-between items-start">
                                 <h3 className="font-semibold">{card.title}</h3>
-                                <card.icon className={`h-5 w-5 ${card.isReady ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <card.icon className={cn("h-5 w-5", card.isReady ? 'text-primary' : 'text-muted-foreground')} />
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
                         </div>
-                        <div className={`flex items-center mt-4 text-sm font-medium ${card.isReady ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <div className={cn(
+                            "flex items-center mt-4 text-sm font-medium",
+                            card.isReady ? 'text-primary' : 'text-muted-foreground'
+                        )}>
                              {card.isReady ? 'Create Test' : 'Use AI Factory'}
                              {card.isReady && <ArrowRight className="ml-2 h-4 w-4" />}
                         </div>
@@ -318,5 +320,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
