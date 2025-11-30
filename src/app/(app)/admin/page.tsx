@@ -90,7 +90,6 @@ export default function AdminPage() {
     try {
       const aiResult = await processContent({ contentType, rawText: inputText });
       
-      // If image generation failed, don't save yet. Show manual upload UI.
       const task1 = 'questions' in aiResult && (aiResult as MockTest).questions?.find(q => q.taskType === 'Task 1');
       if (contentType === 'WritingTest' && task1 && !(task1 as WritingQuestion).imageUrl) {
           setResult(aiResult);
@@ -121,7 +120,6 @@ export default function AdminPage() {
 
     } catch (err: any) {
       console.error("Error processing content:", err);
-      // Attempt to parse the structured content from the error message if it exists
       const jsonMatch = err.message.match(/(\{.*\})/s);
       if (contentType === 'WritingTest' && jsonMatch && jsonMatch[1]) {
           try {
@@ -161,24 +159,21 @@ export default function AdminPage() {
       setError(null);
 
       try {
-          // 1. Upload the manual image
           const base64Image = (await blobToBase64(manualImageFile)).split(',')[1];
           const filePath = `writing-tasks/${result.id}/task1_image.png`;
           const imageUrl = await uploadImageToStorage(base64Image, manualImageFile.type, filePath);
 
-          // 2. Update the result object with the new image URL
           const updatedResult = { ...result } as MockTest;
           const task1Index = updatedResult.questions.findIndex(q => q.taskType === 'Task 1');
           if (task1Index !== -1) {
               (updatedResult.questions[task1Index] as WritingQuestion).imageUrl = imageUrl;
           }
 
-          // 3. Save the completed test to Firestore
           const docRef = doc(firestore, 'mockTests', updatedResult.id);
           await setDoc(docRef, updatedResult);
 
-          setResult(updatedResult); // Update the state to show the final JSON with the new URL
-          setManualImageFile(null); // Clear the file input
+          setResult(updatedResult);
+          setManualImageFile(null);
           toast({
               title: 'Success!',
               description: 'Writing test has been saved with the manually uploaded image.',
@@ -371,7 +366,7 @@ export default function AdminPage() {
                         <div>
                             <div className="flex justify-between items-start">
                                 <h3 className="font-semibold">{card.title}</h3>
-                                {card.isReady && <card.icon className="h-5 w-5 text-primary" />}
+                                {card.icon && <card.icon className="h-5 w-5 text-primary" />}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
                         </div>
@@ -390,3 +385,6 @@ export default function AdminPage() {
     </div>
   );
 }
+
+
+    
