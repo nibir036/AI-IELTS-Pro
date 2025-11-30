@@ -113,19 +113,16 @@ export default function AdminPage() {
 
     } catch (err: any) {
       console.error("Error processing content:", err);
-      if (err.message.includes('Partial content')) {
-            const jsonMatch = err.message.match(/Partial content: (\{.*\})/s);
-            if (jsonMatch && jsonMatch[1]) {
-                 try {
-                    const partialResult = JSON.parse(jsonMatch[1]);
-                    setResult(partialResult);
-                    setError("AI image generation failed. Please upload an image for Task 1 and save the test manually.");
-                } catch (parseError) {
-                    setError(`An error occurred: ${err.message}`);
-                }
-            } else {
-                 setError(`An error occurred: ${err.message}`);
-            }
+      // New error handling logic
+      if (err.message && err.message.includes('Partial content')) {
+          const jsonString = err.message.substring(err.message.indexOf('{'));
+          try {
+              const partialResult = JSON.parse(jsonString);
+              setResult(partialResult);
+              setError("AI image generation failed. Please upload an image for Task 1 and save the test manually.");
+          } catch (parseError) {
+              setError(`An error occurred: ${err.message}`);
+          }
       } else {
         const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
           ? "The AI service is currently overloaded. Please try again in a moment."
@@ -180,7 +177,7 @@ export default function AdminPage() {
 
       } catch (err: any) {
           console.error("Error saving with manual image:", err);
-          setError(`Failed to save test: ${err.message}`);
+setError(`Failed to save test: ${err.message}`);
           toast({
               variant: 'destructive',
               title: 'Save Failed',
@@ -307,19 +304,25 @@ export default function AdminPage() {
                     Generate & Save from Text
                 </Button>
             </div>
-             {error && (
-                <Alert variant={isWritingTestImageFailure ? "default" : "destructive"} className={isWritingTestImageFailure ? "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700" : ""}>
-                    <AlertCircle className={cn("h-4 w-4", isWritingTestImageFailure && "text-amber-600 dark:text-amber-400")} />
-                    <AlertTitle className={isWritingTestImageFailure ? "text-amber-800 dark:text-amber-300" : ""}>Error</AlertTitle>
-                    <AlertDescription className={isWritingTestImageFailure ? "text-amber-700 dark:text-amber-400" : ""}>{error}</AlertDescription>
+             {error && !isWritingTestImageFailure && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
                 </Alert>
              )}
              {isWritingTestImageFailure && (
                 <FormProvider {...methods}>
-                    <Card className="bg-background">
+                    <Alert variant="destructive" className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700">
+                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <AlertTitle className="text-amber-800 dark:text-amber-300">Action Required: AI Image Generation Failed</AlertTitle>
+                        <AlertDescription className="text-amber-700 dark:text-amber-400">
+                            The test content (shown below) was generated, but the AI could not create an image. Please manually upload an image for Task 1 to finalize and save the test.
+                        </AlertDescription>
+                    </Alert>
+                    <Card className="mt-4 bg-background">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><FileUp /> Action Required: Upload Image</CardTitle>
-                            <CardDescription>The AI failed to generate an image. Please upload one manually for Task 1 to complete the test creation.</CardDescription>
+                            <CardTitle className="flex items-center gap-2"><FileUp /> Upload Image for Task 1</CardTitle>
                         </CardHeader>
                         <CardContent className="flex flex-col sm:flex-row items-center gap-4">
                              <FileInput name="manualImageFile" accept="image/*" />
@@ -335,7 +338,7 @@ export default function AdminPage() {
                     </Card>
                 </FormProvider>
             )}
-             {result && !isWritingTestImageFailure && (
+             {result && (
                   <div className="relative mt-4 space-y-4">
                     <p className="text-sm font-medium mb-2">AI Output Review</p>
                     <div className="p-4 bg-muted rounded-md h-full max-h-80 overflow-x-auto text-sm">

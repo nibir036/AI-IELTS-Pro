@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ import { blobToBase64 } from '@/lib/utils';
 
 const formSchema = z.object({
   testType: z.enum(['IELTS-Academic', 'IELTS-General', 'PTE']),
-  task1Image: z.any().optional(),
+  task1Image: z.any().refine(files => files?.length > 0, 'Image for Task 1 is required.'),
   task1Topic: z.string().min(10, "Task 1 topic is required."),
   task2Topic: z.string().min(10, "Task 2 topic is required."),
 });
@@ -33,7 +32,7 @@ export default function CreateWritingTestPage() {
     const { firestore } = useFirebase();
     const router = useRouter();
 
-    const form = useForm<z.infer<typeof formSchema>>({
+    const methods = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             testType: 'IELTS-Academic',
@@ -63,6 +62,8 @@ export default function CreateWritingTestPage() {
                 const base64Image = await blobToBase64(imageFile);
                 const filePath = `writing-tasks/${testId}/task1_image.png`;
                 task1ImageUrl = await uploadImageToStorage(base64Image.split(',')[1], imageFile.type, filePath);
+            } else {
+                throw new Error("Task 1 image is required.");
             }
 
             const newTest = {
@@ -115,10 +116,10 @@ export default function CreateWritingTestPage() {
             </div>
             <Card className="mt-6">
                  <CardContent className="pt-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                    <FormProvider {...methods}>
+                        <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-8">
                              <FormField
-                                control={form.control}
+                                control={methods.control}
                                 name="testType"
                                 render={({ field }) => (
                                 <FormItem>
@@ -141,7 +142,7 @@ export default function CreateWritingTestPage() {
                             />
 
                              <FormField
-                                control={form.control}
+                                control={methods.control}
                                 name="task1Topic"
                                 render={({ field }) => (
                                 <FormItem>
@@ -156,14 +157,13 @@ export default function CreateWritingTestPage() {
                             />
                             
                             <FormField
-                                control={form.control}
+                                control={methods.control}
                                 name="task1Image"
-                                render={({ field: { onChange, value, ...rest } }) => (
+                                render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Task 1 Image (Optional)</FormLabel>
+                                        <FormLabel>Task 1 Image</FormLabel>
                                         <FormControl>
                                             <FileInput
-                                                {...rest}
                                                 name="task1Image"
                                                 accept="image/*"
                                             />
@@ -176,7 +176,7 @@ export default function CreateWritingTestPage() {
 
 
                             <FormField
-                                control={form.control}
+                                control={methods.control}
                                 name="task2Topic"
                                 render={({ field }) => (
                                 <FormItem>
@@ -195,7 +195,7 @@ export default function CreateWritingTestPage() {
                                 Create Writing Test
                             </Button>
                         </form>
-                    </Form>
+                    </FormProvider>
                  </CardContent>
             </Card>
         </div>
