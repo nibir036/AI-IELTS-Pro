@@ -1,21 +1,46 @@
+
 rules_version = '2';
 
-// Grant full access to backend flows (authenticated as admin) and public read for content.
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Public read access for all generated content.
-    // Write access is limited to authenticated services (our backend flows).
-    match /{path=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    // Helper functions for auth checks
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // More specific rules can be added here if needed, but the above rule
-    // fulfills the request for full backend access and public read.
-    // For example, user-specific uploads would be:
-    // match /user-uploads/{userId}/{allPaths=**} {
-    //   allow read, write: if request.auth != null && request.auth.uid == userId;
-    // }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      // In a real app, this should be based on custom claims, not hardcoded UIDs.
+      let admin_uids = ['yTh2178GN3ZV3mAGi3wAmdPOKlm1'];
+      return isSignedIn() && request.auth.uid in admin_uids;
+    }
+
+    // Public read for generated content (images, audio)
+    match /lesson-images/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /writing-tasks/{allPaths=**} {
+       allow read: if true;
+       allow write: if isAdmin();
+    }
+     match /listeningTests/{allPaths=**} {
+       allow read: if true;
+       allow write: if isAdmin();
+    }
+    
+    // User-specific uploads for speaking practice
+    match /speaking-submissions/{userId}/{allPaths=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
   }
 }
