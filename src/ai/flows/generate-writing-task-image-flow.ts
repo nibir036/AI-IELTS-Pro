@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -39,12 +38,8 @@ const generateWritingTaskImageFlow = ai.defineFlow(
       IELTS Prompt: "${prompt}"`;
 
     const { media } = await withRetry(() => ai.generate({
-      model: 'googleai/gemini-2.5-flash-image-preview',
+      model: 'googleai/imagen-4.0-fast-generate-001', // Using the more powerful Imagen model
       prompt: fullPrompt,
-      config: {
-        responseModalities: ['IMAGE'],
-        temperature: 0.1, // Very low temperature for high fidelity to the prompt.
-      },
     }), {
         retryOn: isRetryableGoogleAIError
     });
