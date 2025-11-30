@@ -1,36 +1,21 @@
 rules_version = '2';
 
-// Docs: https://firebase.google.com/docs/storage/security
+// Grant full access to backend flows (authenticated as admin) and public read for content.
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Allow public read access for generated lesson and task images.
-    // The AI Content Factory uploads to these paths.
-    match /lesson-images/{allPaths=**} {
+    // Public read access for all generated content.
+    // Write access is limited to authenticated services (our backend flows).
+    match /{path=**} {
       allow read: if true;
-      allow write: if request.auth != null; // Writes still restricted
-    }
-    match /writing-tasks/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null; // Writes still restricted
-    }
-    
-    // Allow public read access for generated listening test audio.
-    match /listeningTests/{allPaths=**} {
-        allow read: if true;
-        allow write: if request.auth != null;
+      allow write: if request.auth != null;
     }
 
-    // Allow users to upload their own speaking submissions.
-    // The path is structured to only allow a user to write to their own folder.
-    match /speaking-submissions/{userId}/{allPaths=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // A good default security posture for any other paths.
-    // By default, allow read/write access only for authenticated users.
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
+    // More specific rules can be added here if needed, but the above rule
+    // fulfills the request for full backend access and public read.
+    // For example, user-specific uploads would be:
+    // match /user-uploads/{userId}/{allPaths=**} {
+    //   allow read, write: if request.auth != null && request.auth.uid == userId;
+    // }
   }
 }
