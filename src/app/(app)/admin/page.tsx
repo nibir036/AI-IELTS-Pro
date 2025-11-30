@@ -70,7 +70,6 @@ export default function AdminPage() {
   const { firestore } = useFirebase();
 
   const methods = useForm<{ manualImageFile: FileList | null }>();
-  const manualImageFile = methods.watch('manualImageFile');
   
   const handleProcess = async () => {
     if (!firestore) {
@@ -135,8 +134,8 @@ export default function AdminPage() {
     }
   };
   
-  const handleSaveWithManualImage = async () => {
-      const file = manualImageFile?.[0];
+  const handleSaveWithManualImage = async (data: { manualImageFile: FileList | null }) => {
+      const file = data.manualImageFile?.[0];
       if (!file || !partialTestData) {
           toast({ variant: 'destructive', title: 'Error', description: 'Missing image file or test data.' });
           return;
@@ -311,34 +310,36 @@ export default function AdminPage() {
              )}
              {partialTestData && (
                 <FormProvider {...methods}>
-                    <Card className="mt-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700">
-                        <CardHeader>
-                            <AlertTitle className="text-amber-800 dark:text-amber-300 flex items-center gap-2"><FileUp /> Image Generation Failed – Complete Manually</AlertTitle>
-                            <AlertDescription className="text-amber-700 dark:text-amber-400 !mt-2">
-                                The AI generated the test content but failed to create an image. Review the topic below, upload a relevant image for Task 1, and save the test.
-                            </AlertDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                           <div>
-                             <h4 className="text-sm font-semibold mb-2">Generated Test Content (Unsaved)</h4>
-                             <div className="p-4 bg-background/50 rounded-md h-full max-h-60 overflow-x-auto text-xs border">
-                                <pre className="whitespace-pre-wrap">{JSON.stringify(partialTestData, null, 2)}</pre>
-                             </div>
-                           </div>
-                           <div>
-                             <h4 className="text-sm font-semibold mb-2">Upload Task 1 Image</h4>
-                             <FileInput name="manualImageFile" accept="image/*" />
-                           </div>
-                            <Button 
-                                onClick={handleSaveWithManualImage} 
-                                disabled={!manualImageFile?.[0] || isSavingManual}
-                                className="w-full sm:w-auto"
-                            >
-                                {isSavingManual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Test with This Image
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <form onSubmit={methods.handleSubmit(handleSaveWithManualImage)}>
+                        <Card className="mt-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700">
+                            <CardHeader>
+                                <AlertTitle className="text-amber-800 dark:text-amber-300 flex items-center gap-2"><FileUp /> Image Generation Failed – Complete Manually</AlertTitle>
+                                <AlertDescription className="text-amber-700 dark:text-amber-400 !mt-2">
+                                    The AI generated the test content but failed to create an image. Review the topic below, upload a relevant image for Task 1, and save the test.
+                                </AlertDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                            <div>
+                                <h4 className="text-sm font-semibold mb-2">Generated Test Content (Unsaved)</h4>
+                                <div className="p-4 bg-background/50 rounded-md h-full max-h-60 overflow-x-auto text-xs border">
+                                    <pre className="whitespace-pre-wrap">{JSON.stringify(partialTestData, null, 2)}</pre>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold mb-2">Upload Task 1 Image</h4>
+                                <FileInput name="manualImageFile" accept="image/*" />
+                            </div>
+                                <Button 
+                                    type="submit"
+                                    disabled={isSavingManual}
+                                    className="w-full sm:w-auto"
+                                >
+                                    {isSavingManual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save Test with This Image
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </form>
                 </FormProvider>
             )}
           </CardContent>
