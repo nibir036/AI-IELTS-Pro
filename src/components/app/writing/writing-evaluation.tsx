@@ -12,7 +12,7 @@ import { WritingEvaluationResults } from './writing-evaluation-results';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -177,84 +177,85 @@ export function WritingEvaluation({ test }: WritingEvaluationProps) {
   return (
     <div className="space-y-6">
        <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-24">
-           <Tabs defaultValue="task1">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="task1">Task 1</TabsTrigger>
-              <TabsTrigger value="task2">Task 2</TabsTrigger>
-            </TabsList>
-            <TabsContent value="task1" className="space-y-4">
-              <TaskCard task={task1} />
-               <FormField
-                control={form.control}
-                name="task1Essay"
-                render={({ field }) => (
-                  <FormItem>
-                    <Textarea
-                      placeholder="Start writing your Task 1 response here..."
-                      className="min-h-[300px] text-base"
-                      {...field}
-                    />
-                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                        <FormMessage />
-                        <span className={task1WordCount >= task1.wordCountTarget ? 'text-green-600' : 'text-destructive'}>
-                            {task1WordCount} words
-                        </span>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </TabsContent>
-            <TabsContent value="task2" className="space-y-4">
-              <TaskCard task={task2} />
-               <FormField
-                control={form.control}
-                name="task2Essay"
-                render={({ field }) => (
-                  <FormItem>
-                    <Textarea
-                      placeholder="Start writing your Task 2 essay here..."
-                      className="min-h-[400px] text-base"
-                      {...field}
-                    />
-                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                        <FormMessage />
-                        <span className={task2WordCount >= task2.wordCountTarget ? 'text-green-600' : 'text-destructive'}>
-                            {task2WordCount} words
-                        </span>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </TabsContent>
-          </Tabs>
-
-          <div className="fixed bottom-0 right-0 z-20 border-t bg-background/95 backdrop-blur-sm w-full md:pl-[var(--sidebar-width)] group-data-[collapsible=icon]:md:pl-[var(--sidebar-width-icon)] transition-[padding]">
-            <div className="container flex items-center justify-between gap-4 h-20 max-w-7xl mx-auto px-4">
-                {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-
-                {!isValid && !isLoading && (
-                    <div className="hidden md:flex items-center gap-2 text-sm text-amber-600">
-                        <AlertCircle className="h-4 w-4" />
-                        <p>Please complete both essays to meet the word count requirements.</p>
-                    </div>
-                )}
-                 <div className="flex-grow"></div>
-                 <Button type="submit" disabled={isButtonDisabled} size="lg">
-                    {isLoading ? (
-                    <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Evaluating Both Tasks...
-                    </>
-                    ) : (
-                        <>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Submit for AI Evaluation
-                        </>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+            <Card>
+                <CardContent className="p-0">
+                    <Tabs defaultValue="task1">
+                        <TabsList className="grid w-full grid-cols-2 rounded-b-none rounded-t-lg">
+                        <TabsTrigger value="task1">Task 1</TabsTrigger>
+                        <TabsTrigger value="task2">Task 2</TabsTrigger>
+                        </TabsList>
+                        <div className="p-6 space-y-4">
+                        <TabsContent value="task1" className="space-y-4 m-0">
+                            <TaskCard task={task1} />
+                            <FormField
+                                control={form.control}
+                                name="task1Essay"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <Textarea
+                                    placeholder="Start writing your Task 1 response here..."
+                                    className="min-h-[300px] text-base"
+                                    {...field}
+                                    />
+                                    <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                        <FormMessage />
+                                        <span className={task1WordCount >= task1.wordCountTarget ? 'text-green-600' : 'text-destructive'}>
+                                            {task1WordCount} words
+                                        </span>
+                                    </div>
+                                </FormItem>
+                                )}
+                            />
+                        </TabsContent>
+                        <TabsContent value="task2" className="space-y-4 m-0">
+                            <TaskCard task={task2} />
+                            <FormField
+                                control={form.control}
+                                name="task2Essay"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <Textarea
+                                    placeholder="Start writing your Task 2 essay here..."
+                                    className="min-h-[400px] text-base"
+                                    {...field}
+                                    />
+                                    <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                        <FormMessage />
+                                        <span className={task2WordCount >= task2.wordCountTarget ? 'text-green-600' : 'text-destructive'}>
+                                            {task2WordCount} words
+                                        </span>
+                                    </div>
+                                </FormItem>
+                                )}
+                            />
+                        </TabsContent>
+                        </div>
+                    </Tabs>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-4">
+                     {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+                     {!isValid && !isLoading && (
+                        <div className="flex items-center gap-2 text-sm text-amber-600">
+                            <AlertCircle className="h-4 w-4" />
+                            <p>Please complete both essays to meet the word count requirements.</p>
+                        </div>
                     )}
-                </Button>
-            </div>
-          </div>
+                    <Button type="submit" disabled={isButtonDisabled} size="lg">
+                        {isLoading ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Evaluating Both Tasks...
+                        </>
+                        ) : (
+                            <>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Submit for AI Evaluation
+                            </>
+                        )}
+                    </Button>
+                </CardFooter>
+            </Card>
         </form>
       </Form>
       
