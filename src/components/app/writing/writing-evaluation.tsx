@@ -35,7 +35,7 @@ interface WritingEvaluationProps {
 
 function TaskCard({ task }: { task: WritingQuestion }) {
   // A URL is valid if it starts with http:// or https://
-  const isImageUrlValid = task.imageUrl && (task.imageUrl.startsWith('http'));
+  const isImageUrlValid = task.imageUrl && (task.imageUrl.startsWith('https'));
 
   return (
     <Card>
