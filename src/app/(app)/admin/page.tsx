@@ -88,15 +88,6 @@ export default function AdminPage() {
     
     try {
       const aiResult = await processContent({ contentType, rawText: inputText });
-      
-      const task1 = 'questions' in aiResult && (aiResult as MockTest).questions?.find(q => q.taskType === 'Task 1');
-      if (contentType === 'WritingTest' && task1 && !(task1 as WritingQuestion).imageUrl) {
-          setResult(aiResult);
-          setError("AI image generation failed. Please upload an image for Task 1 and save the test manually.");
-          setIsProcessing(false);
-          return;
-      }
-      
       setResult(aiResult);
       let targetCollection: string;
       if ('skill' in aiResult) {
@@ -119,15 +110,19 @@ export default function AdminPage() {
 
     } catch (err: any) {
       console.error("Error processing content:", err);
-      const jsonMatch = err.message.match(/(\{.*\})/s);
-      if (contentType === 'WritingTest' && jsonMatch && jsonMatch[1]) {
-          try {
-              const partialResult = JSON.parse(jsonMatch[1]);
-              setResult(partialResult);
-              setError("AI image generation failed. Please upload an image for Task 1 and save the test manually.");
-          } catch (parseError) {
-              setError(`An error occurred: ${err.message}`);
-          }
+      if (err.message.includes('Image generation failed')) {
+            const jsonMatch = err.message.match(/Partial content: (\{.*\})/s);
+            if (jsonMatch && jsonMatch[1]) {
+                 try {
+                    const partialResult = JSON.parse(jsonMatch[1]);
+                    setResult(partialResult);
+                    setError("AI image generation failed. Please upload an image for Task 1 and save the test manually.");
+                } catch (parseError) {
+                    setError(`An error occurred: ${err.message}`);
+                }
+            } else {
+                 setError(`An error occurred: ${err.message}`);
+            }
       } else {
         const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
           ? "The AI service is currently overloaded. Please try again in a moment."
@@ -305,7 +300,7 @@ export default function AdminPage() {
                 </Select>
                 <Button onClick={handleProcess} disabled={isProcessing || !inputText || !contentType} className="w-full sm:w-auto">
                     {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Generate Content
+                    Generate & Save from Text
                 </Button>
             </div>
              {error && (
