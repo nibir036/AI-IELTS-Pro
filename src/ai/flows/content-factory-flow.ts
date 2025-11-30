@@ -217,12 +217,12 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-    const adminApp = await getFirebaseAdmin();
-    const firestore = adminApp.firestore();
     // 1. Retrieve relevant knowledge from Firestore
     console.log("Searching knowledge base...");
     let knowledge = '';
     try {
+        const adminApp = await getFirebaseAdmin();
+        const firestore = adminApp.firestore();
         const knowledgeQuery = await firestore.collection('knowledge')
             .limit(5)
             .get(); 
@@ -270,12 +270,11 @@ const contentFactoryFlow = ai.defineFlow(
                 task1.imageUrl = publicUrl;
                 console.log(`Task 1 image uploaded to ${publicUrl}`);
 
-            } catch (imgError) {
-                console.warn(`Could not generate or upload image for Task 1: "${task1.topic}". The test will be saved without an image.`);
-                // IMPORTANT: Ensure the imageUrl field is not present if generation fails
-                if (task1.imageUrl) {
-                    delete task1.imageUrl;
-                }
+            } catch (imgError: any) {
+                console.error(`CRITICAL: Failed to generate or upload image for Task 1: "${task1.topic}"`, imgError);
+                 // Throw a new error that includes the structured content, so the client can handle it.
+                 const errorWithData = new Error(`Image generation failed. Partial content: ${JSON.stringify(structuredContent)}`);
+                 throw errorWithData;
             }
         }
     }
@@ -301,7 +300,6 @@ const contentFactoryFlow = ai.defineFlow(
                     }
                 } catch (imgError) {
                     console.error(`Failed to generate or upload image for prompt: "${block.imageHint}"`, imgError);
-                    // IMPORTANT: Fallback to a valid, whitelisted URL to prevent client-side crashes.
                     block.generatedImageUrl = "https://picsum.photos/seed/error/600/400";
                 }
             }
@@ -339,5 +337,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    

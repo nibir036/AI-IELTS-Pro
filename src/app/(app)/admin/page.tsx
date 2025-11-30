@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight, UploadCloud, AlertCircle } from 'lucide-react';
+import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight, UploadCloud, AlertCircle, FileUp } from 'lucide-react';
 import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
@@ -16,6 +16,10 @@ import { processPdf } from '@/ai/flows/process-pdf-flow';
 import { processImage } from '@/ai/flows/process-image-flow';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import { uploadImageToStorage } from '@/lib/firebase/storage';
+import { MockTest, WritingQuestion } from '@/lib/types';
+
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
 
@@ -23,28 +27,24 @@ const creationCards = [
     {
         title: "Writing Test",
         description: "Manually craft a new Writing test, including image uploads for Task 1.",
-        icon: FileText,
         href: "/admin/create/writing",
         isReady: true,
     },
      {
         title: "Listening Test",
         description: "Upload audio or use AI to generate audio from a transcript.",
-        icon: Headphones,
         href: "/admin/create/listening",
         isReady: true,
     },
     {
         title: "Speaking Test",
         description: "Manually build a new Speaking test with prompts for all three parts.",
-        icon: Mic,
         href: "/admin/create/speaking",
         isReady: true,
     },
      {
         title: "Reading Test",
         description: "Use the AI Content Factory to generate complex reading tests.",
-        icon: BookOpen,
         href: "/admin/create/reading",
         isReady: true,
     }
@@ -58,9 +58,15 @@ export default function AdminPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [result, setResult] = useState<ProcessContentOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const [manualImageFile, setManualImageFile] = useState<File | null>(null);
+  const [isSavingManual, setIsSavingManual] = useState(false);
+
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const router = useRouter();
+  
+  const isWritingTestImageFailure = result && 'skill' in result && result.skill === 'Writing' && !(result.questions.find(q => q.taskType === 'Task 1') as WritingQuestion)?.imageUrl;
 
   const handleProcess = async () => {
     if (!firestore) {
@@ -74,84 +80,121 @@ export default function AdminPage() {
     setIsProcessing(true);
     setError(null);
     setResult(null);
+    setManualImageFile(null);
     
     try {
       const aiResult = await processContent({ contentType, rawText: inputText });
       setResult(aiResult);
 
       let targetCollection: string;
-      let imageFailed = false;
-
       if ('skill' in aiResult) {
           switch (aiResult.skill) {
               case 'Reading': targetCollection = 'readingTests'; break;
               case 'Listening': targetCollection = 'listeningTests'; break;
-              case 'Writing': 
-                targetCollection = 'mockTests';
-                const task1 = aiResult.questions.find(q => q.taskType === 'Task 1');
-                if (!task1?.imageUrl) {
-                    imageFailed = true;
-                }
-                break;
+              case 'Writing': targetCollection = 'mockTests'; break;
               default: targetCollection = 'lessons';
           }
       } else {
           targetCollection = 'lessons';
       }
       
-      // If image generation failed, show error and JSON, but don't save.
-      if (imageFailed) {
-        setError("AI image generation failed. Please copy the Task 1 topic from the JSON output below, generate an image manually, and then use the 'Create Writing Test' form to upload it.");
-        toast({
-            variant: 'destructive',
-            title: "Image Generation Failed",
-            description: "The test was not saved. Please follow the instructions to create it manually.",
-        });
-      } else {
-        const docRef = doc(firestore, targetCollection, aiResult.id);
-        await setDoc(docRef, aiResult);
-        toast({
-          title: "Content Saved!",
-          description: `New content was successfully saved to '${targetCollection}'.`,
-        });
-      }
+      const docRef = doc(firestore, targetCollection, aiResult.id);
+      await setDoc(docRef, aiResult);
+      toast({
+        title: "Content Saved!",
+        description: `New content was successfully saved to '${targetCollection}'.`,
+      });
 
     } catch (err: any) {
       console.error("Error processing content:", err);
-      const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
-        ? "The AI service is currently overloaded. Please try again in a moment."
-        : `An error occurred: ${err.message}`;
-      setError(errorMessage);
-       toast({
-        variant: 'destructive',
-        title: "Processing Failed",
-        description: errorMessage,
-      });
+      // Attempt to parse the structured content from the error message if it exists
+      const jsonMatch = err.message.match(/(\{.*\})/s);
+      if (jsonMatch && jsonMatch[1]) {
+          try {
+              const partialResult = JSON.parse(jsonMatch[1]);
+              setResult(partialResult);
+              setError("AI image generation failed. Please upload an image for Task 1 and save the test manually.");
+          } catch (parseError) {
+              setError(`An error occurred: ${err.message}`);
+          }
+      } else {
+        const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
+          ? "The AI service is currently overloaded. Please try again in a moment."
+          : `An error occurred: ${err.message}`;
+        setError(errorMessage);
+         toast({
+          variant: 'destructive',
+          title: "Processing Failed",
+          description: errorMessage,
+        });
+      }
     } finally {
         setIsProcessing(false);
     }
   };
+  
+  const handleSaveWithManualImage = async () => {
+      if (!manualImageFile || !result || !('skill' in result && result.skill === 'Writing')) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Missing image file or test data.' });
+          return;
+      }
+      if (!firestore) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not available.' });
+          return;
+      }
+
+      setIsSavingManual(true);
+      setError(null);
+
+      try {
+          // 1. Upload the manual image
+          const base64Image = (await blobToBase64(manualImageFile)).split(',')[1];
+          const filePath = `writing-tasks/${result.id}/task1_image.png`;
+          const imageUrl = await uploadImageToStorage(base64Image, manualImageFile.type, filePath);
+
+          // 2. Update the result object with the new image URL
+          const updatedResult = { ...result } as MockTest;
+          const task1Index = updatedResult.questions.findIndex(q => q.taskType === 'Task 1');
+          if (task1Index !== -1) {
+              (updatedResult.questions[task1Index] as WritingQuestion).imageUrl = imageUrl;
+          }
+
+          // 3. Save the completed test to Firestore
+          const docRef = doc(firestore, 'mockTests', updatedResult.id);
+          await setDoc(docRef, updatedResult);
+
+          setResult(updatedResult); // Update the state to show the final JSON with the new URL
+          setManualImageFile(null); // Clear the file input
+          toast({
+              title: 'Success!',
+              description: 'Writing test has been saved with the manually uploaded image.',
+          });
+
+      } catch (err: any) {
+          console.error("Error saving with manual image:", err);
+          setError(`Failed to save test: ${err.message}`);
+          toast({
+              variant: 'destructive',
+              title: 'Save Failed',
+              description: err.message,
+          });
+      } finally {
+          setIsSavingManual(false);
+      }
+  };
+
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
-  
-    // Check file size (100MB limit)
     if (file.size > 100 * 1024 * 1024) {
-      toast({
-        variant: 'destructive',
-        title: 'File Too Large',
-        description: 'Please upload a file smaller than 100MB.',
-      });
+      toast({ variant: 'destructive', title: 'File Too Large', description: 'Please upload a file smaller than 100MB.'});
       return;
     }
-  
     setIsUploading(true);
     setError(null);
-  
     try {
       const base64Data = (await blobToBase64(file)).split(',')[1];
       let result;
-      
       if (file.type.startsWith('image/')) {
         result = await processImage({ imageData: base64Data, fileName: file.name });
       } else if (file.type === 'application/pdf') {
@@ -159,20 +202,11 @@ export default function AdminPage() {
       } else {
         throw new Error('Unsupported file type. Please upload a PDF or an image.');
       }
-      
-      toast({
-        title: 'File Processed',
-        description: `Successfully extracted and stored ${result.chunkCount} knowledge chunks from ${file.name}.`,
-      });
-  
+      toast({ title: 'File Processed', description: `Successfully stored ${result.chunkCount} knowledge chunks from ${file.name}.`});
     } catch (err: any) {
       console.error('File upload error:', err);
       setError(err.message);
-      toast({
-        variant: 'destructive',
-        title: 'File Upload Failed',
-        description: err.message,
-      });
+      toast({ variant: 'destructive', title: 'File Upload Failed', description: err.message });
     } finally {
       setIsUploading(false);
     }
@@ -213,7 +247,6 @@ export default function AdminPage() {
         </p>
       </div>
 
-      
         <Card>
            <CardHeader>
             <CardTitle>AI Content Factory</CardTitle>
@@ -263,7 +296,7 @@ export default function AdminPage() {
                 </Select>
                 <Button onClick={handleProcess} disabled={isProcessing || !inputText || !contentType} className="w-full sm:w-auto">
                     {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Generate & Save from Text
+                    Generate Content
                 </Button>
             </div>
              {error && (
@@ -274,11 +307,34 @@ export default function AdminPage() {
                 </Alert>
              )}
              {result && (
-                  <div className="relative mt-4">
+                  <div className="relative mt-4 space-y-4">
                     <p className="text-sm font-medium mb-2">AI Output Review</p>
                     <div className="p-4 bg-muted rounded-md h-full max-h-80 overflow-x-auto text-sm">
                         <pre className="whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
                     </div>
+                    {isWritingTestImageFailure && (
+                        <Card className="bg-amber-50 border-amber-200">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-amber-800"><FileUp /> Action Required: Upload Image</CardTitle>
+                                <CardDescription className="text-amber-700">The AI failed to generate an image. Please upload one manually for Task 1.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col sm:flex-row items-center gap-4">
+                                <Input 
+                                    type="file" 
+                                    accept="image/*"
+                                    onChange={(e) => setManualImageFile(e.target.files ? e.target.files[0] : null)}
+                                />
+                                <Button 
+                                    onClick={handleSaveWithManualImage} 
+                                    disabled={!manualImageFile || isSavingManual}
+                                    className="w-full sm:w-auto"
+                                >
+                                    {isSavingManual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save with Manual Image
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
                   </div>
               )}
           </CardContent>
@@ -301,7 +357,7 @@ export default function AdminPage() {
                         <div>
                             <div className="flex justify-between items-start">
                                 <h3 className="font-semibold">{card.title}</h3>
-                                <card.icon className={cn("h-5 w-5", card.isReady ? 'text-primary' : 'text-muted-foreground')} />
+                                {card.isReady && <card.icon className="h-5 w-5 text-primary" />}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
                         </div>
@@ -309,8 +365,8 @@ export default function AdminPage() {
                             "flex items-center mt-4 text-sm font-medium",
                             card.isReady ? 'text-primary' : 'text-muted-foreground'
                         )}>
-                             {card.isReady ? 'Create Test' : 'Use AI Factory'}
-                             {card.isReady && <ArrowRight className="ml-2 h-4 w-4" />}
+                             Create Test
+                             <ArrowRight className="ml-2 h-4 w-4" />
                         </div>
                     </div>
                 </Link>
