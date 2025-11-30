@@ -114,7 +114,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
     const onSubmit = async (data: UserAnswers) => {
         setIsSubmitting(true);
-        setIsGraded(true);
 
         let correctCount = 0;
         allQuestions.forEach(q => {
@@ -196,6 +195,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 description: `Your reading score of ${finalScore.toFixed(1)} has been saved.`,
             });
         }
+        setIsGraded(true); // Set graded state after all processing
         setIsSubmitting(false);
     };
 
@@ -210,7 +210,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         const getOptionClass = (option: string) => {
             if (!isGraded) return '';
             if (option.toLowerCase() === question.answer.toLowerCase()) return 'text-green-600 font-bold';
-            if (option.toLowerCase() === userAnswer.toLowerCase() && option.toLowerCase() !== question.answer.toLowerCase()) return 'text-red-600';
+            if (userAnswer && option.toLowerCase() === userAnswer.toLowerCase() && option.toLowerCase() !== question.answer.toLowerCase()) return 'text-red-600';
             return 'text-muted-foreground';
         };
 
@@ -328,10 +328,10 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     if (isGraded) {
         return <GradedView />;
     }
-
-    // Helper to split passage into paragraphs.
+    
     const renderPassage = (passageText: string) => {
-        const paragraphs = passageText.split('\n').filter(p => p.trim() !== '');
+        // Splits by one or more newline characters, which is more robust
+        const paragraphs = passageText.split(/\n\s*\n/).filter(p => p.trim() !== '');
         return paragraphs.map((para, index) => (
             <p key={index} className="text-foreground/80 leading-relaxed mb-4">{para.trim()}</p>
         ));
