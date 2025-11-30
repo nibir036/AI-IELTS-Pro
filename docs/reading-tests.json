@@ -5,52 +5,58 @@
       "id": "R_AC_001",
       "title": "The Rise of Urban Farming",
       "skill": "Reading",
-      "passage": "Urban farming, the practice of cultivating, processing, and distributing food in or around urban areas, is experiencing a global renaissance. From rooftop gardens in New York City to vertical farms in Singapore, this movement is transforming cityscapes and challenging traditional food supply chains. The primary driver is a growing desire for fresh, locally-sourced produce, coupled with concerns about food security, carbon emissions from long-distance transport, and the environmental impact of industrial agriculture. \n\nThere are various models of urban farming. Community gardens allow residents to collectively grow produce on shared land, fostering social cohesion and providing educational opportunities. Commercial urban farms, often utilizing advanced technologies like hydroponics (growing plants in nutrient-rich water) and aeroponics (growing plants with roots suspended in the air), aim for high yields in small spaces. These high-tech farms can operate year-round, independent of weather conditions, producing crops like leafy greens and herbs with remarkable efficiency and minimal water usage compared to conventional farming.\n\nHowever, urban farming is not without its challenges. High initial setup costs, particularly for technology-intensive vertical farms, can be a significant barrier. Access to suitable land or rooftop space in dense cities is another major hurdle. Furthermore, critics argue that urban farms cannot realistically replace the vast output of rural agriculture and are limited to producing a narrow range of high-value crops. Despite these limitations, proponents argue that its value lies not in replacing traditional farming, but in supplementing it, increasing urban resilience, and reconnecting city dwellers with their food.",
-      "questions": [
+      "parts": [
         {
-          "id": "q1",
-          "question": "What is the main motivation behind the growth of urban farming?",
-          "type": "multiple-choice",
-          "options": [
-            "A desire for cities to become completely self-sufficient.",
-            "A demand for local food and concerns about the environment.",
-            "The availability of new farming technologies.",
-            "To reduce the cost of produce for urban consumers."
-          ],
-          "answer": "A demand for local food and concerns about the environment."
-        },
-        {
-          "id": "q2",
-          "question": "Hydroponic farms use significantly more water than conventional farms.",
-          "type": "true-false-not-given",
-          "options": ["True", "False", "Not Given"],
-          "answer": "False"
-        },
-        {
-          "id": "q3",
-          "question": "Community gardens are primarily focused on commercial profit.",
-          "type": "true-false-not-given",
-          "options": ["True", "False", "Not Given"],
-          "answer": "False"
-        },
-        {
-          "id": "q4",
-          "question": "Urban farms can grow all types of crops that rural farms can.",
-          "type": "true-false-not-given",
-          "options": ["True", "False", "Not Given"],
-          "answer": "False"
-        },
-        {
-          "id": "q5",
-          "question": "Which technology involves growing plants with their roots in the air?",
-          "type": "multiple-choice",
-          "options": [
-            "Vertical Farming",
-            "Aeroponics",
-            "Hydroponics",
-            "Industrial Agriculture"
-          ],
-          "answer": "Aeroponics"
+          "part": 1,
+          "title": "The Rise of Urban Farming",
+          "passage": "Urban farming, the practice of cultivating, processing, and distributing food in or around urban areas, is experiencing a global renaissance. From rooftop gardens in New York City to vertical farms in Singapore, this movement is transforming cityscapes and challenging traditional food supply chains. The primary driver is a growing desire for fresh, locally-sourced produce, coupled with concerns about food security, carbon emissions from long-distance transport, and the environmental impact of industrial agriculture. \n\nThere are various models of urban farming. Community gardens allow residents to collectively grow produce on shared land, fostering social cohesion and providing educational opportunities. Commercial urban farms, often utilizing advanced technologies like hydroponics (growing plants in nutrient-rich water) and aeroponics (growing plants with roots suspended in the air), aim for high yields in small spaces. These high-tech farms can operate year-round, independent of weather conditions, producing crops like leafy greens and herbs with remarkable efficiency and minimal water usage compared to conventional farming.\n\nHowever, urban farming is not without its challenges. High initial setup costs, particularly for technology-intensive vertical farms, can be a significant barrier. Access to suitable land or rooftop space in dense cities is another major hurdle. Furthermore, critics argue that urban farms cannot realistically replace the vast output of rural agriculture and are limited to producing a narrow range of high-value crops. Despite these limitations, proponents argue that its value lies not in replacing traditional farming, but in supplementing it, increasing urban resilience, and reconnecting city dwellers with their food.",
+          "questions": [
+            {
+              "id": "q1",
+              "question": "What is the main motivation behind the growth of urban farming?",
+              "type": "multiple-choice",
+              "options": [
+                "A desire for cities to become completely self-sufficient.",
+                "A demand for local food and concerns about the environment.",
+                "The availability of new farming technologies.",
+                "To reduce the cost of produce for urban consumers."
+              ],
+              "answer": "A demand for local food and concerns about the environment."
+            },
+            {
+              "id": "q2",
+              "question": "Hydroponic farms use significantly more water than conventional farms.",
+              "type": "true-false-not-given",
+              "options": ["True", "False", "Not Given"],
+              "answer": "False"
+            },
+            {
+              "id": "q3",
+              "question": "Community gardens are primarily focused on commercial profit.",
+              "type": "true-false-not-given",
+              "options": ["True", "False", "Not Given"],
+              "answer": "False"
+            },
+            {
+              "id": "q4",
+              "question": "Urban farms can grow all types of crops that rural farms can.",
+              "type": "true-false-not-given",
+              "options": ["True", "False", "Not Given"],
+              "answer": "False"
+            },
+            {
+              "id": "q5",
+              "question": "Which technology involves growing plants with their roots in the air?",
+              "type": "multiple-choice",
+              "options": [
+                "Vertical Farming",
+                "Aeroponics",
+                "Hydroponics",
+                "Industrial Agriculture"
+              ],
+              "answer": "Aeroponics"
+            }
+          ]
         }
       ]
     },
@@ -58,53 +64,59 @@
       "id": "R_AC_002",
       "title": "The Psychology of Colour",
       "skill": "Reading",
-      "passage": "Colour is a powerful communication tool and can be used to signal action, influence mood, and even influence physiological reactions. Certain colours have been associated with increased blood pressure, increased metabolism, and eyestrain. So how exactly does colour work? How is it that the colour of a room can influence our mood? \n\nThe effect of colour is not entirely universal. Perceptions of colour are somewhat subjective, but there are colour effects that have universal meaning. Colours in the red area of the colour spectrum are known as warm colours and include red, orange, and yellow. These warm colours evoke emotions ranging from feelings of warmth and comfort to feelings of anger and hostility. On the other hand, colours on the blue side of the spectrum are known as cool colours and include blue, purple, and green. These colours are often described as calm, but can also call to mind feelings of sadness or indifference.\n\nCompanies use colour to influence consumer perceptions of their products. For example, the colour blue is often associated with trustworthiness and reliability, which is why many financial institutions use it in their branding. Green is linked to nature and health, making it a popular choice for organic and eco-friendly products. Red creates a sense of urgency, which is why it's often used for clearance sales. Understanding the psychological effects of colour is a critical asset for marketers, artists, and designers, enabling them to create more impactful and persuasive work.",
-      "questions": [
+      "parts": [
         {
-          "id": "q1",
-          "question": "The perception of colour is identical for everyone.",
-          "type": "true-false-not-given",
-          "options": [
-            "True",
-            "False",
-            "Not Given"
-          ],
-          "answer": "False"
-        },
-        {
-          "id": "q2",
-          "question": "Which of the following is considered a 'cool' colour?",
-          "type": "multiple-choice",
-          "options": [
-            "Yellow",
-            "Red",
-            "Green",
-            "Orange"
-          ],
-          "answer": "Green"
-        },
-        {
-          "id": "q3",
-          "question": "Why do many banks use the colour blue?",
-          "type": "multiple-choice",
-          "options": [
-            "It creates a sense of urgency.",
-            "It is associated with nature and health.",
-            "It evokes feelings of calmness.",
-            "It is associated with dependability."
-          ],
-          "answer": "It is associated with dependability."
-        },
-        {
-          "id": "q4",
-          "question": "The text states that red is the best colour for marketing all products.",
-          "type": "true-false-not-given",
-          "options": [
-            "True",
-            "False",
-            "Not Given"
-          ],
-          "answer": "False"
+          "part": 1,
+          "title": "The Psychology of Colour",
+          "passage": "Colour is a powerful communication tool and can be used to signal action, influence mood, and even influence physiological reactions. Certain colours have been associated with increased blood pressure, increased metabolism, and eyestrain. So how exactly does colour work? How is it that the colour of a room can influence our mood? \n\nThe effect of colour is not entirely universal. Perceptions of colour are somewhat subjective, but there are colour effects that have universal meaning. Colours in the red area of the colour spectrum are known as warm colours and include red, orange, and yellow. These warm colours evoke emotions ranging from feelings of warmth and comfort to feelings of anger and hostility. On the other hand, colours on the blue side of the spectrum are known as cool colours and include blue, purple, and green. These colours are often described as calm, but can also call to mind feelings of sadness or indifference.\n\nCompanies use colour to influence consumer perceptions of their products. For example, the colour blue is often associated with trustworthiness and reliability, which is why many financial institutions use it in their branding. Green is linked to nature and health, making it a popular choice for organic and eco-friendly products. Red creates a sense of urgency, which is why it's often used for clearance sales. Understanding the psychological effects of colour is a critical asset for marketers, artists, and designers, enabling them to create more impactful and persuasive work.",
+          "questions": [
+            {
+              "id": "q1",
+              "question": "The perception of colour is identical for everyone.",
+              "type": "true-false-not-given",
+              "options": [
+                "True",
+                "False",
+                "Not Given"
+              ],
+              "answer": "False"
+            },
+            {
+              "id": "q2",
+              "question": "Which of the following is considered a 'cool' colour?",
+              "type": "multiple-choice",
+              "options": [
+                "Yellow",
+                "Red",
+                "Green",
+                "Orange"
+              ],
+              "answer": "Green"
+            },
+            {
+              "id": "q3",
+              "question": "Why do many banks use the colour blue?",
+              "type": "multiple-choice",
+              "options": [
+                "It creates a sense of urgency.",
+                "It is associated with nature and health.",
+                "It evokes feelings of calmness.",
+                "It is associated with dependability."
+              ],
+              "answer": "It is associated with dependability."
+            },
+            {
+              "id": "q4",
+              "question": "The text states that red is the best colour for marketing all products.",
+              "type": "true-false-not-given",
+              "options": [
+                "True",
+                "False",
+                "Not Given"
+              ],
+              "answer": "False"
+            }
+          ]
         }
       ]
     },
@@ -112,66 +124,74 @@
       "id": "R_AC_003",
       "title": "The History of the Bicycle",
       "skill": "Reading",
-      "passage": "The bicycle is such a common feature of modern life that we rarely stop to consider its origins. The earliest contraption that resembled a bicycle was the 'dandy horse,' invented by German Baron Karl von Drais in 1817. It was made of wood and had no pedals; the rider would push their feet against the ground to move forward. It was a clumsy and impractical machine, but it was the first step towards personal transportation that did not rely on animals.\n\nIt wasn't until the 1860s in France that pedals were added to the front wheel, creating the 'vélocipède' or 'boneshaker.' This name was well-deserved, as the combination of stiff iron frames and wooden wheels made for an incredibly uncomfortable ride on cobblestone streets. A major innovation came with the 'high-wheeler' or 'penny-farthing' in the 1870s, which featured a huge front wheel to increase the distance covered with each pedal rotation. While faster, these machines were dangerous and required a great deal of athleticism to mount and ride.\n\nThe breakthrough that led to the modern bicycle was the 'safety bicycle,' developed in the 1880s. It featured two wheels of equal size, a chain-driven rear wheel, and pneumatic (air-filled) tires. This design was far more stable, comfortable, and efficient. It made cycling accessible to a much wider audience, including women, for whom cycling became a symbol of newfound freedom and mobility. The safety bicycle's fundamental design has remained largely unchanged for over a century, a testament to its effectiveness.",
-      "questions": [
+      "parts": [
         {
-          "id": "q1",
-          "question": "The 'dandy horse' had pedals on its front wheel.",
-          "type": "true-false-not-given",
-          "options": [
-            "True",
-            "False",
-            "Not Given"
-          ],
-          "answer": "False"
-        },
-        {
-          "id": "q2",
-          "question": "What was the main disadvantage of the 'vélocipède'?",
-          "type": "multiple-choice",
-          "options": [
-            "It was very slow.",
-            "It was difficult to steer.",
-            "It provided an uncomfortable ride.",
-            "It was made of wood."
-          ],
-          "answer": "It provided an uncomfortable ride."
-        },
-        {
-          "id": "q3",
-          "question": "The penny-farthing was safer to ride than the 'vélocipède'.",
-          "type": "true-false-not-given",
-          "options": [
-            "True",
-            "False",
-            "Not Given"
-          ],
-          "answer": "False"
-        },
-        {
-          "id": "q4",
-          "question": "What was a key feature of the 'safety bicycle'?",
-          "type": "multiple-choice",
-          "options": [
-            "A very large front wheel",
-            "A wooden frame",
-            "A chain-driven rear wheel",
-            "Solid rubber tires"
-          ],
-          "answer": "A chain-driven rear wheel"
-        },
-        {
-          "id": "q5",
-          "question": "The introduction of the safety bicycle had social implications for women.",
-          "type": "true-false-not-given",
-          "options": [
-            "True",
-            "False",
-            "Not Given"
-          ],
-          "answer": "True"
+          "part": 1,
+          "title": "The History of the Bicycle",
+          "passage": "The bicycle is such a common feature of modern life that we rarely stop to consider its origins. The earliest contraption that resembled a bicycle was the 'dandy horse,' invented by German Baron Karl von Drais in 1817. It was made of wood and had no pedals; the rider would push their feet against the ground to move forward. It was a clumsy and impractical machine, but it was the first step towards personal transportation that did not rely on animals.\n\nIt wasn't until the 1860s in France that pedals were added to the front wheel, creating the 'vélocipède' or 'boneshaker.' This name was well-deserved, as the combination of stiff iron frames and wooden wheels made for an incredibly uncomfortable ride on cobblestone streets. A major innovation came with the 'high-wheeler' or 'penny-farthing' in the 1870s, which featured a huge front wheel to increase the distance covered with each pedal rotation. While faster, these machines were dangerous and required a great deal of athleticism to mount and ride.\n\nThe breakthrough that led to the modern bicycle was the 'safety bicycle,' developed in the 1880s. It featured two wheels of equal size, a chain-driven rear wheel, and pneumatic (air-filled) tires. This design was far more stable, comfortable, and efficient. It made cycling accessible to a much wider audience, including women, for whom cycling became a symbol of newfound freedom and mobility. The safety bicycle's fundamental design has remained largely unchanged for over a century, a testament to its effectiveness.",
+          "questions": [
+            {
+              "id": "q1",
+              "question": "The 'dandy horse' had pedals on its front wheel.",
+              "type": "true-false-not-given",
+              "options": [
+                "True",
+                "False",
+                "Not Given"
+              ],
+              "answer": "False"
+            },
+            {
+              "id": "q2",
+              "question": "What was the main disadvantage of the 'vélocipède'?",
+              "type": "multiple-choice",
+              "options": [
+                "It was very slow.",
+                "It was difficult to steer.",
+                "It provided an uncomfortable ride.",
+                "It was made of wood."
+              ],
+              "answer": "It provided an uncomfortable ride."
+            },
+            {
+              "id": "q3",
+              "question": "The penny-farthing was safer to ride than the 'vélocipède'.",
+              "type": "true-false-not-given",
+              "options": [
+                "True",
+                "False",
+                "Not Given"
+              ],
+              "answer": "False"
+            },
+            {
+              "id": "q4",
+              "question": "What was a key feature of the 'safety bicycle'?",
+              "type": "multiple-choice",
+              "options": [
+                "A very large front wheel",
+                "A wooden frame",
+                "A chain-driven rear wheel",
+                "Solid rubber tires"
+              ],
+              "answer": "A chain-driven rear wheel"
+            },
+            {
+              "id": "q5",
+              "question": "The introduction of the safety bicycle had social implications for women.",
+              "type": "true-false-not-given",
+              "options": [
+                "True",
+                "False",
+                "Not Given"
+              ],
+              "answer": "True"
+            }
+          ]
         }
       ]
     }
   ]
 }
+
+    

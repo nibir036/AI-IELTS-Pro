@@ -29,19 +29,17 @@ type AnswerExplanations = Record<string, string>;
 
 
 function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) {
-    const { control, formState: { isSubmitted: isGraded }, watch } = useFormContext();
+    const { control, formState: { isSubmitted: isGraded } } = useFormContext();
     
-    // This regex now correctly handles potential spaces inside the <b> tags
-    const parts = question.question.split(/(<b>\s*\d+\s*<\/b>)/g);
-    
-    const questionTextWithInputs = parts.map((part, index) => {
-        const match = /<b>\s*(\d+)\s*<\/b>/.exec(part);
-        if (match) {
-            const questionNumber = match[1];
-            const questionId = `q${questionNumber}`;
+    const parts = question.question.split(/_{2}\s*\((\d+)\)\s*_{2}/g);
 
+    const questionTextWithInputs = parts.map((part, index) => {
+        // If the part is a number (captured group), it's a blank.
+        if (index % 2 === 1) {
+            const questionNumber = part;
+            const questionId = `q${questionNumber}`;
             return (
-                <Controller
+                 <Controller
                     key={questionId}
                     name={questionId}
                     control={control}
@@ -51,14 +49,14 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
                             {...field}
                             disabled={isGraded}
                             placeholder={`${questionNumber}`}
-                            className="inline-block w-32 h-7 p-1 mx-1 align-baseline"
+                            className="inline-block w-24 h-7 p-1 mx-1 align-baseline"
                          />
                     )}
                 />
             );
         }
-        // Use dangerouslySetInnerHTML for the text parts to correctly render any HTML within them.
-        return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
+        // Otherwise, it's a text segment.
+        return <span key={index}>{part}</span>;
     });
 
     return (
@@ -86,7 +84,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
     const totalQuestions = allQuestions.reduce((acc, q) => {
          if (q.type === 'summary-completion') {
-            const numBlanks = q.question.match(/<b>\s*\d+\s*<\/b>/g)?.length || 0;
+            const numBlanks = (q.question.match(/__\(\d+\)__/g) || []).length;
             return acc + numBlanks;
         }
         return acc + 1;
@@ -113,7 +111,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         allQuestions.forEach(q => {
             if (q.type === 'summary-completion') {
                  const correctAnswers = q.answer.split(',').map(a => a.trim().toLowerCase());
-                 const questionNumbers = q.question.match(/<b>\s*(\d+)\s*<\/b>/g)?.map(m => `q${m.match(/\d+/)?.[0]}`) || [];
+                 const questionNumbers = q.question.match(/__\((\d+)\)__/g)?.map(m => `q${m.match(/\d+/)?.[0]}`) || [];
                  questionNumbers.forEach((qid, index) => {
                      if (data[qid]?.trim().toLowerCase() === correctAnswers[index]) {
                          correctCount++;
@@ -324,7 +322,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     }
     
     const renderPassage = (passageText: string) => {
-        // Split by one or more newlines, which is a common way to separate paragraphs in plain text.
         const paragraphs = passageText.split(/\n\s*\n/).filter(p => p.trim() !== '');
         return paragraphs.map((para, index) => (
             <p key={index} className="text-foreground/80 leading-relaxed mb-4">{para.trim()}</p>
@@ -461,3 +458,6 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
         </div>
     );
 }
+
+
+    
