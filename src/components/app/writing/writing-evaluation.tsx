@@ -33,6 +33,7 @@ interface WritingEvaluationProps {
 }
 
 function TaskCard({ task }: { task: WritingQuestion }) {
+  const isImageUrlValid = task.imageUrl && (task.imageUrl.startsWith('http://') || task.imageUrl.startsWith('https://'));
   return (
     <Card>
       <CardHeader>
@@ -42,7 +43,7 @@ function TaskCard({ task }: { task: WritingQuestion }) {
           {`You should spend about ${task.taskType === 'Task 1' ? '20' : '40'} minutes on this task. Write at least ${task.wordCountTarget} words.`}
         </CardDescription>
       </CardHeader>
-      {task.taskType === 'Task 1' && task.imageUrl && (
+      {task.taskType === 'Task 1' && isImageUrlValid && (
          <CardContent>
              <div className="relative aspect-video w-full">
                 <Image
