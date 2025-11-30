@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight, UploadCloud, AlertCircle, FileUp } from 'lucide-react';
+import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight, UploadCloud, AlertCircle, FileUp, Wrench } from 'lucide-react';
 import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
@@ -28,24 +29,28 @@ const creationCards = [
         title: "Writing Test",
         description: "Manually craft a new Writing test, including image uploads for Task 1.",
         href: "/admin/create/writing",
+        icon: FileText,
         isReady: true,
     },
      {
         title: "Listening Test",
         description: "Upload audio or use AI to generate audio from a transcript.",
         href: "/admin/create/listening",
+        icon: Headphones,
         isReady: true,
     },
     {
         title: "Speaking Test",
         description: "Manually build a new Speaking test with prompts for all three parts.",
         href: "/admin/create/speaking",
+        icon: Mic,
         isReady: true,
     },
      {
         title: "Reading Test",
         description: "Use the AI Content Factory to generate complex reading tests.",
         href: "/admin/create/reading",
+        icon: Wrench,
         isReady: true,
     }
 ];
@@ -84,8 +89,17 @@ export default function AdminPage() {
     
     try {
       const aiResult = await processContent({ contentType, rawText: inputText });
+      
+      // If image generation failed, don't save yet. Show manual upload UI.
+      const task1 = 'questions' in aiResult && (aiResult as MockTest).questions?.find(q => q.taskType === 'Task 1');
+      if (contentType === 'WritingTest' && task1 && !(task1 as WritingQuestion).imageUrl) {
+          setResult(aiResult);
+          setError("AI image generation failed. Please upload an image for Task 1 and save the test manually.");
+          setIsProcessing(false);
+          return;
+      }
+      
       setResult(aiResult);
-
       let targetCollection: string;
       if ('skill' in aiResult) {
           switch (aiResult.skill) {
@@ -109,7 +123,7 @@ export default function AdminPage() {
       console.error("Error processing content:", err);
       // Attempt to parse the structured content from the error message if it exists
       const jsonMatch = err.message.match(/(\{.*\})/s);
-      if (jsonMatch && jsonMatch[1]) {
+      if (contentType === 'WritingTest' && jsonMatch && jsonMatch[1]) {
           try {
               const partialResult = JSON.parse(jsonMatch[1]);
               setResult(partialResult);
