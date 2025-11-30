@@ -82,3 +82,69 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Clickable primary button (metallic gradient #412B6B -> #5C3E94) */
+  .btn-primary {
+    /* Base metallic linear gradient */
+    background-image: linear-gradient(90deg, #412B6B 0%, #5C3E94 100%);
+    color: white;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 6px 18px -6px rgba(60, 30, 110, 0.35);
+    /* make sure background preserves layers for the hover radial overlay */
+    background-repeat: no-repeat;
+    background-size: cover;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Disabled / non-clickable style */
+  .btn-primary-disabled {
+    background-image: linear-gradient(90deg, #D6F4ED 0%, #E5E9C5 100%);
+    color: #1B3C53;
+    cursor: not-allowed;
+    opacity: 0.9;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  /* Mouse-follow hover effect:
+     We layer a radial gradient (the metallic hover colors) on top of the base metallic gradient
+     using CSS variables --mx and --my set by the component on mousemove.
+  */
+  .btn-primary:hover {
+    /* Keep text white on hover */
+    color: white;
+  }
+
+  .btn-primary:hover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* radial gradient hotspot position uses --mx and --my (px relative to element) */
+    background-image:
+      radial-gradient(circle at var(--mx, 50%) var(--my, 50%),
+        #9B5DE0 0%,
+        #456882 60%),
+      linear-gradient(90deg, #412B6B 0%, #5C3E94 100%);
+    mix-blend-mode: screen; /* adjust blend if you prefer overlay or normal */
+    opacity: 0.95;
+    transition: opacity 160ms linear, background-position 160ms linear;
+    border-radius: inherit;
+  }
+
+  /* Slight tweak for focus accessibility */
+  .btn-primary:focus {
+    outline: 2px solid rgba(155, 93, 224, 0.6);
+    outline-offset: 2px;
+  }
+
+  /* For touch devices: fallback—use a simple hover tint */
+  @media (hover: none) {
+    .btn-primary::before {
+      display: none;
+    }
+  }
+}
