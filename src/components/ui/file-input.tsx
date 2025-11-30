@@ -13,16 +13,12 @@ interface FileInputProps extends Omit<InputProps, 'name' | 'type'> {
 
 const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
   ({ className, name, ...props }, ref) => {
-    const { register, watch, setValue, formState: { errors } } = useFormContext();
+    const { register, watch, formState: { errors } } = useFormContext();
 
     const fileList = watch(name) as FileList | null;
     const fileName = fileList?.[0]?.name;
 
-    const { ref: fieldRef, ...fieldProps } = register(name, {
-        onChange: (e) => {
-            setValue(name, e.target.files);
-        },
-    });
+    const { ref: fieldRef, ...fieldProps } = register(name);
 
     return (
       <div className={cn('relative w-full', className)}>
