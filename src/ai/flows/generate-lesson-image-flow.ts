@@ -60,5 +60,3 @@ const generateLessonImageFlow = ai.defineFlow(
     };
   }
 );
-
-    
