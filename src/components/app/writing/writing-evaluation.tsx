@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -12,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, AlertCircle, Pencil } from 'lucide-react';
+import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -33,7 +34,9 @@ interface WritingEvaluationProps {
 }
 
 function TaskCard({ task }: { task: WritingQuestion }) {
+  // A simple check to see if the URL is valid before rendering.
   const isImageUrlValid = task.imageUrl && (task.imageUrl.startsWith('http://') || task.imageUrl.startsWith('https://'));
+
   return (
     <Card>
       <CardHeader>
@@ -58,6 +61,7 @@ function TaskCard({ task }: { task: WritingQuestion }) {
     </Card>
   )
 }
+
 
 export function WritingEvaluation({ test }: WritingEvaluationProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -261,3 +265,5 @@ export function WritingEvaluation({ test }: WritingEvaluationProps) {
     </div>
   );
 }
+
+    

@@ -100,7 +100,7 @@ const WritingTestSchema = z.object({
         topic: z.string(),
         taskType: z.enum(["Task 1", "Task 2"]),
         wordCountTarget: z.number(),
-        imageUrl: z.string().optional().describe("A placeholder URL for the generated image for Task 1."),
+        imageUrl: z.string().url().optional().describe("The public URL of the generated image for Task 1."),
     })),
 });
 
@@ -151,16 +151,13 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'WritingTest':
 *   **Role:** Act as a highly experienced IELTS Writing Examiner.
-*   **Task:** The 'rawText' will contain two topics separated by a semicolon (e.g., "A topic for Task 1; A topic for Task 2"). Generate a complete, unique IELTS Writing Test (Academic Module) with two tasks.
+*   **Task:** The 'rawText' will contain one or two topics separated by a semicolon (e.g., "A topic for Task 1; A topic for Task 2" or just "A topic for Task 2"). Generate a complete IELTS Writing Test. If only a Task 2 topic is provided, create a relevant, generic Task 1 topic (e.g., a simple chart about education trends if Task 2 is about education).
 *   **Structure Requirements:**
     1.  **IELTS Writing Task 1 (Academic):**
-        *   **Topic:** Use the first topic from the 'rawText' input.
-        *   **Visual Representation:** Create a prompt based on a visual representation (e.g., bar chart, line graph, process diagram, or table).
-        *   **Instruction:** The prompt must instruct the student to select and report main features, make comparisons, and summarize data.
-        *   **Image Generation:** You do not need to generate the visual itself. The system will handle image generation based on the topic.
+        *   **Topic:** Generate a prompt based on a visual representation (e.g., bar chart, line graph, process diagram, or table). The prompt must instruct the student to select and report main features and make comparisons.
         *   **Word Count:** The target word count must be 150.
     2.  **IELTS Writing Task 2 (Essay):**
-        *   **Topic:** Use the second topic from the 'rawText' input.
+        *   **Topic:** Use the provided topic from the 'rawText' input.
         *   **Question Type:** The essay prompt must be a common IELTS type (e.g., Agree/Disagree, Discussion of Both Views, Problem/Solution, or Advantages/Disadvantages).
         *   **Word Count:** The target word count must be 250.
 *   **Output Format:** Your JSON output MUST be an object that conforms to the WritingTest schema, containing two items in the 'questions' array, one for each task.
@@ -257,8 +254,12 @@ const contentFactoryFlow = ai.defineFlow(
         const task1 = structuredContent.questions.find(q => q.taskType === 'Task 1');
         if (task1) {
             try {
-                console.log(`Generating image for Task 1 prompt: "${task1.topic}"`);
-                const imageResult = await generateLessonImage(task1.topic); // Use the topic as the prompt
+                // The topic itself is the prompt for the image generation.
+                const imagePrompt = `A data visualization for an IELTS Writing Task 1 prompt: ${task1.topic}`;
+                console.log(`Generating image for Task 1 with prompt: "${imagePrompt}"`);
+                
+                const imageResult = await generateLessonImage(imagePrompt);
+                
                 const [header, base64Data] = imageResult.imageDataUri.split(',');
                 const contentType = header.split(':')[1].split(';')[0];
                 const filePath = `writing-tasks/${structuredContent.id}/task1_image.png`;
@@ -266,8 +267,10 @@ const contentFactoryFlow = ai.defineFlow(
                 const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
                 task1.imageUrl = publicUrl;
                 console.log(`Task 1 image uploaded to ${publicUrl}`);
+
             } catch (imgError) {
                 console.error(`Failed to generate or upload image for Task 1: "${task1.topic}"`, imgError);
+                // Assign a placeholder on failure to prevent crashes, but log the error.
                 task1.imageUrl = "https://picsum.photos/seed/error/600/400";
             }
         }
@@ -328,3 +331,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
