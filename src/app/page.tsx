@@ -47,7 +47,7 @@ export default function Home() {
           <span className="text-xl font-bold">AI IELTS Pro</span>
         </Link>
         <nav className="flex items-center gap-4">
-          <Button variant="ghost" asChild>
+          <Button variant="ghost" asChild className="hover:bg-[#AEDEFC] hover:text-foreground">
             <Link href="/login">Log In</Link>
           </Button>
           <Button asChild>
