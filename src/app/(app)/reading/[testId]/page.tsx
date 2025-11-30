@@ -200,7 +200,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     };
 
     const renderQuestion = (question: ReadingQuestion) => {
-        const userAnswer = userAnswers[question.id] || '';
+        const userAnswer = userAnswers[question.id];
         const questionNumber = parseInt(question.id.replace('q', ''));
         const isCorrect = isGraded ? (
              userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
@@ -331,15 +331,12 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
     // Helper to split passage into paragraphs.
     const renderPassage = (passageText: string) => {
-        // Split by paragraph markers like A., B., 1., 2., etc., followed by a space or newline.
-        const paragraphs = passageText.split(/(?=\b[A-Z]\.\s|\d+\.\s)/).filter(p => p.trim() !== '');
-        if (paragraphs.length <= 1) {
-            return <p className="text-foreground/80 leading-relaxed whitespace-pre-line">{passageText}</p>;
-        }
+        const paragraphs = passageText.split('\n').filter(p => p.trim() !== '');
         return paragraphs.map((para, index) => (
             <p key={index} className="text-foreground/80 leading-relaxed mb-4">{para.trim()}</p>
         ));
     };
+    
 
     return (
         <FormProvider {...methods}>
