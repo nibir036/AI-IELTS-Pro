@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight, UploadCloud } from 'lucide-react';
+import { Loader2, FileText, Headphones, Mic, BookOpen, ArrowRight, UploadCloud, AlertCircle } from 'lucide-react';
 import { processContent, type ProcessContentOutput } from '@/ai/flows/content-factory-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
@@ -14,6 +15,8 @@ import Link from 'next/link';
 import { blobToBase64, cn } from '@/lib/utils';
 import { processPdf } from '@/ai/flows/process-pdf-flow';
 import { processImage } from '@/ai/flows/process-image-flow';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useRouter } from 'next/navigation';
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
 
@@ -41,10 +44,10 @@ const creationCards = [
     },
      {
         title: "Reading Test",
-        description: "Feature under development.",
+        description: "Use the AI Content Factory for this.",
         icon: BookOpen,
-        href: "/admin/create/reading",
-        isReady: true,
+        href: "/admin",
+        isReady: false,
     }
 ];
 
@@ -58,6 +61,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { firestore } = useFirebase();
+  const router = useRouter();
 
   const handleProcess = async () => {
     if (!firestore) {
@@ -95,6 +99,14 @@ export default function AdminPage() {
         title: "Content Saved!",
         description: `New content was successfully saved to '${targetCollection}'.`,
       });
+
+      // Show alert if writing test image failed
+      if (contentType === 'WritingTest' && 'questions' in aiResult) {
+          const task1 = aiResult.questions.find(q => q.taskType === 'Task 1');
+          if (!task1?.imageUrl) {
+              setError("AI image generation failed. The test was saved, but you'll need to edit it to manually add an image for Task 1.");
+          }
+      }
 
     } catch (err: any) {
       console.error("Error processing content:", err);
@@ -246,7 +258,13 @@ export default function AdminPage() {
                     Generate & Save from Text
                 </Button>
             </div>
-             {error && <p className="text-destructive text-sm font-medium">{error}</p>}
+             {error && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+             )}
              {result && (
                   <div className="relative mt-4">
                     <p className="text-sm font-medium mb-2">AI Output Review</p>
@@ -267,7 +285,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {creationCards.map(card => (
-                  <Link key={card.title} href={card.isReady ? card.href : '#'} className={!card.isReady ? "pointer-events-none" : ""}>
+                  <Link key={card.title} href={card.href} className={!card.isReady ? "pointer-events-none" : ""}>
                     <div className={`p-4 border rounded-lg h-full flex flex-col justify-between transition-all ${card.isReady ? 'hover:border-primary hover:shadow-md' : 'bg-muted/50'}`}>
                         <div>
                             <div className="flex justify-between items-start">
@@ -277,7 +295,7 @@ export default function AdminPage() {
                             <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
                         </div>
                         <div className={`flex items-center mt-4 text-sm font-medium ${card.isReady ? 'text-primary' : 'text-muted-foreground'}`}>
-                             {card.isReady ? 'Create Test' : 'Coming Soon'}
+                             {card.isReady ? 'Create Test' : 'Use AI Factory'}
                              {card.isReady && <ArrowRight className="ml-2 h-4 w-4" />}
                         </div>
                     </div>

@@ -271,9 +271,12 @@ const contentFactoryFlow = ai.defineFlow(
                 console.log(`Task 1 image uploaded to ${publicUrl}`);
 
             } catch (imgError) {
-                console.error(`CRITICAL: Failed to generate or upload image for Task 1: "${task1.topic}"`, imgError);
-                // Throw the error to prevent saving a test with a missing image.
-                throw new Error(`Failed to process image for writing task. Reason: ${(imgError as Error).message}`);
+                console.warn(`Could not generate or upload image for Task 1: "${task1.topic}". Saving test without an image.`, imgError);
+                // Do not throw an error. The test will be saved without an image URL,
+                // prompting the user to upload one manually if needed.
+                if (task1.imageUrl) {
+                    delete task1.imageUrl;
+                }
             }
         }
     }

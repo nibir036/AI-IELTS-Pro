@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -35,6 +36,7 @@ export default function CreateWritingTestPage() {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            testType: 'IELTS-Academic',
             task1Topic: '',
             task2Topic: '',
         },
@@ -59,7 +61,7 @@ export default function CreateWritingTestPage() {
             if (values.task1Image && values.task1Image.length > 0) {
                 const imageFile = values.task1Image[0] as File;
                 const base64Image = await blobToBase64(imageFile);
-                const filePath = `writing-tasks/${testId}/${imageFile.name}`;
+                const filePath = `writing-tasks/${testId}/task1_image.png`;
                 task1ImageUrl = await uploadImageToStorage(base64Image.split(',')[1], imageFile.type, filePath);
             }
 
@@ -156,15 +158,19 @@ export default function CreateWritingTestPage() {
                             <FormField
                                 control={form.control}
                                 name="task1Image"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Task 1 Image (Optional)</FormLabel>
-                                    <FormControl>
-                                        <FileInput {...field} accept="image/*" />
-                                    </FormControl>
-                                    <FormDescription>Upload a chart, graph, or image for Task 1.</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
+                                render={({ field: { onChange, value, ...rest } }) => (
+                                    <FormItem>
+                                        <FormLabel>Task 1 Image (Optional)</FormLabel>
+                                        <FormControl>
+                                            <FileInput
+                                                {...rest}
+                                                name="task1Image"
+                                                accept="image/*"
+                                            />
+                                        </FormControl>
+                                        <FormDescription>Upload a chart, graph, or image for Task 1.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
                                 )}
                             />
 

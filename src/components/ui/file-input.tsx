@@ -7,28 +7,24 @@ import { useFormContext } from 'react-hook-form';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
-interface FileInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface FileInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'name'> {
   name: string;
 }
 
 const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
   ({ className, name, ...props }, ref) => {
-    const context = useFormContext();
+    const { register, setValue, watch } = useFormContext();
     const [fileName, setFileName] = React.useState<string | null>(null);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files.length > 0) {
-        setFileName(e.target.files[0].name);
-        if (context) {
-          context.setValue(name, e.target.files, { shouldValidate: true });
+    const fileList = watch(name);
+
+    React.useEffect(() => {
+        if (fileList && fileList.length > 0) {
+            setFileName(fileList[0].name);
+        } else {
+            setFileName(null);
         }
-      } else {
-        setFileName(null);
-        if (context) {
-          context.setValue(name, null, { shouldValidate: true });
-        }
-      }
-    };
+    }, [fileList]);
     
     return (
       <div className={cn('relative', className)}>
@@ -45,10 +41,9 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
         </label>
         <Input
           id={name}
-          name={name}
           type="file"
           className="sr-only"
-          onChange={handleFileChange}
+          {...register(name)}
           {...props}
           ref={ref}
         />
