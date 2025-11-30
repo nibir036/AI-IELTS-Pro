@@ -28,8 +28,7 @@ type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
 function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) {
-    const { control, formState: { isSubmitted: isGraded } } = useFormContext();
-    // Assuming the answer is a comma-separated string for summary completions
+    const { control, formState: { isSubmitted: isGraded }, watch } = useFormContext();
     const correctAnswers = question.answer.split(',').map(a => a.trim().toLowerCase());
 
     const questionTextWithInputs = React.useMemo(() => {
@@ -49,7 +48,7 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
                         control={control}
                         defaultValue=""
                         render={({ field }) => {
-                             const isCorrect = isGraded ? field.value?.trim().toLowerCase() === correctAnswers[answerIndex] : undefined;
+                             const isCorrect = isGraded ? watch(field.name)?.trim().toLowerCase() === correctAnswers[answerIndex] : undefined;
                              return (
                                 <Input
                                     {...field}
@@ -67,11 +66,11 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
             }
             return <span key={index}>{part}</span>;
         });
-    }, [question.question, control, isGraded, correctAnswers]);
+    }, [question.question, control, isGraded, correctAnswers, watch]);
 
     return (
         <div className="p-4 rounded-lg border bg-background">
-            <p className="font-medium">{questionTextWithInputs}</p>
+            <p className="leading-relaxed">{questionTextWithInputs}</p>
         </div>
     );
 }
@@ -138,15 +137,17 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         const finalScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 9.0 : 0;
         setScore(finalScore);
         
-        const incorrectAnswers = allQuestions.filter(q => {
-             const userAnswer = data[q.id] || '';
-             return (q.type !== 'summary-completion' && userAnswer.trim().toLowerCase() !== q.answer.toLowerCase());
+        const incorrectQuestions = allQuestions.filter(q => {
+            if (q.type === 'summary-completion') return false; // Handled separately or skipped for now
+            const userAnswer = data[q.id] || '';
+            return userAnswer.trim().toLowerCase() !== q.answer.toLowerCase();
         });
 
+
         let newExplanations: AnswerExplanations = {};
-        if (incorrectAnswers.length > 0) {
+        if (incorrectQuestions.length > 0) {
             setIsGeneratingExplanations(true);
-            const explanationPromises = incorrectAnswers.map(q => {
+            const explanationPromises = incorrectQuestions.map(q => {
                  const relevantPart = test.parts.find(p => p.questions.some(pq => pq.id === q.id));
                  if (!relevantPart) return Promise.resolve({ id: q.id, explanation: 'Could not find relevant passage.' });
 
@@ -328,16 +329,32 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         return <GradedView />;
     }
 
+    // Helper to split passage into paragraphs.
+    const renderPassage = (passageText: string) => {
+        // Split by paragraph markers like A., B., 1., 2., etc., followed by a space or newline.
+        const paragraphs = passageText.split(/(?=\b[A-Z]\.\s|\d+\.\s)/).filter(p => p.trim() !== '');
+        if (paragraphs.length <= 1) {
+            return <p className="text-foreground/80 leading-relaxed whitespace-pre-line">{passageText}</p>;
+        }
+        return paragraphs.map((para, index) => (
+            <p key={index} className="text-foreground/80 leading-relaxed mb-4">{para.trim()}</p>
+        ));
+    };
+
     return (
         <FormProvider {...methods}>
             <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-6">
                 <Card>
-                     <CardHeader>
+                    <CardHeader>
                         <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
                         <p className="text-muted-foreground">A full-length reading mock test.</p>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <Button
+                        <div>
+                            <Progress value={progress} className="w-48" />
+                            <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
+                        </div>
+                         <Button
                             type="submit"
                             size="lg"
                             disabled={isSubmitting}
@@ -345,10 +362,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             Submit & Grade Full Test
                         </Button>
-                        <div>
-                            <Progress value={progress} className="w-48" />
-                            <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
-                        </div>
                     </CardContent>
                 </Card>
                
@@ -365,7 +378,9 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     <CardHeader><CardTitle>{part.title}</CardTitle></CardHeader>
                                     <CardContent className="flex-1 overflow-hidden">
                                         <ScrollArea className="h-full pr-4">
-                                            <p className="prose dark:prose-invert max-w-none text-foreground/80 whitespace-pre-line">{part.passage}</p>
+                                            <div className="prose dark:prose-invert max-w-none">
+                                                {renderPassage(part.passage)}
+                                            </div>
                                         </ScrollArea>
                                     </CardContent>
                                 </Card>
