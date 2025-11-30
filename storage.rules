@@ -4,7 +4,6 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Helper functions for auth checks
     function isSignedIn() {
       return request.auth != null;
     }
@@ -13,13 +12,13 @@ service firebase.storage {
       return isSignedIn() && request.auth.uid == userId;
     }
     
+    // In a real app, this should be based on custom claims, not hardcoded UIDs.
     function isAdmin() {
-      // In a real app, this should be based on custom claims, not hardcoded UIDs.
       let admin_uids = ['yTh2178GN3ZV3mAGi3wAmdPOKlm1'];
-      return isSignedIn() && request.auth.uid in admin_uids;
+      return request.auth != null && request.auth.uid in admin_uids;
     }
 
-    // Public read for generated content (images, audio)
+    // Public read for generated content, but only admins can write.
     match /lesson-images/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin();
@@ -28,14 +27,16 @@ service firebase.storage {
        allow read: if true;
        allow write: if isAdmin();
     }
-     match /listeningTests/{allPaths=**} {
+    match /listeningTests/{allPaths=**} {
        allow read: if true;
        allow write: if isAdmin();
     }
     
     // User-specific uploads for speaking practice
+    // Both user and admin can read/write here.
     match /speaking-submissions/{userId}/{allPaths=**} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
     }
 
     // Default deny all other paths

@@ -31,27 +31,27 @@ service cloud.firestore {
 
     // Allow admins to manage all curriculum and test content.
     match /lessons/{lessonId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
     match /mockTests/{testId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
     match /readingTests/{testId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
     match /listeningTests/{testId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
     
     match /knowledge/{chunkId} {
-      allow read, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
