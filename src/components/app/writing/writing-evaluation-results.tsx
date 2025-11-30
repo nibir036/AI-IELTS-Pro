@@ -3,22 +3,25 @@
 import type { AiPoweredWritingEvaluationOutput } from '@/lib/types';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, TrendingUp, CheckCircle } from 'lucide-react';
+import { Sparkles, TrendingUp, CheckCircle, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface WritingEvaluationResultsProps {
     result: AiPoweredWritingEvaluationOutput;
+    title?: string;
 }
 
-export function WritingEvaluationResults({ result }: WritingEvaluationResultsProps) {
+export function WritingEvaluationResults({ result, title = "Here's Your Analysis!" }: WritingEvaluationResultsProps) {
     return (
         <Card className="animate-in fade-in-50 duration-500">
             <CardHeader>
                 <div className="flex flex-col-reverse sm:flex-row justify-between items-start gap-4">
                     <div>
-                        <CardTitle className="text-2xl flex items-center gap-2"><Sparkles className="text-accent" /> Here's Your Analysis!</CardTitle>
+                        <CardTitle className="text-2xl flex items-center gap-2">
+                            <Pencil className="text-primary" /> {title}
+                        </CardTitle>
                         <CardDescription>Every essay you write is a step towards success. Keep up the great work!</CardDescription>
                     </div>
                     <div className="text-center w-full sm:w-auto rounded-lg bg-muted p-4">
@@ -52,7 +55,7 @@ export function WritingEvaluationResults({ result }: WritingEvaluationResultsPro
                     </div>
                 </div>
                 <Separator />
-                <Accordion type="single" collapsible className="w-full">
+                <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
                     <AccordionItem value="item-1">
                         <AccordionTrigger className="font-semibold">
                             <div className="flex items-center gap-2">

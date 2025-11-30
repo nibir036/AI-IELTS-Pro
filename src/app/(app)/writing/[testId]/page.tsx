@@ -41,12 +41,9 @@ export default function WritingTaskPage({ params }: { params: Promise<{ testId: 
         notFound();
     }
 
-    // This component currently only supports one question per test.
-    const task = test.questions[0] as WritingQuestion;
-
     return (
         <div>
-            <WritingEvaluation task={task} testId={testId} />
+            <WritingEvaluation test={test} />
         </div>
     );
 }
