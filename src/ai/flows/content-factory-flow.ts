@@ -27,10 +27,10 @@ export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
 const PracticeQuestionSchema = z.object({
   id: z.string().describe("A unique ID for the question (e.g., q1, q2)."),
   instructions: z.string().optional().describe("Instructions for this block of questions, e.g., 'Choose the correct heading for each paragraph.'"),
-  question: z.string().describe("The question text. For 'summary-completion', this should be the full paragraph with placeholders like '__(27)__', '__(28)__'."),
+  question: z.string().describe("The question text. For 'summary-completion', this should be the full paragraph with placeholders like '__(27)__'."),
   type: z.enum(["multiple-choice", "true-false-not-given", "note-completion", "matching-headings", "matching-information", "summary-completion", "yes-no-not-given", "matching-sentence-endings", "fill-in-the-blank"]).describe("The type of question."),
   options: z.array(z.string()).optional().describe("A list of options for the question (e.g., for multiple-choice, or the list of headings for matching)."),
-  answer: z.string().describe("The correct answer to the question."),
+  answer: z.string().describe("The correct answer to the question. For summary-completion, this is a comma-separated string of words."),
   answerBox: z.array(z.string()).optional().describe("For summary-completion, a box of words to choose from."),
 });
 
@@ -129,76 +129,66 @@ const prompt = ai.definePrompt({
     knowledge: z.string().optional().describe("Relevant information from the knowledge base."),
   }) },
   output: { schema: ProcessContentOutputSchema },
-  prompt: `You are a world-class AI curriculum designer for IELTS and ESL students.
-Your task is to take a raw text input and a desired content type, and generate a structured, high-quality JSON output that adheres to the specified schema for that type.
+  prompt: `You are an AI system with two specialized personas acting in a sequence.
+FIRST, you are a "Creative Associate" who brainstorms content.
+SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats that content into a final JSON output.
 
 ---
-## Persona & Task Instructions by Content Type:
+### WORKFLOW ###
+1.  **Creative Associate Role:** Based on the user's input ('contentType' and 'rawText'), first mentally brainstorm and generate the required content (passages, questions, answers, lesson text). Do this internally.
+2.  **Senior Editor Role:** Take the brainstormed content from Step 1 and meticulously format it into a single, valid JSON object that strictly adheres to the user's requested 'contentType' and the corresponding schema provided in this prompt. This is your ONLY output.
 
-**IF contentType is 'Lesson' AND the rawText indicates a 'Grammar' topic:**
-*   **Role:** Expert English language tutor specializing in IELTS.
-*   **Task:** Generate a complete lesson plan focused on the grammar point from the 'rawText'.
+---
+### PERSONA & TASK INSTRUCTIONS BY CONTENT TYPE ###
+
+#### IF contentType is 'Lesson' (e.g., Grammar or Vocabulary):
+*   **Role:** Expert English Language Tutor for IELTS.
+*   **Task:** Generate a complete lesson plan.
 *   **Structure Requirements:**
-    1.  **Explanation:** Use 'contentBlocks' for clear explanations with usage rules for IELTS contexts.
-    2.  **Examples:** Provide at least 5 example sentences in 'contentBlocks' related to common IELTS essay topics (e.g., globalization, environment, education).
-    3.  **Practice:** Generate 5 practice exercises (e.g., gap-fill or sentence transformation) in the 'exercises' array, complete with an answer key.
+    1.  **ID/Metadata:** Generate a unique ID, title, level, and a one-sentence \`content_en\` summary.
+    2.  **Content Blocks:** Use \`contentBlocks\` to provide clear explanations, examples, and tips. Use \`<b>\` tags for emphasis.
+    3.  **Practice:** Generate at least one practice exercise in the \`exercises\` array with 5 questions and a clear answer key.
 
-**IF contentType is 'Lesson' AND the rawText indicates a 'Vocabulary' topic:**
-*   **Role:** IELTS vocabulary expert.
-*   **Task:** Generate a comprehensive vocabulary lesson on the topic from 'rawText'.
-*   **Structure Requirements:**
-    1.  **Word List:** Generate a list of 10 high-frequency, Band 7+ words/phrases relevant to the topic. Use 'contentBlocks' to present each word, its collocations, and synonyms.
-    2.  **Examples:** Provide 5 sentence examples for each word demonstrating its use in an academic (Writing Task 2) style within the 'contentBlocks'.
-    3.  **Practice:** Generate 5 short practice exercises (e.g., matching or sentence building) in the 'exercises' array, with an answer key.
-
-**IF contentType is 'WritingTest':**
-*   **Role:** Highly experienced IELTS Writing Examiner.
-*   **Task:** Generate a complete, unique IELTS Writing Test (Academic Module). The test must consist of two tasks. The 'rawText' will contain two topics separated by a semicolon (e.g., "Topic for Task 1; Topic for Task 2").
-*   **Structure Requirements:**
-    1.  **Task 1:** Generate a task based on the analysis of a visual representation (e.g., bar chart, line graph, process diagram, or table) about the first topic from the 'rawText'. The task prompt must clearly instruct the student to select and report the main features, make comparisons, and summarize the data, keeping the response over 150 words. Do not generate the visual itself, only the prompt.
-    2.  **Task 2:** Generate a full essay prompt for a Task 2 essay (250+ words) on the second topic from the 'rawText'. The essay question must be a common IELTS type (e.g., Agree/Disagree, Discussion of Both Views, Problem/Solution, or Advantages/Disadvantages).
-
-**IF contentType is 'ReadingTest':**
+#### IF contentType is 'ReadingTest':
 *   **Role:** Act as a superior grand master level IELTS Exam Content Creator.
-*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Passage 1 Topic; Passage 2 Topic; Passage 3 Topic"). I need you to generate a Full IELTS Academic Reading Test containing 3 distinct passages and 40 questions in total.
-*   **Strict Structure:**
-    *   **PASSAGE 1 (The Factual Text)**
-        *   **Topic:** [USE PASSAGE 1 TOPIC FROM 'rawText']
-        *   **Length:** 700-750 words.
-        *   **Style:** Descriptive, factual, easy to read.
-        *   **Questions 1-7:** "note-completion". MUST have instructions like "Complete the notes below. Choose NO MORE THAN TWO WORDS from the passage for each answer.".
-        *   **Questions 8-13:** "true-false-not-given". MUST have instructions like "Do the following statements agree with the information given in Reading Passage 1? Write TRUE if the statement agrees with the information, FALSE if the statement contradicts the information, or NOT GIVEN if there is no information on this.".
-    *   **PASSAGE 2 (The Discursive Text)**
-        *   **Topic:** [USE PASSAGE 2 TOPIC FROM 'rawText']
-        *   **Length:** 750-800 words.
-        *   **Style:** Argumentative, sociologic, or workplace-related.
-        *   **Questions 14-19:** "matching-headings". MUST provide a list of 8 headings in the 'options' field for the first question in this block. Each question's text should be the paragraph identifier (e.g., "Paragraph A"). MUST have instructions like "Reading Passage 2 has six paragraphs, A-F. Choose the correct heading for each paragraph from the list of headings below.".
-        *   **Questions 20-23:** "matching-information". MUST have instructions like "Look at the following statements (Questions 20-23) and the paragraphs of Reading Passage 2. Match each statement with the correct paragraph, A-F.".
-        *   **Questions 24-26:** "multiple-choice". MUST have instructions like "Choose the correct letter, A, B, C or D.".
-    *   **PASSAGE 3 (The Abstract Text)**
-        *   **Topic:** [USE PASSAGE 3 TOPIC FROM 'rawText']
-        *   **Length:** 850-900 words.
-        *   **Style:** Complex, scientific, theoretical, or philosophical.
-        *   **Questions 27-32:** "summary-completion". This MUST be a single question object. The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answer' field should be a comma-separated list of the correct words. The instructions MUST be one of two types: (1) "Complete the summary below. Choose ONE WORD ONLY from the passage for each answer." - In this case, do NOT generate an 'answerBox'. (2) "Complete the summary using the list of words, A-J, below." - In this case, you MUST generate an 'answerBox' with 10 words.
-        *   **Questions 33-36:** "yes-no-not-given". MUST have instructions like "Do the following statements agree with the claims of the writer in Reading Passage 3? Write YES if the statement agrees with the claims of the writer, NO if the statement contradicts the claims of the writer, or NOT GIVEN if it is impossible to say what the writer thinks about this.".
-        *   **Questions 37-40:** "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field for the first question of this block. MUST have instructions like "Complete each sentence with the correct ending, A-G, below.".
-
-*   **OUTPUT FORMAT:** The final output must be a single JSON object that strictly adheres to the 'ReadingTest' schema. It must contain 3 items in the 'parts' array, one for each passage. Question IDs must be unique across the entire test (q1, q2, ... q40).
+*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Topic 1; Topic 2; Topic 3"). Generate a Full IELTS Academic Reading Test with 3 distinct passages and 40 questions in total.
+*   **Strict Formatting Rules:**
+    *   The final JSON output MUST contain 3 items in the 'parts' array.
+    *   Each part must contain a passage with paragraphs separated by double newlines (\\n\\n).
+    *   Question IDs must be unique across the entire test (q1, q2, ... q40).
+    *   Each question or group of questions requiring instructions MUST have a complete \`instructions\` field.
+*   **Passage 1 (Factual Text - Questions 1-13):**
+    *   Topic: [USE PASSAGE 1 TOPIC FROM 'rawText']
+    *   Length: 700-750 words.
+    *   Questions 1-7: "note-completion". Instructions: "Complete the notes below. Choose NO MORE THAN TWO WORDS from the passage for each answer."
+    *   Questions 8-13: "true-false-not-given". Instructions: "Do the following statements agree with the information given in Reading Passage 1? Write TRUE, FALSE, or NOT GIVEN."
+*   **Passage 2 (Discursive Text - Questions 14-26):**
+    *   Topic: [USE PASSAGE 2 TOPIC FROM 'rawText']
+    *   Length: 750-800 words.
+    *   Questions 14-19: "matching-headings". Provide a list of 8 headings in the 'options' field for the first question (q14). The question's text should be the paragraph identifier (e.g., "Paragraph A"). Instructions: "Reading Passage 2 has six paragraphs, A-F. Choose the correct heading for each paragraph from the list of headings below."
+    *   Questions 20-23: "matching-information". Instructions: "Look at the following statements (Questions 20-23) and the paragraphs of Reading Passage 2. Match each statement with the correct paragraph, A-F." The 'answer' for each should be a single letter (e.g., "A").
+    *   Questions 24-26: "multiple-choice". Instructions: "Choose the correct letter, A, B, C or D."
+*   **Passage 3 (Abstract Text - Questions 27-40):**
+    *   Topic: [USE PASSAGE 3 TOPIC FROM 'rawText']
+    *   Length: 850-900 words.
+    *   Questions 27-32: "summary-completion". This MUST be a single question object with id "q27". The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answer' field must be a single, comma-separated string of the correct words.
+        *   IF instructions are "Choose ONE WORD ONLY from the passage for each answer.", you MUST NOT generate an 'answerBox'.
+        *   IF instructions are "Complete the summary using the list of words, A-J, below.", you MUST generate an 'answerBox' with 10 words.
+    *   Questions 33-36: "yes-no-not-given". Instructions: "Do the following statements agree with the claims of the writer in Reading Passage 3? Write YES, NO, or NOT GIVEN."
+    *   Questions 37-40: "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field for the first question of this block (q37). Instructions: "Complete each sentence with the correct ending, A-G, below."
 
 ---
-## General Rules:
+### GENERAL RULES ###
 
 - **ID Generation:** Always generate a completely new, unique 'id' for the content.
-- **Output Format:** JSON ONLY. Do not write markdown or conversational text.
+- **Output Format:** JSON ONLY. Do not write markdown or conversational text. Your entire output must be a single JSON object that can be parsed directly.
 
 ---
-### INPUT:
+### INPUT ###
 
 - **Desired Content Type:** '{{{contentType}}}'
 - **Knowledge Base Context (use if helpful):** {{{knowledge}}}
 - **Raw Text to Process:** '{{{rawText}}}'
-
----
 `,
   config: {
     temperature: 0.4, 
@@ -301,11 +291,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
-
-    
-
-    
 
     
