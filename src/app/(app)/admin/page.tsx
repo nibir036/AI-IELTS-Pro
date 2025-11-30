@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm, FormProvider } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,7 +17,7 @@ import { processPdf } from '@/ai/flows/process-pdf-flow';
 import { processImage } from '@/ai/flows/process-image-flow';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/navigation';
-import { Input } from '@/components/ui/input';
+import { FileInput } from '@/components/ui/file-input';
 import { uploadImageToStorage } from '@/lib/firebase/storage';
 import { MockTest, WritingQuestion } from '@/lib/types';
 
@@ -63,12 +64,14 @@ export default function AdminPage() {
   const [result, setResult] = useState<ProcessContentOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const [manualImageFile, setManualImageFile] = useState<File | null>(null);
   const [isSavingManual, setIsSavingManual] = useState(false);
 
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const router = useRouter();
+
+  const methods = useForm<{ manualImageFile: FileList | null }>();
+  const manualImageFile = methods.watch('manualImageFile');
   
   const isWritingTestImageFailure = result && 'skill' in result && result.skill === 'Writing' && !(result.questions.find(q => q.taskType === 'Task 1') as WritingQuestion)?.imageUrl;
 
@@ -84,7 +87,7 @@ export default function AdminPage() {
     setIsProcessing(true);
     setError(null);
     setResult(null);
-    setManualImageFile(null);
+    methods.reset();
     
     try {
       const aiResult = await processContent({ contentType, rawText: inputText });
@@ -110,7 +113,7 @@ export default function AdminPage() {
 
     } catch (err: any) {
       console.error("Error processing content:", err);
-      if (err.message.includes('Image generation failed')) {
+      if (err.message.includes('Partial content')) {
             const jsonMatch = err.message.match(/Partial content: (\{.*\})/s);
             if (jsonMatch && jsonMatch[1]) {
                  try {
@@ -140,7 +143,8 @@ export default function AdminPage() {
   };
   
   const handleSaveWithManualImage = async () => {
-      if (!manualImageFile || !result || !('skill' in result && result.skill === 'Writing')) {
+      const file = manualImageFile?.[0];
+      if (!file || !result || !('skill' in result && result.skill === 'Writing')) {
           toast({ variant: 'destructive', title: 'Error', description: 'Missing image file or test data.' });
           return;
       }
@@ -153,9 +157,9 @@ export default function AdminPage() {
       setError(null);
 
       try {
-          const base64Image = (await blobToBase64(manualImageFile)).split(',')[1];
+          const base64Image = (await blobToBase64(file)).split(',')[1];
           const filePath = `writing-tasks/${result.id}/task1_image.png`;
-          const imageUrl = await uploadImageToStorage(base64Image, manualImageFile.type, filePath);
+          const imageUrl = await uploadImageToStorage(base64Image, file.type, filePath);
 
           const updatedResult = { ...result } as MockTest;
           const task1Index = updatedResult.questions.findIndex(q => q.taskType === 'Task 1');
@@ -167,7 +171,7 @@ export default function AdminPage() {
           await setDoc(docRef, updatedResult);
 
           setResult(updatedResult);
-          setManualImageFile(null);
+          methods.reset();
           setError(null); // Clear the error message on success
           toast({
               title: 'Success!',
@@ -304,41 +308,39 @@ export default function AdminPage() {
                 </Button>
             </div>
              {error && (
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
+                <Alert variant={isWritingTestImageFailure ? "default" : "destructive"} className={isWritingTestImageFailure ? "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700" : ""}>
+                    <AlertCircle className={cn("h-4 w-4", isWritingTestImageFailure && "text-amber-600 dark:text-amber-400")} />
+                    <AlertTitle className={isWritingTestImageFailure ? "text-amber-800 dark:text-amber-300" : ""}>Error</AlertTitle>
+                    <AlertDescription className={isWritingTestImageFailure ? "text-amber-700 dark:text-amber-400" : ""}>{error}</AlertDescription>
                 </Alert>
              )}
-             {result && (
+             {isWritingTestImageFailure && (
+                <FormProvider {...methods}>
+                    <Card className="bg-background">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><FileUp /> Action Required: Upload Image</CardTitle>
+                            <CardDescription>The AI failed to generate an image. Please upload one manually for Task 1 to complete the test creation.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col sm:flex-row items-center gap-4">
+                             <FileInput name="manualImageFile" accept="image/*" />
+                            <Button 
+                                onClick={handleSaveWithManualImage} 
+                                disabled={!manualImageFile?.[0] || isSavingManual}
+                                className="w-full sm:w-auto"
+                            >
+                                {isSavingManual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save with Manual Image
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </FormProvider>
+            )}
+             {result && !isWritingTestImageFailure && (
                   <div className="relative mt-4 space-y-4">
                     <p className="text-sm font-medium mb-2">AI Output Review</p>
                     <div className="p-4 bg-muted rounded-md h-full max-h-80 overflow-x-auto text-sm">
                         <pre className="whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
                     </div>
-                    {isWritingTestImageFailure && (
-                        <Card className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200"><FileUp /> Action Required: Upload Image</CardTitle>
-                                <CardDescription className="text-amber-700 dark:text-amber-300">The AI failed to generate an image. Please upload one manually for Task 1.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex flex-col sm:flex-row items-center gap-4">
-                                <Input 
-                                    type="file" 
-                                    accept="image/*"
-                                    onChange={(e) => setManualImageFile(e.target.files ? e.target.files[0] : null)}
-                                />
-                                <Button 
-                                    onClick={handleSaveWithManualImage} 
-                                    disabled={!manualImageFile || isSavingManual}
-                                    className="w-full sm:w-auto"
-                                >
-                                    {isSavingManual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Save with Manual Image
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
                   </div>
               )}
           </CardContent>

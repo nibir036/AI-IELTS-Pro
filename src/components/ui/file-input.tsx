@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -13,29 +12,20 @@ interface FileInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement
 
 const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
   ({ className, name, ...props }, ref) => {
-    const { register, setValue, watch } = useFormContext();
-    const [fileName, setFileName] = React.useState<string | null>(null);
-
-    const fileList = watch(name);
-
-    React.useEffect(() => {
-        if (fileList && fileList.length > 0) {
-            setFileName(fileList[0].name);
-        } else {
-            setFileName(null);
-        }
-    }, [fileList]);
+    const { register, watch } = useFormContext();
+    const fileList: FileList | null = watch(name);
+    const fileName = fileList?.[0]?.name;
     
     return (
-      <div className={cn('relative', className)}>
+      <div className={cn('relative w-full', className)}>
         <label
           htmlFor={name}
           className="flex items-center justify-center w-full h-24 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none"
         >
           <span className="flex items-center space-x-2">
             <Upload className="w-6 h-6 text-muted-foreground" />
-            <span className="font-medium text-muted-foreground">
-              {fileName || 'Click to select a file'}
+            <span className="font-medium text-muted-foreground text-center">
+              {fileName || 'Click to select an image'}
             </span>
           </span>
         </label>
