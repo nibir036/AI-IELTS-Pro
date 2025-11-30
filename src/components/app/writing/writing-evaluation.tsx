@@ -20,10 +20,13 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from '
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Bar, BarChart, CartesianGrid, Legend, Rectangle, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLabel } from '@/components/ui/chart';
+
 
 const formSchema = (isDiagnostic: boolean) => z.object({
-  essay: z.string().min(isDiagnostic ? 100 : 250, {
-    message: `Essay must be at least ${isDiagnostic ? 100 : 250} words.`,
+  essay: z.string().min(isDiagnostic ? 100 : 150, {
+    message: `Essay must be at least ${isDiagnostic ? 100 : 150} words.`,
   }),
 });
 
@@ -34,6 +37,62 @@ interface WritingEvaluationProps {
   onEvaluationComplete?: (result: AiPoweredWritingEvaluationOutput) => void;
   isDiagnosticTest?: boolean;
 }
+
+const chartData = [
+  { year: "1990", coal: 35, oil: 33, gas: 18, nuclear: 6, renewables: 8 },
+  { year: "2020", coal: 27, oil: 31, gas: 25, nuclear: 4, renewables: 13 },
+];
+
+const chartConfig = {
+    coal: { label: "Coal", color: "hsl(var(--chart-1))" },
+    oil: { label: "Oil", color: "hsl(var(--chart-2))" },
+    gas: { label: "Natural Gas", color: "hsl(var(--chart-3))" },
+    nuclear: { label: "Nuclear", color: "hsl(var(--chart-4))" },
+    renewables: { label: "Renewables", color: "hsl(var(--chart-5))" },
+};
+
+
+function EnergyChart() {
+    return (
+        <Card className="mb-6">
+            <CardHeader>
+                <CardTitle>Global Energy Sources, 1990 vs 2020</CardTitle>
+                <CardDescription>Percentage of total energy consumption</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                    <BarChart accessibilityLayer data={chartData}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis
+                          dataKey="year"
+                          tickLine={false}
+                          tickMargin={10}
+                          axisLine={false}
+                          tickFormatter={(value) => value}
+                        />
+                         <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={10}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent indicator="dot" />}
+                        />
+                        <Legend align="center" iconType="circle" />
+                        <Bar dataKey="coal" fill="var(--color-coal)" radius={4} />
+                        <Bar dataKey="oil" fill="var(--color-oil)" radius={4} />
+                        <Bar dataKey="gas" fill="var(--color-gas)" radius={4} />
+                        <Bar dataKey="nuclear" fill="var(--color-nuclear)" radius={4} />
+                        <Bar dataKey="renewables" fill="var(--color-renewables)" radius={4} />
+                    </BarChart>
+                </ChartContainer>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagnosticTest = false }: WritingEvaluationProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -58,7 +117,7 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
     return words ? words.length + 1 : (essayValue.trim() ? 1 : 0);
   }, [essayValue]);
 
-  const isButtonDisabled = isLoading || (wordCount < (isDiagnosticTest ? 100 : 250));
+  const isButtonDisabled = isLoading || (wordCount < (isDiagnosticTest ? 100 : 150));
 
 
   async function onSubmit(values: z.infer<ReturnType<typeof formSchema>>) {
@@ -125,6 +184,7 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
 
   return (
     <div className="space-y-6">
+       {task.taskType === 'Task 1' && <EnergyChart />}
       <Card>
         <CardHeader>
           <Badge variant="outline" className="w-fit">{isDiagnosticTest ? 'Diagnostic Test' : task.taskType}</Badge>
@@ -132,7 +192,7 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
           <CardDescription>
             {isDiagnosticTest
                 ? "Write at least 150 words. This will be used to determine your starting band score."
-                : `You should spend about 40 minutes on this task. Write at least ${task.wordCountTarget} words.`
+                : `You should spend about ${task.taskType === 'Task 1' ? '20' : '40'} minutes on this task. Write at least ${task.wordCountTarget} words.`
             }
             </CardDescription>
         </CardHeader>
@@ -152,7 +212,7 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
                 />
                  <div className="flex justify-between items-center text-sm text-muted-foreground">
                     <FormMessage />
-                    <span className={wordCount >= (isDiagnosticTest ? 100 : 250) ? 'text-green-600' : 'text-destructive'}>
+                    <span className={wordCount >= (isDiagnosticTest ? 100 : 150) ? 'text-green-600' : 'text-destructive'}>
                         {wordCount} words
                     </span>
                  </div>
@@ -174,7 +234,7 @@ export function WritingEvaluation({ task, testId, onEvaluationComplete, isDiagno
                     </>
                 )}
             </Button>
-            {wordCount < (isDiagnosticTest ? 100 : 250) && !isLoading && (
+            {wordCount < (isDiagnosticTest ? 100 : 150) && !isLoading && (
                 <div className="flex items-center gap-2 text-sm text-amber-600">
                     <AlertCircle className="h-4 w-4" />
                     <p>
