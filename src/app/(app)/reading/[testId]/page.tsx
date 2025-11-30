@@ -32,10 +32,11 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
     const correctAnswers = question.answer.split(',').map(a => a.trim().toLowerCase());
 
     const questionTextWithInputs = React.useMemo(() => {
-        const parts = question.question.split(/(__\(\d+\)__)/g);
+        const parts = question.question.split(/(<b>\s*\d+\s*<\/b>)/g);
         let questionCounter = 0;
+        
         return parts.map((part, index) => {
-            const match = /__\((\d+)\)__/.exec(part);
+            const match = /<b>\s*(\d+)\s*<\/b>/.exec(part);
             if (match) {
                 const questionNumber = match[1];
                 const questionId = `q${questionNumber}`;
@@ -48,7 +49,7 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
                         control={control}
                         defaultValue=""
                         render={({ field }) => {
-                             const isCorrect = isGraded ? watch(field.name)?.trim().toLowerCase() === correctAnswers[answerIndex] : undefined;
+                             const isCorrect = isGraded ? (watch(field.name) || '').trim().toLowerCase() === correctAnswers[answerIndex] : undefined;
                              return (
                                 <Input
                                     {...field}
@@ -64,7 +65,8 @@ function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) 
                     />
                 );
             }
-            return <span key={index}>{part}</span>;
+            // Use dangerouslySetInnerHTML to render the text part, which may contain HTML
+            return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
         });
     }, [question.question, control, isGraded, correctAnswers, watch]);
 
@@ -92,7 +94,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
     const totalQuestions = allQuestions.reduce((acc, q) => {
          if (q.type === 'summary-completion') {
-            const numBlanks = q.question.match(/__\(\d+\)__/g)?.length || 0;
+            const numBlanks = q.question.match(/<b>\s*\d+\s*<\/b>/g)?.length || 0;
             return acc + numBlanks;
         }
         return acc + 1;
@@ -119,7 +121,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         allQuestions.forEach(q => {
             if (q.type === 'summary-completion') {
                  const correctAnswers = q.answer.split(',').map(a => a.trim().toLowerCase());
-                 const questionNumbers = q.question.match(/__\((\d+)\)__/g)?.map(m => `q${m.match(/\d+/)?.[0]}`) || [];
+                 const questionNumbers = q.question.match(/<b>\s*(\d+)\s*<\/b>/g)?.map(m => `q${m.match(/\d+/)?.[0]}`) || [];
                  questionNumbers.forEach((qid, index) => {
                      if (data[qid]?.trim().toLowerCase() === correctAnswers[index]) {
                          correctCount++;
@@ -203,7 +205,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         const userAnswer = userAnswers[question.id];
         const questionNumber = parseInt(question.id.replace('q', ''));
         const isCorrect = isGraded ? (
-             userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
+             (userAnswer || '').trim().toLowerCase() === question.answer.toLowerCase()
        ) : undefined;
         const explanation = explanations[question.id];
 
@@ -330,7 +332,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     }
     
     const renderPassage = (passageText: string) => {
-        // Splits by one or more newline characters, which is more robust
         const paragraphs = passageText.split(/\n\s*\n/).filter(p => p.trim() !== '');
         return paragraphs.map((para, index) => (
             <p key={index} className="text-foreground/80 leading-relaxed mb-4">{para.trim()}</p>
@@ -471,3 +472,4 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     
 
     
+
