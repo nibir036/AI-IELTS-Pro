@@ -179,7 +179,7 @@ Your task is to take a raw text input and a desired content type, and generate a
         *   **Topic:** [USE PASSAGE 3 TOPIC FROM 'rawText']
         *   **Length:** 850-900 words.
         *   **Style:** Complex, scientific, theoretical, or philosophical.
-        *   **Questions 27-32:** "summary-completion". This MUST be a single question object. The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answerBox' field MUST contain the list of words to choose from. The 'answer' field should be a comma-separated list of the correct words. MUST have instructions like "Complete the summary below. Choose ONE WORD ONLY from the passage for each answer.".
+        *   **Questions 27-32:** "summary-completion". This MUST be a single question object. The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answer' field should be a comma-separated list of the correct words. The instructions MUST be one of two types: (1) "Complete the summary below. Choose ONE WORD ONLY from the passage for each answer." - In this case, do NOT generate an 'answerBox'. (2) "Complete the summary using the list of words, A-J, below." - In this case, you MUST generate an 'answerBox' with 10 words.
         *   **Questions 33-36:** "yes-no-not-given". MUST have instructions like "Do the following statements agree with the claims of the writer in Reading Passage 3? Write YES if the statement agrees with the claims of the writer, NO if the statement contradicts the claims of the writer, or NOT GIVEN if it is impossible to say what the writer thinks about this.".
         *   **Questions 37-40:** "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field for the first question of this block. MUST have instructions like "Complete each sentence with the correct ending, A-G, below.".
 
@@ -301,6 +301,8 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
 
     
 

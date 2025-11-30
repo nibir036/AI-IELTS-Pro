@@ -31,6 +31,7 @@ type AnswerExplanations = Record<string, string>;
 function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) {
     const { control, formState: { isSubmitted: isGraded } } = useFormContext();
     
+    // This regex looks for placeholders like __(27)__ and captures the number inside.
     const parts = question.question.split(/_{2}\s*\((\d+)\)\s*_{2}/g);
 
     const questionTextWithInputs = parts.map((part, index) => {
@@ -222,7 +223,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                            <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
                            <div dangerouslySetInnerHTML={{ __html: question.instructions }} />
                         </div>
-                        {(question.type === 'matching-headings' || question.type === 'summary-completion') && question.answerBox && (
+                        {question.type !== 'summary-completion' && question.answerBox && (
                              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1 p-3 border-t">
                                 {question.answerBox.map((opt, idx) => <p key={idx} className="text-xs text-muted-foreground">{opt}</p>)}
                             </div>
@@ -236,7 +237,17 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 )}
                  
                  {question.type === 'summary-completion' ? (
-                    <SummaryCompletionQuestion question={question} />
+                    <>
+                        {question.answerBox && (
+                           <div className="bg-muted/50 p-3 rounded-lg border text-sm text-foreground">
+                             <p className="mb-2 font-semibold">Words to choose from:</p>
+                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-x-4 gap-y-1">
+                                {question.answerBox.map((opt, idx) => <p key={idx} className="text-xs text-muted-foreground">{opt}</p>)}
+                             </div>
+                           </div>
+                        )}
+                        <SummaryCompletionQuestion question={question} />
+                    </>
                  ) : (
                     <div className="p-4 rounded-lg border bg-background">
                         <div className="flex items-start gap-3 mb-4">
@@ -322,6 +333,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     }
     
     const renderPassage = (passageText: string) => {
+        // Split by one or more newlines, trim each resulting line, and filter out empty ones.
         const paragraphs = passageText.split(/\n\s*\n/).filter(p => p.trim() !== '');
         return paragraphs.map((para, index) => (
             <p key={index} className="text-foreground/80 leading-relaxed mb-4">{para.trim()}</p>
@@ -459,5 +471,7 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     );
 }
 
+
+    
 
     
