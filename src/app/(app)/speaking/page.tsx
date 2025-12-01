@@ -6,7 +6,7 @@ import { SpeakingPromptCard } from '@/components/app/speaking/speaking-prompt-ca
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mic, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
