@@ -86,17 +86,39 @@ export default function AdminPage() {
     
     try {
       const aiResult = await processContent({ contentType, rawText: inputText });
+
       let targetCollection: string;
-      if ('skill' in aiResult) {
-          switch (aiResult.skill) {
-              case 'Reading': targetCollection = 'readingTests'; break;
-              case 'Listening': targetCollection = 'listeningTests'; break;
-              case 'Writing': targetCollection = 'mockTests'; break;
-              default: targetCollection = 'lessons';
-          }
-      } else {
-          targetCollection = 'lessons';
-      }
+        if ('skill' in aiResult && aiResult.skill) {
+             switch (aiResult.skill) {
+                case 'Reading': targetCollection = 'readingTests'; break;
+                case 'Listening': targetCollection = 'listeningTests'; break;
+                case 'Writing': targetCollection = 'mockTests'; break;
+                default: throw new Error(`Unknown skill type for saving: ${aiResult.skill}`);
+            }
+        } else if ('type' in aiResult && aiResult.type) {
+             switch (aiResult.type) {
+                case 'Grammar':
+                case 'Vocabulary':
+                case 'Tips':
+                case 'Speaking':
+                    targetCollection = 'lessons';
+                    break;
+                case 'SpeakingPromptSet':
+                    // This type is handled inside the flow, but we can return early here.
+                     toast({
+                        title: "Content Saved!",
+                        description: `New speaking prompts were successfully generated and saved.`,
+                    });
+                    setInputText('');
+                    setIsProcessing(false);
+                    return;
+                default:
+                     throw new Error(`Unknown content type for saving: ${aiResult.type}`);
+            }
+        }
+        else {
+            throw new Error("Could not determine target collection for saving. The AI result is malformed.");
+        }
       
       const docRef = doc(firestore, targetCollection, aiResult.id);
       await setDoc(docRef, aiResult);
