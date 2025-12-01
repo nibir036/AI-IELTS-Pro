@@ -18,9 +18,8 @@ import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
 import { Lesson, SpeakingTest } from '@/lib/types';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, writeBatch, doc, setDoc, collection, getDocs, limit, query as firestoreQuery } from 'firebase/firestore';
-import { firebaseConfig } from '@/firebase/config';
+import { getFirebaseAdmin } from '@/firebase/admin';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
 
 const ProcessContentInputSchema = z.object({
@@ -242,17 +241,17 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-    // 1. Initialize Firebase Client SDK
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const firestore = getFirestore(app);
+    // 1. Initialize Firebase Admin SDK
+    const adminApp = await getFirebaseAdmin();
+    const firestore = getAdminFirestore(adminApp);
 
     // 2. Retrieve relevant knowledge from Firestore
     console.log("Searching knowledge base...");
     let knowledge = '';
     try {
-        const knowledgeCollectionRef = collection(firestore, 'knowledge');
-        const knowledgeQuery = firestoreQuery(knowledgeCollectionRef, limit(5));
-        const knowledgeSnapshot = await getDocs(knowledgeQuery);
+        const knowledgeCollectionRef = firestore.collection('knowledge');
+        const knowledgeQuery = knowledgeCollectionRef.limit(5);
+        const knowledgeSnapshot = await knowledgeQuery.get();
 
         if (!knowledgeSnapshot.empty) {
             knowledge = knowledgeSnapshot.docs.map(doc => doc.data().chunk).join('\n\n---\n\n');
@@ -277,7 +276,7 @@ const contentFactoryFlow = ai.defineFlow(
     
     // 4. Post-process for media generation and saving
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
-        const batch = writeBatch(firestore);
+        const batch = firestore.batch();
 
         structuredContent.prompts.forEach(prompt => {
             const speakingTest: SpeakingTest = {
@@ -287,7 +286,7 @@ const contentFactoryFlow = ai.defineFlow(
                 content_en: prompt.content_en,
                 skill: 'Speaking',
             };
-            const docRef = doc(firestore, 'speakingTests', speakingTest.id);
+            const docRef = firestore.collection('speakingTests').doc(speakingTest.id);
             batch.set(docRef, speakingTest);
         });
 
@@ -391,7 +390,7 @@ const contentFactoryFlow = ai.defineFlow(
                 case 'Reading': targetCollection = 'readingTests'; break;
                 case 'Listening': targetCollection = 'listeningTests'; break;
                 case 'Writing': targetCollection = 'mockTests'; break;
-                default: targetCollection = 'lessons';
+                default: throw new Error(`Unknown skill type for saving: ${structuredContent.skill}`);
             }
         } else if ('type' in structuredContent && structuredContent.type) {
              switch (structuredContent.type) {
@@ -409,8 +408,8 @@ const contentFactoryFlow = ai.defineFlow(
             throw new Error("Could not determine target collection for saving.");
         }
       
-        const docRef = doc(firestore, targetCollection, structuredContent.id);
-        await setDoc(docRef, structuredContent);
+        const docRef = firestore.collection(targetCollection).doc(structuredContent.id);
+        await docRef.set(structuredContent);
         console.log(`Content saved to '${targetCollection}/${structuredContent.id}'.`);
     }
 
