@@ -7,8 +7,51 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    match /{document=**} {
-      allow read, write: if isSignedIn();
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      // In a real app, this would use custom claims, but UID check is fine for a demo.
+      let admin_uids = ['yTh2178GN3ZV3mAGi3wAmdPOKlm1'];
+      return isSignedIn() && request.auth.uid in admin_uids;
+    }
+
+    // USERS collection: Users can only read/write their own profile.
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // CURRICULUM collections: Any signed-in user can read, only admins can write.
+    match /lessons/{lessonId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /mockTests/{testId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /readingTests/{testId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /listeningTests/{testId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // KNOWLEDGE BASE collection: Signed-in can read, admin can write.
+    match /knowledge/{chunkId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // USER-SPECIFIC sub-collections: Only the owner of the data can access it.
+    match /users/{userId}/{subcollection}/{docId} {
+      allow read, write: if isOwner(userId);
     }
   }
 }
