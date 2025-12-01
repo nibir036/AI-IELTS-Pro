@@ -2,30 +2,10 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Allow anyone to read any file. 
-    // This is necessary for displaying images and playing audio files in the app.
-    allow read: if true;
-
-    // Users can only write to their own sub-folder within 'speaking-submissions'.
-    // This prevents one user from overwriting another user's files.
-    match /speaking-submissions/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow admins to upload images for writing tasks
-    match /writing-tasks/{allPaths=**} {
-        allow write: if request.auth != null; // Simplified to any logged-in user for admin panel
-    }
-    
-    // Allow admins to upload audio for listening tests
-    match /listeningTests/{allPaths=**} {
-        allow write: if request.auth != null; // Simplified to any logged-in user for admin panel
-    }
-    
-     // Allow admins to upload images for lessons
-    match /lesson-images/{allPaths=**} {
-      allow write: if request.auth != null; // Simplified to any logged-in user for admin panel
+    match /{allPaths=**} {
+      // Allow read and write access to all paths for any user, including unauthenticated.
+      // This is for demonstration purposes and should be secured for production.
+      allow read, write: if true;
     }
   }
 }
