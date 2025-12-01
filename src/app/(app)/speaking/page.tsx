@@ -1,10 +1,10 @@
 
 'use client';
 
-import type { Lesson } from '@/lib/types';
+import type { SpeakingTest } from '@/lib/types';
 import { SpeakingPromptCard } from '@/components/app/speaking/speaking-prompt-card';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,10 +21,10 @@ export default function SpeakingPage() {
 
   const promptsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'lessons'), where('type', '==', 'Speaking'));
+    return query(collection(firestore, 'speakingTests'));
   }, [firestore]);
 
-  const { data: speakingPrompts, isLoading: isPromptsLoading } = useCollection<Lesson>(promptsQuery);
+  const { data: speakingPrompts, isLoading: isPromptsLoading } = useCollection<SpeakingTest>(promptsQuery);
 
   const isLoading = isUserLoading || isPromptsLoading;
   const isUserAdmin = userProfile ? ADMIN_UIDS.includes(userProfile.id) : false;

@@ -67,7 +67,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Type of lesson (e.g., Grammar, Vocabulary, Tips, Reading, Listening, Speaking)."
+          "description": "Type of lesson (e.g., Grammar, Vocabulary, Tips, Reading, Listening)."
         },
         "title": {
           "type": "string",
@@ -75,7 +75,7 @@
         },
         "level": {
           "type": "string",
-          "description": "Difficulty level of the lesson (e.g., Basic, Intermediate, Advanced, Part 1)."
+          "description": "Difficulty level of the lesson (e.g., Basic, Intermediate, Advanced)."
         },
         "content_en": {
           "type": "string",
@@ -111,6 +111,35 @@
         "level",
         "content_en"
       ]
+    },
+     "SpeakingTest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SpeakingTest",
+      "type": "object",
+      "description": "Represents a single speaking test prompt.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the speaking test entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the speaking prompt."
+        },
+        "level": {
+            "type": "string",
+            "enum": ["Part 1", "Part 2", "Part 3"]
+        },
+        "content_en": {
+            "type": "string",
+            "description": "The full text of the speaking prompt."
+        },
+         "skill": {
+            "type": "string",
+            "enum": ["Speaking"]
+        }
+      },
+      "required": ["id", "title", "level", "content_en", "skill"]
     },
     "MockTest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -382,6 +411,12 @@
         "$ref": "#/entities/Lesson"
       },
       "description": "Stores static curriculum content. Write access is restricted to admins."
+    },
+     "/speakingTests/{testId}": {
+      "schema": {
+        "$ref": "#/entities/SpeakingTest"
+      },
+      "description": "Stores speaking practice prompts. Write access is restricted to admins."
     },
     "/mockTests/{testId}": {
       "schema": {

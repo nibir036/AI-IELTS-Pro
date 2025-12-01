@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -33,6 +34,11 @@ service cloud.firestore {
 
     // CURRICULUM collections: Any signed-in user can read, only admins can write.
     match /lessons/{lessonId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    match /speakingTests/{testId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }

@@ -37,12 +37,20 @@ export type PracticeExercise = {
 
 export interface Lesson {
   id: string;
-  type: 'Grammar' | 'Vocabulary' | 'Tips' | 'Reading' | 'Listening' | 'Speaking';
+  type: 'Grammar' | 'Vocabulary' | 'Tips';
   title: string;
-  level: 'Basic' | 'Intermediate' | 'Advanced' | 'All Levels' | "Part 1" | "Part 2" | "Part 3";
+  level: 'Basic' | 'Intermediate' | 'Advanced' | 'All Levels';
   contentBlocks: ContentBlock[];
   exercises?: PracticeExercise[]; // New field for exercises
   content_en: string; // Brief summary
+}
+
+export interface SpeakingTest {
+  id: string;
+  title: string;
+  level: 'Part 1' | 'Part 2' | 'Part 3';
+  content_en: string;
+  skill: 'Speaking';
 }
 
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,11 +10,11 @@ import { SpeakingEvaluation } from './speaking-evaluation';
 import { Languages, Loader2, PlayCircle } from 'lucide-react';
 import { getTranslation } from '@/ai/flows/multilingual-support';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import type { Lesson } from '@/lib/types';
+import type { SpeakingTest } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface SpeakingPromptCardProps {
-  prompt: Lesson;
+  prompt: SpeakingTest;
 }
 
 export function SpeakingPromptCard({ prompt }: SpeakingPromptCardProps) {

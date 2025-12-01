@@ -37,26 +37,25 @@ export default function CreateSpeakingTestPage() {
         },
     });
 
-    const createLesson = async (title: string, content: string, level: "Part 1" | "Part 2" | "Part 3") => {
+    const createSpeakingTest = async (title: string, content: string, level: "Part 1" | "Part 2" | "Part 3") => {
         if (!firestore) throw new Error("Firestore not initialized");
         const id = `SPEAKING_${uuidv4().slice(0, 8)}`;
-        const lesson = {
+        const test = {
             id,
             title,
             content_en: content,
-            type: 'Speaking',
+            skill: 'Speaking' as const,
             level,
         };
-        await setDoc(doc(firestore, 'lessons', id), lesson);
+        await setDoc(doc(firestore, 'speakingTests', id), test);
     };
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
-            // Create 3 separate lessons, one for each part
-            await createLesson('Speaking Task (Part 1)', values.part1, 'Part 1');
-            await createLesson('Speaking Task (Part 2)', values.part2, 'Part 2');
-            await createLesson('Speaking Task (Part 3)', values.part3, 'Part 3');
+            await createSpeakingTest('Speaking Task (Part 1)', values.part1, 'Part 1');
+            await createSpeakingTest('Speaking Task (Part 2)', values.part2, 'Part 2');
+            await createSpeakingTest('Speaking Task (Part 3)', values.part3, 'Part 3');
             
             toast({
                 title: 'Success!',
