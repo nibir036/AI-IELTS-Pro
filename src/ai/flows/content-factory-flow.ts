@@ -17,7 +17,7 @@ import { generateAudioFromText } from './text-to-speech-flow';
 import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
-import { Lesson } from '@/lib/types';
+import { Lesson, SpeakingTest } from '@/lib/types';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, writeBatch, doc, setDoc, collection, getDocs, limit, query as firestoreQuery } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
@@ -80,6 +80,7 @@ const SpeakingPromptSetSchema = z.object({
         title: z.string().describe("The title of the prompt, e.g., 'Speaking: Holidays'."),
         level: z.enum(["Part 1", "Part 2", "Part 3"]),
         content_en: z.string().describe("The full content of the speaking prompt for that part."),
+        skill: z.enum(['Speaking']).default('Speaking'),
     }))
 });
 
@@ -172,7 +173,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     1.  **Part 1:** Generate 10 standard interview-style questions covering 3 common areas (e.g., Hometown, Work/Study, Hobbies), subtly related to the 'rawText' theme if possible.
     2.  **Part 2:** Generate a detailed Cue Card prompt on the 'rawText' topic. Include the standard four bullet points (e.g., what, where, why, how).
     3.  **Part 3:** Generate 6 abstract, demanding discussion questions that naturally follow the theme of the Part 2 Cue Card.
-*   **Output Format:** Your JSON output MUST be a single object that conforms to the 'SpeakingPromptSet' schema. It must contain a 'prompts' array with exactly 3 objects, one for each part of the speaking test. The title for each should be the main topic (e.g., "Speaking: Holidays").
+*   **Output Format:** Your JSON output MUST be a single object that conforms to the 'SpeakingPromptSet' schema. It must contain a 'prompts' array with exactly 3 objects, one for each part of the speaking test. The title for each should be the main topic (e.g., "Speaking: Holidays"). Ensure the 'skill' field is set to 'Speaking' for each prompt.
 
 #### IF contentType is 'WritingTest':
 *   **Role:** Act as a highly experienced IELTS Writing Examiner.
@@ -279,19 +280,19 @@ const contentFactoryFlow = ai.defineFlow(
         const batch = writeBatch(firestore);
 
         structuredContent.prompts.forEach(prompt => {
-            const lesson = {
+            const speakingTest: SpeakingTest = {
                 id: prompt.id,
                 title: prompt.title,
                 level: prompt.level,
                 content_en: prompt.content_en,
-                type: 'Speaking' as const, // Hardcode the type for these lessons
+                skill: 'Speaking',
             };
-            const docRef = doc(firestore, 'lessons', lesson.id);
-            batch.set(docRef, lesson);
+            const docRef = doc(firestore, 'speakingTests', speakingTest.id);
+            batch.set(docRef, speakingTest);
         });
 
         await batch.commit();
-        console.log("Speaking prompts saved successfully.");
+        console.log("Speaking prompts saved successfully to 'speakingTests' collection.");
         return structuredContent; // Return the set itself to satisfy the flow's output schema
     }
 
@@ -416,3 +417,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
