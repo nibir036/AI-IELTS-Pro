@@ -1,0 +1,28 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Check if the user is authenticated.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Check if the user's ID matches the userId in the path.
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Allow users to write to their own 'speaking-submissions' folder.
+    match /speaking-submissions/{userId}/{allPaths=**} {
+      allow write: if isOwner(userId);
+    }
+
+    // Allow anyone to read any file. This is a common pattern for public media.
+    // If you need more granular read control, you can change this.
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+  }
+}

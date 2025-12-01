@@ -192,8 +192,8 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
         description: `Your speaking score of ${aiReport.scoreBand.toFixed(1)} has been saved.`,
       });
 
-    } catch (e) {
-      setError("An error occurred during evaluation. Please try again.");
+    } catch (e: any) {
+      setError(`An error occurred during evaluation: ${e.message || 'Please try again.'}`);
       console.error(e);
        toast({
         variant: "destructive",

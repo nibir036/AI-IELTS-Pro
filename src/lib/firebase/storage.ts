@@ -16,7 +16,8 @@ import { initializeFirebase } from '@/firebase';
  * @returns The public URL of the uploaded file.
  */
 export async function uploadAudioFromClient(blob: Blob, filePath: string): Promise<string> {
-    const { storage } = initializeFirebase(); // Get client-side storage instance
+    const { firestore, auth } = initializeFirebase(); // Get client-side storage instance
+    const storage = getStorage();
     const storageRef = ref(storage, filePath);
 
     try {
