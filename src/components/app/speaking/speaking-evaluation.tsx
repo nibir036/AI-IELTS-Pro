@@ -18,7 +18,7 @@ import { useFirebase } from '@/firebase';
 import { collection, doc, increment } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { serverTimestamp } from 'firebase/firestore';
+import { serverTimestamp, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { uploadAudioFromClient } from '@/firebase/client-storage';
 
 // Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
@@ -46,15 +46,27 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   const [error, setError] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
-  
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
   const wavesurferRef = useRef<any | null>(null);
   const waveformRef = useRef<HTMLDivElement>(null);
   const recordPluginRef = useRef<any | null>(null);
 
-  const { user: authUser, firestore, isUserLoading } = useFirebase();
+  const { auth, firestore } = useFirebase();
+  const { user: authUser } = useFirebase(); // Using the direct user from useFirebase
   const { user: userProfile } = useUserProfile();
   const { toast } = useToast();
   const startTimeRef = useRef<Date | null>(null);
+
+  useEffect(() => {
+    if (!auth) return;
+    // Set up the onAuthStateChanged listener to know when Firebase Auth is ready.
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setIsAuthReady(true); // Mark auth as ready regardless of whether there's a user
+    });
+    return () => unsubscribe(); // Cleanup listener on unmount
+  }, [auth]);
+
 
   useEffect(() => {
     if (!WaveSurfer || !RecordPlugin) return;
@@ -137,14 +149,18 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   };
 
   async function handleSubmit() {
+    // Robust check for authentication before proceeding
+    if (!authUser || !firestore || !userProfile) {
+        setError("User not authenticated — cannot upload. Please log in and try again.");
+        return;
+    }
     if (!audioBlob) {
         setError("No audio recorded. Please record your response first.");
         return;
     }
-    if (!authUser || !firestore || !userProfile) {
-        setError("You must be logged in to submit an evaluation.");
-        return;
-    }
+    
+    // Log UID for verification as requested
+    console.log("Upload UID:", authUser.uid);
     
     setIsLoading(true);
     setIsUploading(true);
@@ -152,7 +168,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     setResult(null);
 
     try {
-      // 1. Upload audio from the client
+      // 1. Upload audio from the client with the correct path
       const uniqueFilename = `${uuidv4()}.wav`;
       const filePath = `speaking-submissions/${authUser.uid}/${uniqueFilename}`;
       const audioUrl = await uploadAudioFromClient(audioBlob, filePath);
@@ -205,6 +221,9 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
       setIsUploading(false);
     }
   }
+  
+  // The submit button is now disabled until auth is ready AND a blob exists.
+  const isSubmitDisabled = isLoading || isRecording || !audioBlob || !isAuthReady || !authUser;
 
   return (
     <div className="space-y-6">
@@ -242,7 +261,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
                   </Button>
                   )}
 
-                  <Button onClick={handleSubmit} disabled={isLoading || isRecording || !audioBlob || !authUser || isUserLoading} className="w-full sm:w-auto">
+                  <Button onClick={handleSubmit} disabled={isSubmitDisabled} className="w-full sm:w-auto">
                       {isLoading && isUploading && (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</>
                       )}

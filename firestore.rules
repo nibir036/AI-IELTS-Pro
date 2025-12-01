@@ -2,6 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Allow all reads and writes for now (development mode)
     match /{document=**} {
       allow read, write: if true;
     }
@@ -10,6 +11,7 @@ service cloud.firestore {
 
 service firebase.storage {
   match /b/{bucket}/o {
+    // Allow all reads and writes for now (development mode)
     match /{allPaths=**} {
       allow read, write: if true;
     }
