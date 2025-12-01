@@ -1,17 +1,11 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Allow read and write access to all files for any signed-in user.
-    // Access control will be managed by the frontend application logic.
+    // Allow read and write access to all files.
+    // This is safe for a demo app and will be restricted later if needed.
     match /{allPaths=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }
