@@ -18,6 +18,7 @@ import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
 import { getFirebaseAdmin } from '@/firebase/admin';
+import { Lesson } from '@/lib/types';
 
 const ProcessContentInputSchema = z.object({
   contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
@@ -73,7 +74,7 @@ const SpeakingPromptSetSchema = z.object({
     type: z.enum(["SpeakingPromptSet"]),
     prompts: z.array(z.object({
         id: z.string().describe("A unique ID for the lesson, e.g., SPEAKING_a4f8."),
-        title: z.string().describe("The title of the prompt, e.g., 'Speaking: Hometown'."),
+        title: z.string().describe("The title of the prompt, e.g., 'Speaking: Holidays'."),
         level: z.enum(["Part 1", "Part 2", "Part 3"]),
         content_en: z.string().describe("The full content of the speaking prompt for that part."),
     }))
@@ -270,7 +271,7 @@ const contentFactoryFlow = ai.defineFlow(
 
     // Handle saving for SpeakingPromptSet
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
-        const adminApp = await getFirebaseAdmin();
+        const adminApp = await getFirebaseAdmin(); // Re-auth before write
         const firestore = adminApp.firestore();
         const batch = firestore.batch();
 
@@ -283,7 +284,6 @@ const contentFactoryFlow = ai.defineFlow(
                 level: promptData.level,
                 type: 'Speaking',
                 content_en: promptData.content_en,
-                contentBlocks: [], // Add empty contentBlocks to conform to Lesson type
             };
             batch.set(docRef, lessonData);
         });
@@ -405,5 +405,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
