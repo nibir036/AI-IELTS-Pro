@@ -3,14 +3,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    /**
+     * @description Checks if the user is signed in.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
 
+    /**
+     * @description Checks if the requested user ID matches the authenticated user's ID.
+     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
     
+    /**
+     * @description Checks if the user is a designated admin by their UID.
+     */
     function isAdmin() {
       // In a real app, this would use custom claims, but UID check is fine for a demo.
       let admin_uids = ['yTh2178GN3ZV3mAGi3wAmdPOKlm1'];
@@ -24,34 +33,37 @@ service cloud.firestore {
 
     // CURRICULUM collections: Any signed-in user can read, only admins can write.
     match /lessons/{lessonId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /mockTests/{testId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /readingTests/{testId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /listeningTests/{testId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
     
     // KNOWLEDGE BASE collection: Signed-in can read, admin can write.
     match /knowledge/{chunkId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     // USER-SPECIFIC sub-collections: Only the owner of the data can access it.
-    match /users/{userId}/{subcollection}/{docId} {
-      allow read, write: if isOwner(userId);
+    match /users/{userId}/submissions/{submissionId} {
+      allow read, write, create, delete, list: if isOwner(userId);
+    }
+    match /users/{userId}/learningPaths/{learningPathId} {
+      allow read, write, create, delete, list: if isOwner(userId);
     }
   }
 }
