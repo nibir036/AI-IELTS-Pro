@@ -19,7 +19,7 @@ import { collection, doc, increment } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { serverTimestamp } from 'firebase/firestore';
-import { uploadAudioFromClient } from '@/lib/firebase/storage';
+import { uploadAudioFromClient } from '@/firebase/client-storage';
 
 // Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
 let WaveSurfer: any = null;
