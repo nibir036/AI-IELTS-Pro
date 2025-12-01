@@ -377,7 +377,7 @@ const contentFactoryFlow = ai.defineFlow(
             }
         } catch (audioError) {
             console.error("Error during audio generation or upload:", audioError);
-            structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_1.mp3";
+            structuredContent.audioUrl = "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3";
         }
     }
 

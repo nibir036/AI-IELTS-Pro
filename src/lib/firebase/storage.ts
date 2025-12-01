@@ -48,7 +48,7 @@ export async function uploadAudioToStorage(base64Audio: string, contentType: str
     } catch(e) {
         console.error("Audio upload failed, returning placeholder.", e);
         // Return a known, safe placeholder URL that is whitelisted in next.config.js
-        return "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_1.mp3";
+        return "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3";
     }
 }
 
