@@ -18,6 +18,11 @@ service firebase.storage {
     match /speaking-submissions/{userId}/{allPaths=**} {
       allow write: if isOwner(userId);
     }
+    
+    // Allow users to write to their own 'writing-tasks' folder.
+    match /writing-tasks/{userId}/{allPaths=**} {
+        allow write: if isOwner(userId);
+    }
 
     // Allow anyone to read any file. This is a common pattern for public media.
     // If you need more granular read control, you can change this.
