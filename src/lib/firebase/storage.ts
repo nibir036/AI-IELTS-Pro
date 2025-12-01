@@ -12,7 +12,13 @@ async function uploadToStorage(
     filePath: string
 ): Promise<string> {
     const adminApp = await getFirebaseAdmin();
-    const bucket = getAdminStorage(adminApp).bucket("studio-161365104-8c7c1.appspot.com");
+    // Use environment variable for the bucket name for consistency and correctness
+    const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    if (!bucketName) {
+        throw new Error("Firebase Storage bucket name is not configured in environment variables.");
+    }
+    
+    const bucket = getAdminStorage(adminApp).bucket(bucketName);
     const buffer = Buffer.from(base64Data, 'base64');
     const file = bucket.file(filePath);
 
