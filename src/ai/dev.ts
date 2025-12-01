@@ -1,7 +1,11 @@
 
 'use server';
 import { config } from 'dotenv';
+import { getFirebaseAdmin } from '@/firebase/admin';
 config();
+
+// Force Firebase Admin initialization at server startup.
+getFirebaseAdmin();
 
 // Dynamically import flows.
 // This is the entry point for the Genkit dev server.
@@ -16,5 +20,3 @@ import('@/ai/flows/text-to-speech-flow.ts');
 import('@/ai/flows/process-pdf-flow.ts');
 import('@/ai/flows/generate-lesson-image-flow.ts');
 import('@/ai/flows/generate-writing-task-image-flow.ts');
-
-    
