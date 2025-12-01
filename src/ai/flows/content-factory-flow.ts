@@ -17,8 +17,10 @@ import { generateAudioFromText } from './text-to-speech-flow';
 import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
-import { getFirebaseAdmin } from '@/firebase/admin';
 import { Lesson } from '@/lib/types';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore, writeBatch, doc, setDoc, collection, getDocs, limit, query as firestoreQuery } from 'firebase/firestore';
+import { firebaseConfig } from '@/firebase/config';
 
 
 const ProcessContentInputSchema = z.object({
@@ -239,25 +241,27 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-    // 1. Retrieve relevant knowledge from Firestore
+    // 1. Initialize Firebase Client SDK
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const firestore = getFirestore(app);
+
+    // 2. Retrieve relevant knowledge from Firestore
     console.log("Searching knowledge base...");
     let knowledge = '';
     try {
-        const adminApp = await getFirebaseAdmin();
-        const firestore = adminApp.firestore();
-        const knowledgeQuery = await firestore.collection('knowledge')
-            .limit(5)
-            .get(); 
+        const knowledgeCollectionRef = collection(firestore, 'knowledge');
+        const knowledgeQuery = firestoreQuery(knowledgeCollectionRef, limit(5));
+        const knowledgeSnapshot = await getDocs(knowledgeQuery);
 
-        if (!knowledgeQuery.empty) {
-            knowledge = knowledgeQuery.docs.map(doc => doc.data().chunk).join('\n\n---\n\n');
-            console.log(`Found ${knowledgeQuery.size} relevant knowledge chunks.`);
+        if (!knowledgeSnapshot.empty) {
+            knowledge = knowledgeSnapshot.docs.map(doc => doc.data().chunk).join('\n\n---\n\n');
+            console.log(`Found ${knowledgeSnapshot.size} relevant knowledge chunks.`);
         }
     } catch (e) {
         console.warn("Could not query knowledge base. Proceeding without it.", e);
     }
 
-    // 2. Call the AI with the input text and the retrieved knowledge
+    // 3. Call the AI with the input text and the retrieved knowledge
     console.log("Generating structured content from AI...");
     const result = await withRetry(() => prompt({ ...input, knowledge }), {
       retryOn: isRetryableGoogleAIError,
@@ -270,11 +274,9 @@ const contentFactoryFlow = ai.defineFlow(
     }
     console.log("Structured content generated.");
     
-    // 3. Post-process for media generation and saving
+    // 4. Post-process for media generation and saving
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
-        const adminApp = await getFirebaseAdmin();
-        const firestore = adminApp.firestore();
-        const batch = firestore.batch();
+        const batch = writeBatch(firestore);
 
         structuredContent.prompts.forEach(prompt => {
             const lesson = {
@@ -284,7 +286,7 @@ const contentFactoryFlow = ai.defineFlow(
                 content_en: prompt.content_en,
                 type: 'Speaking' as const, // Hardcode the type for these lessons
             };
-            const docRef = firestore.collection('lessons').doc(lesson.id);
+            const docRef = doc(firestore, 'lessons', lesson.id);
             batch.set(docRef, lesson);
         });
 
@@ -294,7 +296,7 @@ const contentFactoryFlow = ai.defineFlow(
     }
 
 
-    // 4. Post-process for media generation
+    // 5. Post-process for media generation
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
         console.log("Processing Writing Test for image generation...");
         const task1 = structuredContent.questions.find(q => q.taskType === 'Task 1');
@@ -381,8 +383,6 @@ const contentFactoryFlow = ai.defineFlow(
 
      // Final step for single-object content types: save to Firestore
     if (input.contentType !== 'SpeakingPrompt') {
-        const adminApp = await getFirebaseAdmin();
-        const firestore = adminApp.firestore();
         let targetCollection: string;
 
         if ('skill' in structuredContent) {
@@ -392,12 +392,24 @@ const contentFactoryFlow = ai.defineFlow(
                 case 'Writing': targetCollection = 'mockTests'; break;
                 default: targetCollection = 'lessons';
             }
-        } else {
-          targetCollection = 'lessons';
+        } else if ('type' in structuredContent && structuredContent.type) {
+             switch (structuredContent.type) {
+                case 'Grammar':
+                case 'Vocabulary':
+                case 'Tips':
+                case 'Speaking':
+                    targetCollection = 'lessons';
+                    break;
+                default:
+                     throw new Error(`Unknown content type for saving: ${structuredContent.type}`);
+            }
+        }
+        else {
+            throw new Error("Could not determine target collection for saving.");
         }
       
-        const docRef = firestore.collection(targetCollection).doc(structuredContent.id);
-        await docRef.set(structuredContent);
+        const docRef = doc(firestore, targetCollection, structuredContent.id);
+        await setDoc(docRef, structuredContent);
         console.log(`Content saved to '${targetCollection}/${structuredContent.id}'.`);
     }
 
