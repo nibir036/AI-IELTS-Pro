@@ -1,8 +1,7 @@
 
 'use server';
-import { config } from 'dotenv';
+import 'dotenv/config';
 import { getFirebaseAdmin } from '@/firebase/admin';
-config();
 
 // Force Firebase Admin initialization at server startup.
 getFirebaseAdmin();
