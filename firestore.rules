@@ -29,30 +29,30 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
 
-    // Allow admins or server-side processes to manage all curriculum and test content.
+    // Allow admins to manage curriculum content.
     match /lessons/{lessonId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || request.auth == null;
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /mockTests/{testId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || request.auth == null;
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin(); // Admin only for writes
     }
 
     match /readingTests/{testId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || request.auth == null;
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin(); // Admin only for writes
     }
 
     match /listeningTests/{testId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || request.auth == null;
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin(); // Admin only for writes
     }
     
     match /knowledge/{chunkId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || request.auth == null;
+      allow read, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     // User-specific data is restricted to the owner
