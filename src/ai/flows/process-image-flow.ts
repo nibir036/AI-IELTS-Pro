@@ -7,8 +7,10 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getFirebaseAdmin } from '@/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore, writeBatch, doc, serverTimestamp, collection } from 'firebase/firestore';
+import { firebaseConfig } from '@/firebase/config';
+
 
 // Helper to chunk text into smaller pieces
 function chunkText(text: string, chunkSize: number, overlap: number): string[] {
@@ -58,14 +60,14 @@ const processImageFlow = ai.defineFlow(
     outputSchema: ProcessImageOutputSchema,
   },
   async ({ imageData, fileName }) => {
-    // Get the firestore instance from the initialized admin app
-    const adminApp = await getFirebaseAdmin();
-    const firestore = adminApp.firestore();
+    // 1. Initialize Firebase Client SDK
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const firestore = getFirestore(app);
     
     // The model expects a full data URI
     const imageDataUri = `data:image/jpeg;base64,${imageData}`;
     
-    // 1. Call the AI model to extract text from the image
+    // 2. Call the AI model to extract text from the image
     const ocrResult = await extractTextFromImagePrompt({ imageDataUri });
 
     if (!ocrResult.output || !ocrResult.output.extractedText) {
@@ -73,19 +75,19 @@ const processImageFlow = ai.defineFlow(
     }
     const extractedText = ocrResult.output.extractedText;
 
-    // 2. Chunk the extracted text
+    // 3. Chunk the extracted text
     const textChunks = chunkText(extractedText, 1000, 200); // 1000-char chunks, 200-char overlap
 
-    // 3. Store each chunk in the 'knowledge' collection in Firestore
-    const batch = firestore.batch();
-    const knowledgeCollection = firestore.collection('knowledge');
+    // 4. Store each chunk in the 'knowledge' collection in Firestore using the client SDK
+    const batch = writeBatch(firestore);
+    const knowledgeCollection = collection(firestore, 'knowledge');
 
     textChunks.forEach(chunk => {
-        const docRef = knowledgeCollection.doc(); // Auto-generate ID
+        const docRef = doc(knowledgeCollection); // Auto-generate ID
         batch.set(docRef, {
             chunk: chunk,
             sourceFile: fileName,
-            createdAt: FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
         });
     });
 
