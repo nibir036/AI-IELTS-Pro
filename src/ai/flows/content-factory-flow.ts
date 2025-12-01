@@ -70,7 +70,7 @@ const LessonSchema = z.object({
 });
 
 const SpeakingPromptSetSchema = z.object({
-    type: z.literal("SpeakingPromptSet"),
+    type: z.enum(["SpeakingPromptSet"]),
     prompts: z.array(z.object({
         id: z.string().describe("A unique ID for the lesson, e.g., SPEAKING_a4f8."),
         title: z.string().describe("The title of the prompt, e.g., 'Speaking: Hometown'."),
@@ -283,6 +283,7 @@ const contentFactoryFlow = ai.defineFlow(
                 level: promptData.level,
                 type: 'Speaking',
                 content_en: promptData.content_en,
+                contentBlocks: [], // Add empty contentBlocks to conform to Lesson type
             };
             batch.set(docRef, lessonData);
         });
