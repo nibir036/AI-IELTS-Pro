@@ -69,6 +69,16 @@ const LessonSchema = z.object({
   exercises: z.array(PracticeExerciseSchema).optional().describe("An array of practice exercises with answer keys."),
 });
 
+const SpeakingPromptSetSchema = z.object({
+    type: z.literal("SpeakingPromptSet"),
+    prompts: z.array(z.object({
+        id: z.string().describe("A unique ID for the lesson, e.g., SPEAKING_a4f8."),
+        title: z.string().describe("The title of the prompt, e.g., 'Speaking: Hometown'."),
+        level: z.enum(["Part 1", "Part 2", "Part 3"]),
+        content_en: z.string().describe("The full content of the speaking prompt for that part."),
+    }))
+});
+
 const ReadingTestPartSchema = z.object({
     part: z.number(),
     title: z.string(),
@@ -111,6 +121,7 @@ const ProcessContentOutputSchema = z.union([
     ReadingTestSchema,
     ListeningTestSchema,
     WritingTestSchema,
+    SpeakingPromptSetSchema,
 ]);
 export type ProcessContentOutput = z.infer<typeof ProcessContentOutputSchema>;
 
@@ -149,6 +160,15 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     1.  **ID/Metadata:** Generate a unique ID, title, level, and a one-sentence \`content_en\` summary.
     2.  **Content Blocks:** Use \`contentBlocks\` to provide clear explanations, examples, and tips. Use \`<b>\` tags for emphasis.
     3.  **Practice:** Generate at least one practice exercise in the \`exercises\` array with 5 questions and a clear answer key.
+
+#### IF contentType is 'SpeakingPrompt':
+*   **Role:** Act as a certified IELTS Speaking Examiner.
+*   **Task:** Generate a complete, unique IELTS Speaking Test (Part 1, 2, and 3). The 'rawText' from the user is the central theme for the test.
+*   **Structure Requirements:**
+    1.  **Part 1:** Generate 10 standard interview-style questions covering 3 common areas (e.g., Hometown, Work/Study, Hobbies), subtly related to the 'rawText' theme if possible.
+    2.  **Part 2:** Generate a detailed Cue Card prompt on the 'rawText' topic. Include the standard four bullet points (e.g., what, where, why, how).
+    3.  **Part 3:** Generate 6 abstract, demanding discussion questions that naturally follow the theme of the Part 2 Cue Card.
+*   **Output Format:** Your JSON output MUST be a single object that conforms to the 'SpeakingPromptSet' schema. It must contain a 'prompts' array with exactly 3 objects, one for each part of the speaking test. The title for each should be the main topic (e.g., "Speaking: Holidays").
 
 #### IF contentType is 'WritingTest':
 *   **Role:** Act as a highly experienced IELTS Writing Examiner.
@@ -248,6 +268,30 @@ const contentFactoryFlow = ai.defineFlow(
     }
     console.log("Structured content generated.");
 
+    // Handle saving for SpeakingPromptSet
+    if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
+        const adminApp = await getFirebaseAdmin();
+        const firestore = adminApp.firestore();
+        const batch = firestore.batch();
+
+        console.log(`Saving ${structuredContent.prompts.length} speaking prompts.`);
+        structuredContent.prompts.forEach(promptData => {
+            const docRef = firestore.collection('lessons').doc(promptData.id);
+            const lessonData: Omit<Lesson, 'contentBlocks' | 'exercises'> = {
+                id: promptData.id,
+                title: promptData.title,
+                level: promptData.level,
+                type: 'Speaking',
+                content_en: promptData.content_en,
+            };
+            batch.set(docRef, lessonData);
+        });
+
+        await batch.commit();
+        console.log("Speaking prompts saved successfully.");
+        return structuredContent; // Return the set itself to satisfy the flow's output schema
+    }
+
 
     // 3. Post-process for media generation
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
@@ -332,6 +376,29 @@ const contentFactoryFlow = ai.defineFlow(
             console.error("Error during audio generation or upload:", audioError);
             structuredContent.audioUrl = "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_error.mp3";
         }
+    }
+
+     // Final step for single-object content types: save to Firestore
+    if (input.contentType !== 'SpeakingPrompt') {
+        const adminApp = await getFirebaseAdmin();
+        const firestore = adminApp.firestore();
+        let targetCollection: string;
+
+        if ('skill' in structuredContent) {
+             switch (structuredContent.skill) {
+                case 'Reading': targetCollection = 'readingTests'; break;
+                case 'Listening': targetCollection = 'listeningTests'; break;
+                case 'Writing': targetCollection = 'mockTests'; break;
+                default: targetCollection = 'lessons';
+            }
+        } else {
+            targetCollection = 'lessons';
+        }
+
+        console.log(`Saving document to ${targetCollection}/${structuredContent.id}`);
+        const docRef = firestore.collection(targetCollection).doc(structuredContent.id);
+        await docRef.set(structuredContent);
+        console.log("Document saved successfully.");
     }
     
     return structuredContent;
