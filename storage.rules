@@ -2,9 +2,29 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow all reads and writes for now (development mode)
+  
+    // Default fallback: Block all operations unless specifically allowed below
     match /{allPaths=**} {
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    // Allow public read on lesson and writing task images
+    match /lesson-images/{allPaths=**} {
+      allow get: if true;
+    }
+    match /writing-tasks/{allPaths=**} {
+      allow get: if true;
+    }
+    
+    // Allow public read on listening test audio
+    match /listeningTests/{allPaths=**} {
+        allow get: if true;
+    }
+
+    // Allow users to upload speaking submissions to their own folder
+    match /speaking-submissions/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

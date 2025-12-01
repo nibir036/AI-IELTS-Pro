@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -52,8 +51,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const recordPluginRef = useRef<any | null>(null);
 
-  const { auth, firestore } = useFirebase();
-  const { user: authUser } = useFirebase(); // Using the direct user from useFirebase
+  const { auth, firestore, user: authUser } = useFirebase();
   const { user: userProfile } = useUserProfile();
   const { toast } = useToast();
   const startTimeRef = useRef<Date | null>(null);
@@ -159,7 +157,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
         return;
     }
     
-    // Log UID for verification as requested
+    // Log UID for verification
     console.log("Upload UID:", authUser.uid);
     
     setIsLoading(true);
