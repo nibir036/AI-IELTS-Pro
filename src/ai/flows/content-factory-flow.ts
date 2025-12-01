@@ -19,8 +19,6 @@ import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { Lesson } from '@/lib/types';
-import { promises as fs } from 'fs';
-import path from 'path';
 
 
 const ProcessContentInputSchema = z.object({
@@ -241,9 +239,6 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-    // 0. Ensure Firebase Admin is ready for storage operations, but not for DB writes unless needed
-    await getFirebaseAdmin();
-
     // 1. Retrieve relevant knowledge from Firestore
     console.log("Searching knowledge base...");
     let knowledge = '';
@@ -275,21 +270,31 @@ const contentFactoryFlow = ai.defineFlow(
     }
     console.log("Structured content generated.");
     
-    // BYPASS: For speaking prompts, save to a local file instead of Firestore
+    // 3. Post-process for media generation and saving
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
-        const filePath = path.join(process.cwd(), 'docs', 'generated-speaking-prompts.json');
-        try {
-            await fs.writeFile(filePath, JSON.stringify(structuredContent.prompts, null, 2));
-            console.log(`Bypassed Firestore. Speaking prompts saved to ${filePath}`);
-        } catch (fileError) {
-            console.error(`CRITICAL: Failed to write speaking prompts to file: ${filePath}`, fileError);
-            throw new Error(`AI generation succeeded, but failed to save prompts to a local file.`);
-        }
+        const adminApp = await getFirebaseAdmin();
+        const firestore = adminApp.firestore();
+        const batch = firestore.batch();
+
+        structuredContent.prompts.forEach(prompt => {
+            const lesson = {
+                id: prompt.id,
+                title: prompt.title,
+                level: prompt.level,
+                content_en: prompt.content_en,
+                type: 'Speaking' as const, // Hardcode the type for these lessons
+            };
+            const docRef = firestore.collection('lessons').doc(lesson.id);
+            batch.set(docRef, lesson);
+        });
+
+        await batch.commit();
+        console.log("Speaking prompts saved successfully.");
         return structuredContent; // Return the set itself to satisfy the flow's output schema
     }
 
 
-    // 3. Post-process for media generation
+    // 4. Post-process for media generation
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
         console.log("Processing Writing Test for image generation...");
         const task1 = structuredContent.questions.find(q => q.taskType === 'Task 1');
@@ -388,15 +393,14 @@ const contentFactoryFlow = ai.defineFlow(
                 default: targetCollection = 'lessons';
             }
         } else {
-            targetCollection = 'lessons';
+          targetCollection = 'lessons';
         }
-
-        console.log(`Saving document to ${targetCollection}/${structuredContent.id}`);
+      
         const docRef = firestore.collection(targetCollection).doc(structuredContent.id);
         await docRef.set(structuredContent);
-        console.log("Document saved successfully.");
+        console.log(`Content saved to '${targetCollection}/${structuredContent.id}'.`);
     }
-    
+
     return structuredContent;
   }
 );
