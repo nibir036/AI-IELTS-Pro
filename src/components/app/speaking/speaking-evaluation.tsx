@@ -51,7 +51,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const recordPluginRef = useRef<any | null>(null);
 
-  const { user: authUser, firestore } = useFirebase();
+  const { user: authUser, firestore, isUserLoading } = useFirebase();
   const { user: userProfile } = useUserProfile();
   const { toast } = useToast();
   const startTimeRef = useRef<Date | null>(null);
@@ -242,7 +242,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
                   </Button>
                   )}
 
-                  <Button onClick={handleSubmit} disabled={isLoading || isRecording || !audioBlob} className="w-full sm:w-auto">
+                  <Button onClick={handleSubmit} disabled={isLoading || isRecording || !audioBlob || !authUser || isUserLoading} className="w-full sm:w-auto">
                       {isLoading && isUploading && (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</>
                       )}
