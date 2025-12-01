@@ -19,6 +19,9 @@ import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { Lesson } from '@/lib/types';
+import { promises as fs } from 'fs';
+import path from 'path';
+
 
 const ProcessContentInputSchema = z.object({
   contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
@@ -238,7 +241,7 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-    // 0. Ensure Firebase Admin is ready before any operation
+    // 0. Ensure Firebase Admin is ready for storage operations, but not for DB writes unless needed
     await getFirebaseAdmin();
 
     // 1. Retrieve relevant knowledge from Firestore
@@ -271,28 +274,17 @@ const contentFactoryFlow = ai.defineFlow(
       throw new Error("Failed to generate structured content from the AI prompt.");
     }
     console.log("Structured content generated.");
-
-    // Handle saving for SpeakingPromptSet
+    
+    // BYPASS: For speaking prompts, save to a local file instead of Firestore
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
-        const adminApp = await getFirebaseAdmin(); // Re-auth before write
-        const firestore = adminApp.firestore();
-        const batch = firestore.batch();
-
-        console.log(`Saving ${structuredContent.prompts.length} speaking prompts.`);
-        structuredContent.prompts.forEach(promptData => {
-            const docRef = firestore.collection('lessons').doc(promptData.id);
-            const lessonData: Omit<Lesson, 'contentBlocks' | 'exercises'> = {
-                id: promptData.id,
-                title: promptData.title,
-                level: promptData.level,
-                type: 'Speaking',
-                content_en: promptData.content_en,
-            };
-            batch.set(docRef, lessonData);
-        });
-
-        await batch.commit();
-        console.log("Speaking prompts saved successfully.");
+        const filePath = path.join(process.cwd(), 'docs', 'generated-speaking-prompts.json');
+        try {
+            await fs.writeFile(filePath, JSON.stringify(structuredContent.prompts, null, 2));
+            console.log(`Bypassed Firestore. Speaking prompts saved to ${filePath}`);
+        } catch (fileError) {
+            console.error(`CRITICAL: Failed to write speaking prompts to file: ${filePath}`, fileError);
+            throw new Error(`AI generation succeeded, but failed to save prompts to a local file.`);
+        }
         return structuredContent; // Return the set itself to satisfy the flow's output schema
     }
 
@@ -408,3 +400,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
