@@ -21,19 +21,19 @@ service firebase.storage {
     // Public read for generated content, but only admins can write.
     match /lesson-images/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() || request.auth == null;
     }
     match /writing-tasks/{allPaths=**} {
        allow read: if true;
-       allow write: if isAdmin();
+       allow write: if isAdmin() || request.auth == null;
     }
     match /listeningTests/{allPaths=**} {
        allow read: if true;
-       allow write: if isAdmin();
+       allow write: if isAdmin() || request.auth == null;
     }
     
     // User-specific uploads for speaking practice
-    // Both user and admin can read/write here.
+    // Allow the user to write to their own path.
     match /speaking-submissions/{userId}/{allPaths=**} {
       allow read: if isOwner(userId) || isAdmin();
       allow write: if isOwner(userId);

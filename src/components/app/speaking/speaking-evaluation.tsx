@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -11,12 +12,14 @@ import { Loader2, Mic, StopCircle, Send, VideoOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
 import { useFirebase } from '@/firebase';
 import { collection, doc, increment } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { serverTimestamp } from 'firebase/firestore';
+import { uploadAudioFromClient } from '@/lib/firebase/storage';
 
 // Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
 let WaveSurfer: any = null;
@@ -38,6 +41,7 @@ interface SpeakingEvaluationProps {
 export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [result, setResult] = useState<AiPoweredSpeakingEvaluationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -132,15 +136,6 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     }
   };
 
-  const blobToDataURL = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-  }
-
   async function handleSubmit() {
     if (!audioBlob) {
         setError("No audio recorded. Please record your response first.");
@@ -152,26 +147,31 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     }
     
     setIsLoading(true);
+    setIsUploading(true);
     setError(null);
     setResult(null);
 
     try {
-      const audioDataUri = await blobToDataURL(audioBlob);
-      const response = await evaluateSpeaking({
-        task: task,
-        audioDataUri: audioDataUri,
-        userId: authUser.uid,
-      });
+      // 1. Upload audio from the client
+      const uniqueFilename = `${uuidv4()}.wav`;
+      const filePath = `speaking-submissions/${authUser.uid}/${uniqueFilename}`;
+      const audioUrl = await uploadAudioFromClient(audioBlob, filePath);
+      
+      setIsUploading(false);
 
-      const { aiReport, audioStorageUrl } = response;
+      // 2. Call the AI flow with the public URL
+      const aiReport = await evaluateSpeaking({
+        task: task,
+        audioUrl: audioUrl,
+      });
       setResult(aiReport);
 
-      // Save submission to Firestore
+      // 3. Save submission to Firestore
       const submissionRef = doc(collection(firestore, 'users', authUser.uid, 'submissions'));
       setDocumentNonBlocking(submissionRef, {
           skill: 'Speaking',
           testId: testId,
-          inputData: audioStorageUrl, // Save the public URL of the audio
+          inputData: audioUrl,
           aiReport: aiReport,
           scoreBand: aiReport.scoreBand,
           timestamp: serverTimestamp(),
@@ -198,10 +198,11 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
        toast({
         variant: "destructive",
         title: "Evaluation Failed",
-        description: "Something went wrong while saving your results.",
+        description: "Something went wrong while processing your request.",
       });
     } finally {
       setIsLoading(false);
+      setIsUploading(false);
     }
   }
 
@@ -242,16 +243,14 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
                   )}
 
                   <Button onClick={handleSubmit} disabled={isLoading || isRecording || !audioBlob} className="w-full sm:w-auto">
-                      {isLoading ? (
-                      <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Evaluating...
-                      </>
-                      ) : (
-                          <>
-                          <Send className="mr-2 h-4 w-4" />
-                          Submit for AI Evaluation
-                          </>
+                      {isLoading && isUploading && (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</>
+                      )}
+                      {isLoading && !isUploading && (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Evaluating...</>
+                      )}
+                      {!isLoading && (
+                          <><Send className="mr-2 h-4 w-4" />Submit for AI Evaluation</>
                       )}
                   </Button>
               </div>
@@ -265,8 +264,10 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
       {isLoading && (
         <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 mt-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="font-semibold">Our AI is analyzing your response...</p>
-            <p className="text-sm text-muted-foreground">Success is built on practice like this. Please wait.</p>
+            <p className="font-semibold">
+                {isUploading ? "Uploading your recording..." : "Our AI is analyzing your response..."}
+            </p>
+            <p className="text-sm text-muted-foreground">This may take a moment. Please wait.</p>
         </div>
       )}
 
