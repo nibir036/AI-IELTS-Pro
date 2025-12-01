@@ -48,7 +48,7 @@ export async function uploadAudioToStorage(base64Audio: string, contentType: str
     } catch(e) {
         console.error("Audio upload failed, returning placeholder.", e);
         // Return a known, safe placeholder URL that is whitelisted in next.config.js
-        return "https://firebasestorage.googleapis.com/v0/b/studio-161365104-8c7c1.appspot.com/o/listeningTests%2Fplaceholder_error.mp3?alt=media";
+        return "https://storage.googleapis.com/studioprod-51f49.appspot.com/placeholder_audio_1.mp3";
     }
 }
 
@@ -69,4 +69,3 @@ export async function uploadImageToStorage(base64Image: string, contentType: str
         return "https://picsum.photos/seed/error/600/400";
     }
 }
-
