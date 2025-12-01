@@ -7,29 +7,26 @@ config();
 import admin from 'firebase-admin';
 import type { App } from 'firebase-admin/app';
 
-// This variable will hold the singleton instance of the initialized app.
-let adminApp: App | null = null;
-
-async function initializeAdminApp(): Promise<App> {
-  if (adminApp) {
-    return adminApp;
-  }
-
+/**
+ * Gets the initialized Firebase Admin App instance.
+ * Ensures that initialization only happens once per server instance.
+ * This is the recommended pattern for serverless environments.
+ * @returns A promise that resolves with the initialized Firebase Admin App.
+ */
+export async function getFirebaseAdmin(): Promise<App> {
+  // If an app is already initialized, return it.
   if (admin.apps.length > 0 && admin.apps[0]) {
-    console.log('Reusing existing Firebase Admin SDK app instance.');
-    adminApp = admin.apps[0] as App;
-    return adminApp;
+    return admin.apps[0];
   }
 
-  console.log('Firebase Admin SDK not initialized, initializing now...');
+  // Otherwise, initialize a new app.
   try {
     // In a hosted Google Cloud environment (like App Hosting),
     // the SDK can automatically discover credentials without any arguments.
     // It falls back to GOOGLE_APPLICATION_CREDENTIALS locally if set.
-    adminApp = admin.initializeApp();
-
+    const app = admin.initializeApp();
     console.log('Firebase Admin SDK initialized successfully.');
-    return adminApp;
+    return app;
   } catch (error: any) {
     console.error('CRITICAL: Firebase Admin SDK initialization failed.', error);
     // Provide a more helpful error message for developers.
@@ -39,14 +36,4 @@ async function initializeAdminApp(): Promise<App> {
     }
     throw new Error(detailedError);
   }
-}
-
-/**
- * Gets the initialized Firebase Admin App instance.
- * Ensures that initialization only happens once.
- * @returns The initialized Firebase Admin App.
- */
-export async function getFirebaseAdmin(): Promise<App> {
-    // This will either return the existing instance or initialize a new one.
-    return initializeAdminApp();
 }
