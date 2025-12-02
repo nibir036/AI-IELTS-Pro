@@ -2,17 +2,15 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { getFirebaseAdmin } from '@/firebase/admin';
-import { firebasePlugin } from '@genkit-ai/firebase';
 
-// Initialize Firebase Admin first (this loads service account)
+// Initialize Firebase Admin so Firestore/Storage work globally
 getFirebaseAdmin();
 
 export const ai = genkit({
   plugins: [
     googleAI(),
-    firebasePlugin({
-      adminSdk: true, // Use Firebase Admin SDK
-    }),
+    // ❌ No Firebase plugin exists in @genkit-ai/firebase for this purpose.
+    // Admin SDK is initialized globally via getFirebaseAdmin().
   ],
   model: 'googleai/gemini-2.5-flash',
 });
