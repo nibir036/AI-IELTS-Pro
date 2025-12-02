@@ -242,7 +242,7 @@ const contentFactoryFlow = ai.defineFlow(
   },
   async (input) => {
     // 1. Initialize Firebase Admin and get Firestore
-    await getFirebaseAdmin();
+    getFirebaseAdmin();
     const firestore = getAdminFirestore();
 
     // 2. Retrieve relevant knowledge from Firestore
@@ -254,7 +254,7 @@ const contentFactoryFlow = ai.defineFlow(
         const knowledgeSnapshot = await knowledgeQuery.get();
 
         if (!knowledgeSnapshot.empty) {
-            knowledge = knowledgeSnapshot.docs.map(doc => doc.data().chunk).join('\\n\\n---\\n\\n');
+            knowledge = knowledgeSnapshot.docs.map(doc => doc.data().chunk).join('\n\n---\n\n');
             console.log(`Found ${knowledgeSnapshot.size} relevant knowledge chunks.`);
         }
     } catch (e) {
@@ -416,5 +416,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    

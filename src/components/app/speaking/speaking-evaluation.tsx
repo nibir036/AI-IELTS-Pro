@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -17,7 +18,7 @@ import { useFirebase } from '@/firebase';
 import { collection, doc, increment, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { uploadAudioFromClient } from '@/firebase/client-storage';
 
 // Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
