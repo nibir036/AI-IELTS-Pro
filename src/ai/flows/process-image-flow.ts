@@ -7,9 +7,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, writeBatch, doc, serverTimestamp, collection } from 'firebase/firestore';
-import { firebaseConfig } from '@/firebase/config';
+import { getFirebaseAdmin } from '@/firebase/admin';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
+import { serverTimestamp } from 'firebase/firestore';
 
 
 // Helper to chunk text into smaller pieces
@@ -60,9 +60,9 @@ const processImageFlow = ai.defineFlow(
     outputSchema: ProcessImageOutputSchema,
   },
   async ({ imageData, fileName }) => {
-    // 1. Initialize Firebase Client SDK
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const firestore = getFirestore(app);
+    // 1. Initialize Firebase Admin SDK
+    const adminApp = getFirebaseAdmin();
+    const firestore = getAdminFirestore(adminApp);
     
     // The model expects a full data URI
     const imageDataUri = `data:image/jpeg;base64,${imageData}`;
@@ -78,12 +78,12 @@ const processImageFlow = ai.defineFlow(
     // 3. Chunk the extracted text
     const textChunks = chunkText(extractedText, 1000, 200); // 1000-char chunks, 200-char overlap
 
-    // 4. Store each chunk in the 'knowledge' collection in Firestore using the client SDK
-    const batch = writeBatch(firestore);
-    const knowledgeCollection = collection(firestore, 'knowledge');
+    // 4. Store each chunk in the 'knowledge' collection in Firestore using the Admin SDK
+    const batch = firestore.batch();
+    const knowledgeCollection = firestore.collection('knowledge');
 
     textChunks.forEach(chunk => {
-        const docRef = doc(knowledgeCollection); // Auto-generate ID
+        const docRef = knowledgeCollection.doc(); // Auto-generate ID
         batch.set(docRef, {
             chunk: chunk,
             sourceFile: fileName,

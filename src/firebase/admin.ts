@@ -16,7 +16,7 @@ export function getFirebaseAdmin() {
 
         app = initializeApp({
           credential: cert(serviceAccountPath),
-          storageBucket: "studio-161365104-8c7c1.firebasestorage.app",
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         });
 
         console.log("🔥 Firebase Admin initialized");
@@ -39,4 +39,3 @@ export function getAdminStorage() {
   getFirebaseAdmin();
   return getStorage();
 }
-

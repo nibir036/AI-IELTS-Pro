@@ -4,8 +4,7 @@ import { initializeApp, getApps, getApp, FirebaseApp, FirebaseOptions } from 'fi
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
-// IMPORTANT: This function is corrected to directly use the NEXT_PUBLIC_ variables.
-// This was the root cause of the upload hanging issue.
+// This function reads the configuration from environment variables.
 function getFirebaseConfig(): FirebaseOptions {
     const firebaseConfig = {
         apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
