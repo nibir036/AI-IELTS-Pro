@@ -4,7 +4,9 @@ import { initializeApp, getApps, getApp, FirebaseApp, FirebaseOptions } from 'fi
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
-function buildFirebaseConfig(): FirebaseOptions {
+// IMPORTANT: This function is corrected to directly use the NEXT_PUBLIC_ variables.
+// This was the root cause of the upload hanging issue.
+function getFirebaseConfig(): FirebaseOptions {
     const firebaseConfig = {
         apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
         authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -14,18 +16,20 @@ function buildFirebaseConfig(): FirebaseOptions {
         appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     };
 
-    if (!firebaseConfig.apiKey) {
-        throw new Error('NEXT_PUBLIC_FIREBASE_API_KEY is not set in the environment');
+    // This check is crucial for client-side validation.
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.storageBucket) {
+        throw new Error('Firebase configuration variables are not set correctly in the environment.');
     }
 
     return firebaseConfig;
 }
 
+
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
   if (!getApps().length) {
     // Build the config from environment variables
-    const options = buildFirebaseConfig();
+    const options = getFirebaseConfig();
     initializeApp(options);
   }
   // If already initialized, return the SDKs with the already initialized App

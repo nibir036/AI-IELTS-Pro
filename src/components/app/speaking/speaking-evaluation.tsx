@@ -88,6 +88,8 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   }, [toast]);
 
   useEffect(() => {
+    // This effect initializes WaveSurfer and the Record plugin
+    // It will only run AFTER hasMicPermission is true.
     if (waveformRef.current && hasMicPermission && WaveSurfer && RecordPlugin && !wavesurferRef.current) {
         const wavesurfer = WaveSurfer.create({
             container: waveformRef.current,
@@ -126,7 +128,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
             wavesurfer.destroy();
         };
     }
-  }, [hasMicPermission, toast]);
+  }, [hasMicPermission]); // Dependency on hasMicPermission ensures correct order
 
   const handleStartRecording = async () => {
     if (recordPluginRef.current && recordPluginRef.current.isRecording()) {
@@ -166,8 +168,8 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
         setError("No audio recorded. Please record your response first.");
         return;
     }
-    if (audioBlob.size === 0) {
-        setError("Cannot submit an empty recording. Please record your response again.");
+    if (audioBlob.size < 1000) { // Check for a reasonably sized blob
+        setError("Cannot submit a very short or empty recording. Please record your response again.");
         return;
     }
     
@@ -182,7 +184,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
       const uniqueFilename = `${uuidv4()}.wav`;
       const filePath = `speaking-submissions/${authUser.uid}/${uniqueFilename}`;
       
-      const { publicUrl, path } = await uploadAudioFromClient(audioBlob, filePath);
+      const { publicUrl, path } = await uploadAudioFromClient(audioBlob, filePath, authUser);
       
       setIsUploading(false);
       
