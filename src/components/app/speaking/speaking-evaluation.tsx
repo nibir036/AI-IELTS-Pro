@@ -148,7 +148,6 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   };
 
   async function handleSubmit() {
-    // Robust check for authentication before proceeding
     if (!authUser || !firestore || !userProfile) {
         setError("User not authenticated — cannot upload. Please log in and try again.");
         return;
@@ -158,7 +157,6 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
         return;
     }
     
-    // Log UID for verification
     console.log("Upload UID:", authUser.uid);
     
     setIsLoading(true);
@@ -167,26 +165,26 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     setResult(null);
 
     try {
-      // 1. Upload audio from the client with the correct path
+      // 1. Upload audio and get back BOTH the public URL and the file path
       const uniqueFilename = `${uuidv4()}.wav`;
       const filePath = `speaking-submissions/${authUser.uid}/${uniqueFilename}`;
-      const audioUrl = await uploadAudioFromClient(audioBlob, filePath);
-
+      const { publicUrl, path } = await uploadAudioFromClient(audioBlob, filePath);
+      
+      setIsUploading(false);
+      
       // Create a record in the top-level 'uploads' collection
       const uploadRef = doc(collection(firestore, 'uploads'));
       setDocumentNonBlocking(uploadRef, {
           userId: authUser.uid,
-          filePath: filePath,
-          publicUrl: audioUrl,
+          filePath: path,
+          publicUrl: publicUrl,
           createdAt: serverTimestamp(),
       });
       
-      setIsUploading(false);
-
-      // 2. Call the AI flow with the public URL
+      // 2. Call the AI flow with the file path
       const aiReport = await evaluateSpeaking({
         task: task,
-        audioUrl: audioUrl,
+        filePath: path,
       });
       setResult(aiReport);
 
@@ -195,7 +193,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
       setDocumentNonBlocking(submissionRef, {
           skill: 'Speaking',
           testId: testId,
-          inputData: audioUrl,
+          inputData: publicUrl, // Save public URL for client-side playback
           aiReport: aiReport,
           scoreBand: aiReport.scoreBand,
           timestamp: serverTimestamp(),
@@ -230,7 +228,6 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     }
   }
   
-  // The submit button is now disabled until auth is ready AND a blob exists.
   const isSubmitDisabled = isLoading || isRecording || !audioBlob || !isAuthReady || !authUser;
 
   return (
@@ -302,5 +299,3 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     </div>
   );
 }
-
-    

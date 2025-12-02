@@ -2,8 +2,8 @@
 'use server';
 
 /**
- * @fileOverview AI-powered speaking evaluation flow. This flow receives a public audio URL
- * and performs AI evaluation.
+ * @fileOverview AI-powered speaking evaluation flow. This flow receives an audio file path
+ * from Firebase Storage and performs AI evaluation.
  *
  * - evaluateSpeaking - A function that handles the speaking evaluation process.
  * - EvaluateSpeakingInput - The input type for the evaluateSpeaking function.
@@ -13,14 +13,14 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
+import { getAdminStorage } from '@/firebase/admin';
 
-// Schema for the direct input to this flow, which is now just the URL
+// Schema for the direct input to this flow, which is now the file path
 const EvaluateSpeakingInputSchema = z.object({
-  audioUrl: z
+  filePath: z
     .string()
-    .url()
     .describe(
-      "Public URL of the user's recorded audio in Firebase Storage."
+      "Full path of the user's recorded audio in Firebase Storage (e.g., 'speaking-submissions/userId/file.wav')."
     ),
   task: z.string().describe('The speaking task or question the user responded to.'),
 });
@@ -49,7 +49,10 @@ export async function evaluateSpeaking(
 
 const aiPoweredSpeakingEvaluationPrompt = ai.definePrompt({
   name: 'aiPoweredSpeakingEvaluationPrompt',
-  input: { schema: EvaluateSpeakingInputSchema },
+  input: { schema: z.object({
+    task: z.string(),
+    audioUrl: z.string().url(), // The prompt still needs a URL
+  })},
   output: { schema: AiPoweredSpeakingEvaluationOutputSchema },
   prompt: `You are a highly experienced IELTS speaking examiner. Evaluate the student's speaking performance based on the audio recording and the task they were responding to.
 
@@ -75,8 +78,24 @@ const speakingEvaluationFlow = ai.defineFlow(
     outputSchema: AiPoweredSpeakingEvaluationOutputSchema,
   },
   async (input) => {
-    console.log("Sending audio URL to AI for evaluation...");
-    const aiResult = await withRetry(() => aiPoweredSpeakingEvaluationPrompt(input), {
+    console.log("Generating signed URL for AI evaluation...");
+    
+    // 1. Get a reference to the storage file using the Admin SDK
+    const storage = getAdminStorage();
+    const bucket = storage.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);
+    const file = bucket.file(input.filePath);
+    
+    // 2. Generate a short-lived signed URL for the AI to access the file
+    const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 5 * 60 * 1000, // 5 minutes
+    });
+
+    console.log("Sending signed audio URL to AI for evaluation...");
+    const aiResult = await withRetry(() => aiPoweredSpeakingEvaluationPrompt({
+        task: input.task,
+        audioUrl: signedUrl, // Use the signed URL
+    }), {
       retryOn: isRetryableGoogleAIError,
     });
     
