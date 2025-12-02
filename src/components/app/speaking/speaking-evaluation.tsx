@@ -19,7 +19,6 @@ import { collection, doc, increment, serverTimestamp } from 'firebase/firestore'
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { onAuthStateChanged } from 'firebase/auth';
-import { uploadAudioFromClient } from '@/firebase/client-storage';
 
 // Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
 let WaveSurfer: any = null;
@@ -182,25 +181,38 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     setResult(null);
 
     try {
-      const uniqueFilename = `${uuidv4()}.wav`;
-      const filePath = `speaking-submissions/${authUser.uid}/${uniqueFilename}`;
-      
-      const { publicUrl, path } = await uploadAudioFromClient(audioBlob, filePath, authUser);
-      
+      // Create a FormData object and append the audio blob and user ID
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.wav');
+      formData.append('userId', authUser.uid);
+
+      // Post the data to our new server-side API endpoint
+      const response = await fetch('/api/upload-speaking-audio', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload audio to the server.');
+      }
+
+      const { filePath } = await response.json();
+
       setIsUploading(false);
       
       const uploadRef = doc(collection(firestore, 'uploads'));
       setDocumentNonBlocking(uploadRef, {
           userId: authUser.uid,
-          filePath: path,
-          publicUrl: publicUrl,
+          filePath: filePath,
+          publicUrl: `https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/${encodeURIComponent(filePath)}?alt=media`, // Construct a potential URL
           createdAt: serverTimestamp(),
           type: 'speaking-recording',
       });
       
       const aiReport = await evaluateSpeaking({
         task: task,
-        filePath: path,
+        filePath: filePath,
       });
       setResult(aiReport);
 
@@ -208,7 +220,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
       setDocumentNonBlocking(submissionRef, {
           skill: 'Speaking',
           testId: testId,
-          inputData: publicUrl,
+          inputData: filePath,
           aiReport: aiReport,
           scoreBand: aiReport.scoreBand,
           timestamp: serverTimestamp(),

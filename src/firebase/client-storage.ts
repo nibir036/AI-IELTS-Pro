@@ -1,4 +1,3 @@
-
 'use client';
 
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -34,11 +33,10 @@ export async function uploadAudioFromClient(blob: Blob, filePath: string, user: 
         console.error("Client-side upload failed:", error);
          if (error.code === 'storage/unauthorized' || error.message?.includes('CORS')) {
             const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "YOUR_BUCKET_NAME";
-            const detailedError = `Upload failed due to a CORS policy error. This is a server configuration issue. Please run 'gsutil cors set cors.json gs://${bucketName}' in your terminal to fix it. See the README for more details.`;
+            const detailedError = `Upload failed due to a CORS policy error. This is a server configuration issue. Please run 'gsutil cors set cors.json gs://${bucketName}' in an authenticated terminal (like Google Cloud Shell) to fix it. See the README for more details.`;
             throw new Error(detailedError);
         }
         // It's crucial to re-throw the error so the calling component knows about the failure.
         throw new Error(`Failed to upload audio to storage from client: ${error.message}`);
     }
 }
-
