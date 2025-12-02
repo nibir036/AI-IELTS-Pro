@@ -24,3 +24,4 @@ gsutil cors set cors.json gs://YOUR_BUCKET_NAME
 It may take a minute for the settings to apply. After running the command, your file uploads should work correctly.
 
 **For production**, you should replace `"origin": ["*"]` in `cors.json` with the specific domains of your deployed application for better security.
+

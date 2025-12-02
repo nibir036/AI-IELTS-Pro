@@ -1,3 +1,4 @@
+
 import { initializeApp, cert, getApps, App } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -15,7 +16,7 @@ export function getFirebaseAdmin() {
 
         app = initializeApp({
           credential: cert(serviceAccountPath),
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          storageBucket: "studio-161365104-8c7c1.firebasestorage.app",
         });
 
         console.log("🔥 Firebase Admin initialized");
@@ -38,3 +39,4 @@ export function getAdminStorage() {
   getFirebaseAdmin();
   return getStorage();
 }
+
