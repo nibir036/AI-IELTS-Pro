@@ -36,12 +36,39 @@ const personalizedLearningPathPrompt = ai.definePrompt({
   name: 'personalizedLearningPathPrompt',
   input: {schema: PersonalizedLearningPathInputSchema},
   output: {schema: PersonalizedLearningPathOutputSchema},
-  prompt: `You are an expert IELTS tutor. Based on the student's current band score of {{currentBand}} and target band score of {{targetBand}}, create a personalized learning path.
+  prompt: `You are an expert IELTS tutor. Your task is to create a personalized learning path by selecting relevant lesson IDs from a predefined list.
 
-  The learning path should be a list of lesson IDs that will help the student improve their skills and achieve their target band score. Take into account that the student's native language is {{nativeLanguage}}, and suggest lessons that can help them with common mistakes for speakers of that language.
+Here is the list of available lesson IDs:
+- GRAMMAR_001
+- GRAMMAR_002
+- GRAMMAR_003
+- GRAMMAR_004
+- VOCAB_001
+- VOCAB_002
+- VOCAB_003
+- VOCAB_004
+- TIPS_001
+- TIPS_002
+- TIPS_003
+- TIPS_004
+- SPEAKING_001
+- SPEAKING_002
+- SPEAKING_003
+- SPEAKING_004
+- SPEAKING_005
 
-  Return the lesson IDs in a JSON array.
-  `,
+Based on the student's current band score of {{currentBand}}, their target of {{targetBand}}, and their native language of {{nativeLanguage}}, select the most appropriate lesson IDs from the list above.
+
+**Rules:**
+1.  **ONLY output lesson IDs from the list provided.** Do not invent new IDs.
+2.  Your output MUST be a valid JSON array of strings matching the 'lessonIds' schema.
+3.  Select a variety of lessons covering grammar, vocabulary, and tips that would be most beneficial for a user trying to bridge the gap between their current and target scores.
+
+Example Output:
+{
+  "lessonIds": ["GRAMMAR_002", "VOCAB_001", "TIPS_002"]
+}
+`,
 });
 
 const personalizedLearningPathFlow = ai.defineFlow(
@@ -58,3 +85,4 @@ const personalizedLearningPathFlow = ai.defineFlow(
     return result.output!;
   }
 );
+
