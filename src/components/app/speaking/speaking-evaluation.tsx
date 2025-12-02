@@ -108,7 +108,17 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
         recordPluginRef.current = record;
 
         record.on('record-end', (blob: Blob) => {
-            setAudioBlob(blob);
+            console.log("Recording ended, blob size:", blob.size);
+            if (blob.size === 0) {
+              setError("Recording failed. The audio blob is empty. Please check your microphone.");
+              toast({
+                variant: "destructive",
+                title: "Recording Failed",
+                description: "No audio was captured. Please check your microphone and browser permissions."
+              });
+            } else {
+              setAudioBlob(blob);
+            }
         });
 
         return () => {
@@ -116,13 +126,14 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
             wavesurfer.destroy();
         };
     }
-  }, [hasMicPermission]);
+  }, [hasMicPermission, toast]);
 
   const handleStartRecording = async () => {
     if (recordPluginRef.current && recordPluginRef.current.isRecording()) {
       return;
     }
     if (recordPluginRef.current) {
+        setError(null);
         setResult(null);
         setAudioBlob(null);
         setIsRecording(true);
@@ -155,8 +166,12 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
         setError("No audio recorded. Please record your response first.");
         return;
     }
+    if (audioBlob.size === 0) {
+        setError("Cannot submit an empty recording. Please record your response again.");
+        return;
+    }
     
-    console.log("Upload UID:", authUser.uid);
+    console.log("Upload initiated by UID:", authUser.uid);
     
     setIsLoading(true);
     setIsUploading(true);
@@ -164,14 +179,13 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     setResult(null);
 
     try {
-      // 1. Upload audio and get back BOTH the public URL and the file path
       const uniqueFilename = `${uuidv4()}.wav`;
       const filePath = `speaking-submissions/${authUser.uid}/${uniqueFilename}`;
+      
       const { publicUrl, path } = await uploadAudioFromClient(audioBlob, filePath);
       
       setIsUploading(false);
       
-      // Create a record in the top-level 'uploads' collection
       const uploadRef = doc(collection(firestore, 'uploads'));
       setDocumentNonBlocking(uploadRef, {
           userId: authUser.uid,
@@ -180,26 +194,24 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
           createdAt: serverTimestamp(),
       });
       
-      // 2. Call the AI flow with the file path
       const aiReport = await evaluateSpeaking({
         task: task,
         filePath: path,
       });
       setResult(aiReport);
 
-      // 3. Save submission to Firestore
       const submissionRef = doc(collection(firestore, 'users', authUser.uid, 'submissions'));
       setDocumentNonBlocking(submissionRef, {
           skill: 'Speaking',
           testId: testId,
-          inputData: publicUrl, // Save public URL for client-side playback
+          inputData: publicUrl,
           aiReport: aiReport,
           scoreBand: aiReport.scoreBand,
           timestamp: serverTimestamp(),
       });
       
       const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
-      const newTotalSubmissions = (userProfile.totalPracticeTime / 5 || 0) + 1; // Assuming 5 mins for speaking
+      const newTotalSubmissions = (userProfile.totalPracticeTime / 5 || 0) + 1;
       const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + aiReport.scoreBand) / newTotalSubmissions;
 
       const userRef = doc(firestore, 'users', authUser.uid);

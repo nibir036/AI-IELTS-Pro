@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -82,7 +81,7 @@ const speakingEvaluationFlow = ai.defineFlow(
     
     // 1. Get a reference to the storage file using the Admin SDK
     const storage = getAdminStorage();
-    const bucket = storage.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);
+    const bucket = storage.bucket(); // Bucket is automatically inferred from initialization
     const file = bucket.file(input.filePath);
     
     // 2. Generate a short-lived signed URL for the AI to access the file

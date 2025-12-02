@@ -1,4 +1,3 @@
-
 'use client';
 
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -17,6 +16,7 @@ export async function uploadAudioFromClient(blob: Blob, filePath: string): Promi
     const storageRef = ref(storage, filePath);
 
     try {
+        console.log(`Starting client-side upload to: ${filePath}`);
         const snapshot = await uploadBytes(storageRef, blob);
         const downloadUrl = await getDownloadURL(snapshot.ref);
         console.log(`Client-side upload successful. URL: ${downloadUrl}`);
