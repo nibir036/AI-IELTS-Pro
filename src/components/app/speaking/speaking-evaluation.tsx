@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -194,6 +195,7 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
           filePath: path,
           publicUrl: publicUrl,
           createdAt: serverTimestamp(),
+          type: 'speaking-recording',
       });
       
       const aiReport = await evaluateSpeaking({
