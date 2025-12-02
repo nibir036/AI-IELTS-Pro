@@ -15,7 +15,7 @@ If you skip this step, uploads will hang indefinitely with a CORS error in the b
 
 1.  A `cors.json` file is included in the root of this project with a permissive development configuration.
 2.  Open a terminal in your project's root directory.
-3.  Run the following command, replacing `YOUR_BUCKET_NAME` with your actual Firebase Storage bucket name (e.g., `gs://my-project-12345.appspot.com`):
+3.  Run the following command, replacing `YOUR_BUCKET_NAME` with your actual Firebase Storage bucket name (e.g., `gs://my-project-12345.firebasestorage.app`):
 
 ```bash
 gsutil cors set cors.json gs://YOUR_BUCKET_NAME
