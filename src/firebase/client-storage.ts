@@ -29,9 +29,14 @@ export async function uploadAudioFromClient(blob: Blob, filePath: string, user: 
         const downloadUrl = await getDownloadURL(snapshot.ref);
         console.log(`Client-side upload successful. URL: ${downloadUrl}`);
         return { publicUrl: downloadUrl, path: snapshot.ref.fullPath };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Client-side upload failed:", error);
+         if (error.code === 'storage/unauthorized' || error.message?.includes('CORS')) {
+            const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+            const detailedError = `Upload failed due to a CORS policy error. This is a server configuration issue. Please run the following command in your terminal to fix it: \`gsutil cors set cors.json gs://${bucketName}\``;
+            throw new Error(detailedError);
+        }
         // It's crucial to re-throw the error so the calling component knows about the failure.
-        throw new Error("Failed to upload audio to storage from client.");
+        throw new Error(`Failed to upload audio to storage from client: ${error.message}`);
     }
 }
