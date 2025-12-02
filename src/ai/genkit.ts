@@ -1,3 +1,4 @@
+
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { getFirebaseAdmin } from '@/firebase/admin';
@@ -9,7 +10,7 @@ getFirebaseAdmin();
 export const ai = genkit({
   plugins: [
     googleAI(),
-    firebase(), // Correctly use the firebase plugin
+    firebase(),
   ],
   model: 'googleai/gemini-2.5-flash',
 });
