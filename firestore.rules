@@ -57,6 +57,12 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
+
+    // UPLOADS collection: Only admins can write, signed-in users can read.
+    match /uploads/{uploadId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
     
     // KNOWLEDGE BASE collection: Signed-in can read, admin can write.
     match /knowledge/{chunkId} {
@@ -74,3 +80,4 @@ service cloud.firestore {
   }
 }
 
+    

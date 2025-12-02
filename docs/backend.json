@@ -371,6 +371,43 @@
         "lessonIds"
       ]
     },
+    "Upload": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Upload",
+      "type": "object",
+      "description": "Represents a file uploaded to Firebase Storage.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the upload record."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who uploaded the file."
+        },
+        "filePath": {
+          "type": "string",
+          "description": "The full path to the file in Firebase Storage."
+        },
+        "publicUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "The public URL to access the file."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the file was uploaded."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "filePath",
+        "publicUrl",
+        "createdAt"
+      ]
+    },
     "KnowledgeChunk": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "KnowledgeChunk",
@@ -442,6 +479,12 @@
         },
         "description": "Stores listening practice tests. Write access is restricted to admins."
     },
+    "/uploads/{uploadId}": {
+        "schema": {
+            "$ref": "#/entities/Upload"
+        },
+        "description": "Stores a record of every file uploaded to Firebase Storage. Write access is admin only."
+    },
     "/users/{userId}/submissions/{submissionId}": {
       "schema": {
         "$ref": "#/entities/Submission"
@@ -462,3 +505,5 @@
     }
   }
 }
+
+    

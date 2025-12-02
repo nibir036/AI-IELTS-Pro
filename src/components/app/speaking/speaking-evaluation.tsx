@@ -171,6 +171,15 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
       const uniqueFilename = `${uuidv4()}.wav`;
       const filePath = `speaking-submissions/${authUser.uid}/${uniqueFilename}`;
       const audioUrl = await uploadAudioFromClient(audioBlob, filePath);
+
+      // Create a record in the top-level 'uploads' collection
+      const uploadRef = doc(collection(firestore, 'uploads'));
+      setDocumentNonBlocking(uploadRef, {
+          userId: authUser.uid,
+          filePath: filePath,
+          publicUrl: audioUrl,
+          createdAt: serverTimestamp(),
+      });
       
       setIsUploading(false);
 
@@ -293,3 +302,5 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
     </div>
   );
 }
+
+    
