@@ -241,9 +241,8 @@ const contentFactoryFlow = ai.defineFlow(
     outputSchema: ProcessContentOutputSchema,
   },
   async (input) => {
-    // 1. Initialize Firebase Admin SDK
-    const adminApp = await getFirebaseAdmin();
-    const firestore = getAdminFirestore(adminApp);
+    // 1. Initialize Firebase Admin and get Firestore
+    const firestore = getAdminFirestore();
 
     // 2. Retrieve relevant knowledge from Firestore
     console.log("Searching knowledge base...");
@@ -416,5 +415,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
