@@ -1,10 +1,9 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow users to write to their own submission folder
+    // Allow users to read and write to their own submission folder
     match /speaking-submissions/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Allow public read for generated assets like lesson images and test audio
@@ -18,8 +17,10 @@ service firebase.storage {
       allow read: if true;
     }
     
-    // Allow admins to manage all files if needed
-    match /{allPaths=**} {
+    // Allow admins to manage all files if needed. This rule should be less broad
+    // or placed carefully to not override user-specific rules. For now, the user-specific
+    // rule for speaking-submissions will take precedence. A more specific admin rule is better.
+    match /admin-uploads/{allPaths=**} {
         allow read, write: if request.auth != null && request.auth.token.admin == true;
     }
   }
