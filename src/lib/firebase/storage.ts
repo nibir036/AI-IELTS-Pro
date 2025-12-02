@@ -1,7 +1,7 @@
 
 'use server';
 
-import { getStorage as getAdminStorage } from 'firebase-admin/storage';
+import { getAdminStorage } from 'firebase-admin/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { getFirebaseAdmin } from '@/firebase/admin'; 
 
@@ -11,14 +11,9 @@ async function uploadToStorage(
     contentType: string, 
     filePath: string
 ): Promise<string> {
-    const adminApp = await getFirebaseAdmin();
-    // Use environment variable for the bucket name for consistency and correctness
-    const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    if (!bucketName) {
-        throw new Error("Firebase Storage bucket name is not configured in environment variables.");
-    }
-    
-    const bucket = getAdminStorage(adminApp).bucket(bucketName);
+    // getFirebaseAdmin ensures the app is initialized with the correct bucket.
+    getFirebaseAdmin(); 
+    const bucket = getAdminStorage().bucket(); // No need to pass bucket name
     const buffer = Buffer.from(base64Data, 'base64');
     const file = bucket.file(filePath);
 
