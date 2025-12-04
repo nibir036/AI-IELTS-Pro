@@ -1,11 +1,14 @@
 'use server';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminStorage } from '@/firebase/admin';
+import { getFirebaseAdmin, getAdminStorage } from '@/firebase/admin';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
     try {
+        // Ensure Firebase Admin is initialized before using any of its services.
+        getFirebaseAdmin();
+
         const formData = await req.formData();
         const file = formData.get('audio') as Blob | null;
         const userId = formData.get('userId') as string | null;
@@ -35,7 +38,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ filePath: filePath }, { status: 200 });
 
     } catch (error: any) {
-        console.error('Error in /api/upload-speaking-audio route:', error);
-        return NextResponse.json({ error: error.message || 'An internal server error occurred.' }, { status: 500 });
+        console.error('[API/UPLOAD-SPEAKING-AUDIO] Error:', error);
+        // Ensure a clear JSON error response is always sent, even on failure.
+        return NextResponse.json(
+            { error: error.message || 'An internal server error occurred during file upload.' },
+            { status: 500 }
+        );
     }
 }
