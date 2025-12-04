@@ -25,6 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
