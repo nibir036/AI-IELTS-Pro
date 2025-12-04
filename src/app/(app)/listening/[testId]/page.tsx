@@ -28,6 +28,13 @@ type AnswerExplanations = Record<string, string>;
 
 // Memoize the AudioPlayer to prevent re-renders on parent state changes
 const AudioPlayer = React.memo(function AudioPlayer({ src }: { src: string }) {
+    if (!src) {
+        return (
+            <div className="flex items-center justify-center w-full h-14 bg-muted rounded-lg">
+                <p className="text-xs text-muted-foreground">Audio not available for this part.</p>
+            </div>
+        );
+    }
     return (
         <audio controls src={src} className="w-full">
             Your browser does not support the audio element.
@@ -357,8 +364,7 @@ function TestPageSkeleton() {
                 <Card className="flex flex-col h-full">
                     <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
                     <CardContent className="flex-1 space-y-4">
-                        <Skeleton className="h-24 w-full" />
-                        <Skeleton className="h-10 w-40" />
+                        <Skeleton className="h-14 w-full" />
                     </CardContent>
                 </Card>
                 <Card className="flex flex-col h-full">
@@ -402,3 +408,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
+
+    
