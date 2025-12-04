@@ -78,18 +78,18 @@ export default function CreateListeningTestPage() {
             
             await setDoc(doc(firestore, 'listeningTests', testId), listeningTest);
             
+            // Client-side toast after successful server action.
             const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-            if (!projectId) {
-                toast({
-                    title: 'Success!',
-                    description: `Listening test "${listeningTest.title}" has been created, but the project ID is missing for the direct link.`,
-                });
-            } else {
+            if (projectId) {
                  toast({
                     title: 'Success!',
-                    description: `Listening test "${listeningTest.title}" has been created without an audio file.`,
+                    description: `Listening test "${listeningTest.title}" has been created.`,
                     action: <OpenInFirebaseButton projectId={projectId} collection="listeningTests" docId={testId} />
+                });
+            } else {
+                toast({
+                    title: 'Success!',
+                    description: `Listening test "${listeningTest.title}" created. Project ID not found for Firebase link.`,
                 });
             }
            
