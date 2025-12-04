@@ -158,6 +158,10 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             return 'text-muted-foreground';
         };
 
+        const questionParts = (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && question.question.includes('____')
+            ? question.question.split('____')
+            : [question.question];
+
         return (
             <div key={question.id} className="space-y-4">
                  {question.instructions && (
@@ -171,7 +175,28 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                  <Card className={`p-4 ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
                     <div className="flex items-start gap-3 mb-4">
                         <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
-                        <p className="flex-1 font-medium">{question.question}</p>
+                        <div className="flex-1 font-medium">
+                            {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && questionParts.length > 1 ? (
+                                <p className="leading-relaxed">
+                                    {questionParts[0]}
+                                    <Controller
+                                        name={question.id as any}
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Input
+                                                {...field}
+                                                disabled={isGraded}
+                                                placeholder="Your answer"
+                                                className="inline-block w-40 h-7 p-1 mx-1 align-baseline"
+                                            />
+                                        )}
+                                    />
+                                    {questionParts[1]}
+                                </p>
+                            ) : (
+                                <p>{question.question}</p>
+                            )}
+                        </div>
                         {isGraded && (
                             isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
                         )}
@@ -195,7 +220,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                     </RadioGroup>
                                 )}
                                 
-                                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion') && (
+                                { (question.type === 'summary-completion') && (
                                     <div className="relative">
                                         <Input {...field} disabled={isGraded} placeholder="Your answer" />
                                         {isGraded && !isCorrect && (
@@ -248,21 +273,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         );
     }
     
-
-    const AudioControlCard = () => (
-        <Card>
-            <CardHeader>
-                <CardTitle>{test.title}</CardTitle>
-                <CardDescription>Listen to the audio and answer the questions as you go.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <audio controls src={test.audioUrl} className="w-full">
-                    Your browser does not support the audio element.
-                </audio>
-            </CardContent>
-        </Card>
-    );
-
     return (
         <FormProvider {...methods}>
             <form onSubmit={handleFormSubmit(onSubmit)}>
@@ -295,34 +305,32 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                             ))}
                         </TabsList>
                         
-                         <TabsContent value="part-1" className="mt-4">
-                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-32rem)]">
-                                 <AudioControlCard />
-                                <Card className="flex flex-col h-full">
-                                    <CardHeader><CardTitle>Questions {test.parts[0].questions[0].id.replace('q','')} - {test.parts[0].questions[test.parts[0].questions.length - 1].id.replace('q','')}</CardTitle></CardHeader>
-                                    <CardContent className="flex-1 overflow-hidden">
-                                        <ScrollArea className="h-full pr-4">
-                                            <div className="space-y-4">
-                                                {test.parts[0].questions.map((q) => renderQuestion(q))}
-                                            </div>
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </TabsContent>
-
-                        {test.parts.slice(1).map((part) => (
+                        {test.parts.map((part) => (
                              <TabsContent key={part.part} value={`part-${part.part}`} className="mt-4">
-                                 <Card className="flex flex-col h-full">
-                                    <CardHeader><CardTitle>Questions {part.questions[0].id.replace('q','')} - {part.questions[part.questions.length - 1].id.replace('q','')}</CardTitle></CardHeader>
-                                    <CardContent className="flex-1 overflow-hidden">
-                                        <ScrollArea className="h-[calc(100vh-20rem)] pr-4">
-                                            <div className="space-y-4">
-                                                {part.questions.map((q) => renderQuestion(q))}
-                                            </div>
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-32rem)]">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>{part.title || `Part ${part.part}`}</CardTitle>
+                                            <CardDescription>Listen to the audio and answer the questions for this part.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <audio controls src={part.audioUrl} className="w-full">
+                                                Your browser does not support the audio element.
+                                            </audio>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="flex flex-col h-full">
+                                        <CardHeader><CardTitle>Questions</CardTitle></CardHeader>
+                                        <CardContent className="flex-1 overflow-hidden">
+                                            <ScrollArea className="h-full pr-4">
+                                                <div className="space-y-4">
+                                                    {part.questions.map((q) => renderQuestion(q))}
+                                                </div>
+                                            </ScrollArea>
+                                        </CardContent>
+                                    </Card>
+                                </div>
                             </TabsContent>
                         ))}
                     </Tabs>
@@ -386,5 +394,3 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
-
-    

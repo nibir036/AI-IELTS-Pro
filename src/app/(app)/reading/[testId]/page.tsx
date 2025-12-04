@@ -213,6 +213,10 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         }
 
         const options = getOptionsForType(question);
+        
+        const questionParts = (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && question.question.includes('____')
+            ? question.question.split('____')
+            : [question.question];
 
         return (
              <div key={question.id} className="space-y-4">
@@ -251,7 +255,30 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     <div className="p-4 rounded-lg border bg-background">
                         <div className="flex items-start gap-3 mb-4">
                             <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
-                            <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
+                            
+                            <div className="flex-1 font-medium">
+                                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && questionParts.length > 1 ? (
+                                    <p className="leading-relaxed">
+                                        {questionParts[0]}
+                                        <Controller
+                                            name={question.id as any}
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Input
+                                                    {...field}
+                                                    disabled={isGraded}
+                                                    placeholder="answer"
+                                                    className="inline-block w-40 h-7 p-1 mx-1 align-baseline"
+                                                />
+                                            )}
+                                        />
+                                        {questionParts[1]}
+                                    </p>
+                                ) : (
+                                    <p dangerouslySetInnerHTML={{ __html: question.question }} />
+                                )}
+                            </div>
+
                             {isGraded && (
                                 isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
                             )}
@@ -275,7 +302,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                         </RadioGroup>
                                     )}
 
-                                    {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'matching-information' || question.type === 'matching-headings') && (
+                                    {(question.type === 'matching-information' || question.type === 'matching-headings') && (
                                         <div className="relative">
                                             <Input {...field} disabled={isGraded} placeholder="Your answer"/>
                                             {isGraded && !isCorrect && (
@@ -469,5 +496,3 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
         </div>
     );
 }
-
-    
