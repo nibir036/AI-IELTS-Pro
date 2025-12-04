@@ -13,93 +13,24 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, Play, Pause, Loader2, Lightbulb, List, Headphones, Info } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, Loader2, Lightbulb, List, Headphones, Info } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import type WaveSurfer from 'wavesurfer.js';
 
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
-
-
-function AudioPlayer({ 
-    url, 
-    onReady,
-    onPlay,
-    onPause,
-    onFinish,
-}: { 
-    url: string;
-    onReady: (player: WaveSurfer) => void;
-    onPlay: () => void;
-    onPause: () => void;
-    onFinish: () => void;
-}) {
-    const waveformRef = React.useRef<HTMLDivElement>(null);
-    const wavesurferRef = React.useRef<WaveSurfer | null>(null);
-
-    React.useEffect(() => {
-        if (!waveformRef.current) return;
-        let isMounted = true;
-
-        import('wavesurfer.js').then(module => {
-            if (!isMounted) return;
-            const WaveSurfer = module.default;
-
-            const wavesurfer = WaveSurfer.create({
-                container: waveformRef.current!,
-                waveColor: 'hsl(var(--muted-foreground))',
-                progressColor: 'hsl(var(--primary))',
-                barWidth: 2,
-                barGap: 1,
-                barRadius: 2,
-                height: 80,
-                url: url,
-            });
-            wavesurferRef.current = wavesurfer;
-
-            wavesurfer.on('ready', () => onReady(wavesurfer));
-            wavesurfer.on('play', onPlay);
-            wavesurfer.on('pause', onPause);
-            wavesurfer.on('finish', onFinish);
-        });
-
-        return () => {
-            isMounted = false;
-            wavesurferRef.current?.destroy();
-        };
-    }, [url, onReady, onPlay, onPause, onFinish]);
-
-    return <div ref={waveformRef} className="w-full h-24 bg-muted rounded-lg" />;
-}
-
 
 function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
-
-    const wavesurferRef = React.useRef<WaveSurfer | null>(null);
-    const [isPlayerReady, setIsPlayerReady] = React.useState(false);
-    const [isPlaying, setIsPlaying] = React.useState(false);
-    const [hasPlayed, setHasPlayed] = React.useState(false);
     const startTimeRef = React.useRef<Date | null>(null);
 
     const [isGraded, setIsGraded] = React.useState(false);
@@ -107,6 +38,10 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const [explanations, setExplanations] = React.useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+    React.useEffect(() => {
+        startTimeRef.current = new Date();
+    }, []);
 
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
     const totalQuestions = allQuestions.length;
@@ -119,23 +54,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const userAnswers = watch();
     const answeredQuestions = Object.values(userAnswers).filter(val => val && val.trim() !== '').length;
     const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
-
-    const handlePlayerReady = (player: WaveSurfer) => {
-        wavesurferRef.current = player;
-        setIsPlayerReady(true);
-    };
-
-    const handlePlayPause = () => {
-        if (wavesurferRef.current) {
-            wavesurferRef.current.playPause();
-            if (!hasPlayed) {
-                setHasPlayed(true);
-                if (!startTimeRef.current) {
-                    startTimeRef.current = new Date();
-                }
-            }
-        }
-    };
     
     const onSubmit = async (data: UserAnswers) => {
         if (!test) return;
@@ -335,42 +253,12 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         <Card>
             <CardHeader>
                 <CardTitle>{test.title}</CardTitle>
-                <CardDescription>Listen to the audio. You will only hear it once. Answer the questions as you listen.</CardDescription>
+                <CardDescription>Listen to the audio and answer the questions as you go.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <AudioPlayer
-                    url={test.audioUrl}
-                    onReady={handlePlayerReady}
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                    onFinish={() => setIsPlaying(false)}
-                />
-                {!isPlayerReady ? (
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin"/>
-                        <p>Loading audio player...</p>
-                    </div>
-                ) : (
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                             <Button onClick={(e) => { if(hasPlayed) { e.preventDefault(); } }} disabled={isPlaying || hasPlayed} className="w-full sm:w-auto">
-                                {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
-                                {hasPlayed ? 'Audio can only be played once' : isPlaying ? 'Playing...' : 'Play Audio'}
-                            </Button>
-                        </AlertDialogTrigger>
-                         <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Start the listening test?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                In an real IELTS test, the audio is played only once. Click "Play" to start the test. You will not be able to pause or replay the audio.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogAction onClick={handlePlayPause}>Play</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                )}
+                <audio controls src={test.audioUrl} className="w-full">
+                    Your browser does not support the audio element.
+                </audio>
             </CardContent>
         </Card>
     );
