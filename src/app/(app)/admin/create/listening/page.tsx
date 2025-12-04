@@ -17,8 +17,6 @@ import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { OpenInFirebaseButton } from '@/components/app/admin/open-in-firebase-button';
-
 
 const questionSchema = z.object({
     id: z.string(),
@@ -78,20 +76,10 @@ export default function CreateListeningTestPage() {
             
             await setDoc(doc(firestore, 'listeningTests', testId), listeningTest);
             
-            // Client-side toast after successful server action.
-            const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-            if (projectId) {
-                 toast({
-                    title: 'Success!',
-                    description: `Listening test "${listeningTest.title}" has been created.`,
-                    action: <OpenInFirebaseButton projectId={projectId} collection="listeningTests" docId={testId} />
-                });
-            } else {
-                toast({
-                    title: 'Success!',
-                    description: `Listening test "${listeningTest.title}" created. Project ID not found for Firebase link.`,
-                });
-            }
+            toast({
+                title: 'Success!',
+                description: `Listening test "${listeningTest.title}" has been created.`,
+            });
            
             router.push('/listening');
 
