@@ -1,231 +1,35 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
-import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
-
-const questionSchema = z.object({
-    id: z.string(),
-    question: z.string().min(1, "Question text is required."),
-    type: z.enum(['multiple-choice', 'fill-in-the-blank']),
-    options: z.array(z.string()).optional(),
-    answer: z.string().min(1, "Answer is required."),
-});
-
-const formSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters long."),
-  transcript: z.string().min(50, 'A transcript of at least 50 characters must be provided.'),
-  questions: z.array(questionSchema).min(1, "At least one question is required."),
-});
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Wrench } from 'lucide-react';
 
 export default function CreateListeningTestPage() {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const { toast } = useToast();
-    const { firestore } = useFirebase();
-    const router = useRouter();
-
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            title: '',
-            transcript: '',
-            questions: [],
-        },
-    });
-
-    const { fields, append, remove } = useFieldArray({
-        control: form.control,
-        name: "questions",
-    });
-
-    const onSubmit = async (values: z.infer<typeof formSchema>) => {
-        if (!firestore) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not available.' });
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            const testId = `L_AC_${uuidv4().slice(0, 4).toUpperCase()}`;
-            
-            const listeningTest = {
-                id: testId,
-                title: values.title,
-                skill: 'Listening' as const,
-                audioUrl: '', // Leaving this blank for you to fill in manually
-                transcript: values.transcript,
-                questions: values.questions.map(q => ({
-                    ...q,
-                    options: q.type === 'multiple-choice' ? (q.options || []) : undefined,
-                })),
-            };
-            
-            await setDoc(doc(firestore, 'listeningTests', testId), listeningTest);
-            
-            toast({
-                title: 'Success!',
-                description: `Listening test "${listeningTest.title}" has been created.`,
-            });
-           
-            router.push('/listening');
-
-        } catch (error: any) {
-            console.error('Error creating listening test:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Creation Failed',
-                description: error.message || 'Could not create the listening test. Please try again.',
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
-    const questionType = form.watch('questions');
-
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Create Listening Test (Transcript Only)</h1>
-                <p className="text-muted-foreground">
-                Create a test structure from a transcript. You will add the audio URL manually in the Firebase Console.
-                </p>
-            </div>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                     <Card>
-                        <CardHeader><CardTitle>Test Details</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                             <FormField
-                                control={form.control}
-                                name="title"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Test Title</FormLabel>
-                                    <FormControl><Input placeholder="e.g., Conversation about University Life" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="transcript"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Audio Transcript</FormLabel>
-                                    <FormControl><Textarea placeholder="Paste the full audio transcript here." {...field} className="min-h-[200px]" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Questions</CardTitle>
-                            <CardDescription>Add questions for the test. The IDs will be generated automatically.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {fields.map((field, index) => (
-                                <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
-                                    <h4 className="font-semibold">Question {index + 1}</h4>
-                                     <FormField
-                                        control={form.control}
-                                        name={`questions.${index}.question`}
-                                        render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Question Text</FormLabel>
-                                            <FormControl><Input placeholder="Enter the question" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                        )}
-                                    />
-                                    <div className="grid grid-cols-2 gap-4">
-                                         <FormField
-                                            control={form.control}
-                                            name={`questions.${index}.type`}
-                                            render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Question Type</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                                                    <SelectItem value="fill-in-the-blank">Fill-in-the-blank</SelectItem>
-                                                </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
-                                         <FormField
-                                            control={form.control}
-                                            name={`questions.${index}.answer`}
-                                            render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Correct Answer</FormLabel>
-                                                <FormControl><Input placeholder="Enter the correct answer" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
-                                    </div>
-                                     {questionType[index]?.type === 'multiple-choice' && (
-                                        <FormField
-                                            control={form.control}
-                                            name={`questions.${index}.options`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Options (comma-separated)</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Option A, Option B, Option C"
-                                                            onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()))}
-                                                            value={Array.isArray(field.value) ? field.value.join(', ') : ''}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    )}
-                                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => remove(index)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                             <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => append({ id: `q${fields.length + 1}`, question: '', type: 'multiple-choice', options: [], answer: '' })}
-                            >
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Question
-                            </Button>
-                        </CardContent>
-                    </Card>
-                    
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Create Listening Test
+        <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[60vh]">
+            <Card className="w-full max-w-lg text-center">
+                <CardHeader>
+                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                        <Wrench className="h-8 w-8 text-primary" />
+                    </div>
+                    <CardTitle className="mt-4 text-2xl">AI Generation Recommended</CardTitle>
+                    <CardDescription className="text-base">
+                        Due to server timeouts with long audio generation, listening tests are best created using the AI Content Factory from a transcript.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="mb-6 text-sm text-muted-foreground">
+                       Please use the AI Content Factory on the main Admin Dashboard to generate new listening tests from a raw transcript. You can then add the audio URL manually in the Firebase Console.
+                    </p>
+                    <Button asChild>
+                        <Link href="/admin">Back to Admin Dashboard</Link>
                     </Button>
-                </form>
-            </Form>
+                </CardContent>
+            </Card>
         </div>
-    )
+    );
 }
+
+    

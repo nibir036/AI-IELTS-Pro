@@ -215,6 +215,14 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     *   Questions 33-36: "yes-no-not-given". Instructions: "Do the following statements agree with the claims of the writer in Reading Passage 3? Write YES, NO, or NOT GIVEN."
     *   Questions 37-40: "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field for the first question of this block (q37). Instructions: "Complete each sentence with the correct ending, A-G, below."
 
+#### IF contentType is 'ListeningTest':
+*   **Role:** IELTS Listening Test Creator.
+*   **Task:** The 'rawText' will contain the full transcript for the listening test. Generate a complete IELTS-style Listening Test based on this transcript.
+*   **Structure Requirements:**
+    1.  **Questions:** Create 10-15 varied questions that test comprehension of the provided transcript. Use a mix of 'multiple-choice' and 'fill-in-the-blank' question types.
+    2.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". **Do NOT attempt to generate audio.**
+*   **Output Format:** Your JSON output MUST be an object that conforms to the ListeningTest schema.
+
 ---
 ### GENERAL RULES ###
 
@@ -358,27 +366,9 @@ const contentFactoryFlow = ai.defineFlow(
     }
 
     if (input.contentType === 'ListeningTest' && 'transcript' in structuredContent && 'audioUrl' in structuredContent) {
-        console.log("Generating audio for listening test...");
-        
-        try {
-            const audioResult = await generateAudioFromText(structuredContent.transcript);
-             if (audioResult.audioDataUri.startsWith('data:')) {
-                const [header, base64Data] = audioResult.audioDataUri.split(',');
-                const contentType = header.split(':')[1].split(';')[0];
-                
-                const testId = structuredContent.id;
-                const filePath = `listeningTests/${testId}/${testId}.wav`;
-                console.log(`Uploading ${contentType} to Firebase Storage at path: ${filePath}`);
-                
-                const publicUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
-                structuredContent.audioUrl = publicUrl;
-            } else {
-                 throw new Error("Malformed data URI from TTS flow.");
-            }
-        } catch (audioError) {
-            console.error("Error during audio generation or upload:", audioError);
-            structuredContent.audioUrl = "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3";
-        }
+      // Bypassing audio generation for long transcripts to avoid timeouts.
+      // The prompt now instructs the AI to use a placeholder URL directly.
+      console.log("Bypassing audio generation for Listening Test. Using placeholder URL.");
     }
 
      // Final step for single-object content types: save to Firestore
@@ -416,3 +406,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
