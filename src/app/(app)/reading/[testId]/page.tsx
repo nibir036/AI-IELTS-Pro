@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
-import { useForm, FormProvider, Controller, useFormContext } from 'react-hook-form';
+import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, increment } from 'firebase/firestore';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
@@ -26,48 +26,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
-
-function SummaryCompletionQuestion({ question }: { question: ReadingQuestion }) {
-    const { control, formState: { isSubmitted: isGraded } } = useFormContext();
-    
-    // This regex looks for placeholders like __(27)__ and captures the number inside.
-    const parts = question.question.split(/_{2}\s*\((\d+)\)\s*_{2}/g);
-
-    const questionTextWithInputs = parts.map((part, index) => {
-        // If the part is a number (captured group), it's a blank.
-        if (index % 2 === 1) {
-            const questionNumber = part;
-            const questionId = `q${questionNumber}`;
-            return (
-                 <Controller
-                    key={questionId}
-                    name={questionId}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                         <Input
-                            {...field}
-                            disabled={isGraded}
-                            placeholder={`${questionNumber}`}
-                            className="inline-block w-24 h-7 p-1 mx-1 align-baseline"
-                         />
-                    )}
-                />
-            );
-        }
-        // Otherwise, it's a text segment.
-        return <span key={index}>{part}</span>;
-    });
-
-    return (
-        <div className="p-4 rounded-lg border bg-background">
-            <p className="leading-relaxed">{questionTextWithInputs}</p>
-        </div>
-    );
-}
-
-
-
 function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
@@ -82,13 +40,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
-    const totalQuestions = allQuestions.reduce((acc, q) => {
-         if (q.type === 'summary-completion') {
-            const numBlanks = (q.question.match(/__\(\d+\)__/g) || []).length;
-            return acc + numBlanks;
-        }
-        return acc + 1;
-    }, 0);
+    const totalQuestions = allQuestions.length;
 
 
     const methods = useForm<UserAnswers>({
@@ -109,27 +61,16 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
         let correctCount = 0;
         allQuestions.forEach(q => {
-            if (q.type === 'summary-completion') {
-                 const correctAnswers = q.answer.split(',').map(a => a.trim().toLowerCase());
-                 const questionNumbers = q.question.match(/__\((\d+)\)__/g)?.map(m => `q${m.match(/\d+/)?.[0]}`) || [];
-                 questionNumbers.forEach((qid, index) => {
-                     if (data[qid]?.trim().toLowerCase() === correctAnswers[index]) {
-                         correctCount++;
-                     }
-                 });
-            } else {
-                 const userAnswer = data[q.id] || '';
-                 const isCorrect = userAnswer.trim().toLowerCase() === q.answer.toLowerCase();
-                if (isCorrect) {
-                    correctCount++;
-                }
+            const userAnswer = data[q.id] || '';
+            const isCorrect = userAnswer.trim().toLowerCase() === q.answer.toLowerCase();
+            if (isCorrect) {
+                correctCount++;
             }
         });
         const finalScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 9.0 : 0;
         setScore(finalScore);
         
         const incorrectQuestions = allQuestions.filter(q => {
-            if (q.type === 'summary-completion') return false; // Handled separately or skipped for now
             const userAnswer = data[q.id] || '';
             return userAnswer.trim().toLowerCase() !== q.answer.toLowerCase();
         });
@@ -213,10 +154,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         }
 
         const options = getOptionsForType(question);
-        
-        const questionParts = (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && question.question.includes('____')
-            ? question.question.split('____')
-            : [question.question];
 
         return (
              <div key={question.id} className="space-y-4">
@@ -238,99 +175,59 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                         )}
                     </div>
                 )}
-                 
-                 {question.type === 'summary-completion' ? (
-                    <>
-                        {question.answerBox && (
-                           <div className="bg-muted/50 p-3 rounded-lg border text-sm text-foreground">
-                             <p className="mb-2 font-semibold">Words to choose from:</p>
-                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-x-4 gap-y-1">
-                                {question.answerBox.map((opt, idx) => <p key={idx} className="text-xs text-muted-foreground">{opt}</p>)}
-                             </div>
-                           </div>
-                        )}
-                        <SummaryCompletionQuestion question={question} />
-                    </>
-                 ) : (
-                    <div className="p-4 rounded-lg border bg-background">
-                        <div className="flex items-start gap-3 mb-4">
-                            <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
-                            
-                            <div className="flex-1 font-medium">
-                                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && questionParts.length > 1 ? (
-                                    <p className="leading-relaxed">
-                                        {questionParts[0]}
-                                        <Controller
-                                            name={question.id as any}
-                                            control={control}
-                                            render={({ field }) => (
-                                                <Input
-                                                    {...field}
-                                                    disabled={isGraded}
-                                                    placeholder="answer"
-                                                    className="inline-block w-40 h-7 p-1 mx-1 align-baseline"
-                                                />
-                                            )}
-                                        />
-                                        {questionParts[1]}
-                                    </p>
-                                ) : (
-                                    <p dangerouslySetInnerHTML={{ __html: question.question }} />
-                                )}
-                            </div>
-
-                            {isGraded && (
-                                isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
-                            )}
-                        </div>
-                        
-                        <Controller
-                            name={question.id as any}
-                            control={control}
-                            render={({ field }) => (
-                                <div className="pl-10">
-                                    {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-sentence-endings') && (
-                                        <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
-                                            {options.map((option, index) => (
-                                                <div key={index} className="flex items-center space-x-2">
-                                                    <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                                                    <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
-                                                        {option}
-                                                    </Label>
-                                                </div>
-                                            ))}
-                                        </RadioGroup>
-                                    )}
-
-                                    {(question.type === 'matching-information' || question.type === 'matching-headings') && (
-                                        <div className="relative">
-                                            <Input {...field} disabled={isGraded} placeholder="Your answer"/>
-                                            {isGraded && !isCorrect && (
-                                                <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        />
-                        
-                        {isGraded && !isCorrect && (
-                            <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
-                                <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                                <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                    {isGeneratingExplanations && !explanation ? (
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <Loader2 className="h-3 w-3 animate-spin"/>
-                                            <span>Generating explanation...</span>
-                                        </div>
-                                    ) : (
-                                        <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
-                                    )}
-                                </div>
-                            </div>
+                <div className="p-4 rounded-lg border bg-background">
+                     <div className="flex items-start gap-3 mb-4">
+                        <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
+                         <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
+                         {isGraded && (
+                            isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
                         )}
                     </div>
-                 )}
+                    <Controller
+                        name={question.id as any}
+                        control={control}
+                        render={({ field }) => (
+                            <div className="pl-10">
+                                {(question.type === 'multiple-choice' || question.type === 'true-false-not-given' || question.type === 'yes-no-not-given' || question.type === 'matching-sentence-endings') && (
+                                    <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                                        {options.map((option, index) => (
+                                            <div key={index} className="flex items-center space-x-2">
+                                                <RadioGroupItem value={option} id={`${question.id}-${index}`} />
+                                                <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
+                                                    {option}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </RadioGroup>
+                                )}
+
+                                 {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion' || question.type === 'matching-information' || question.type === 'matching-headings') && (
+                                    <div className="relative">
+                                        <Input {...field} disabled={isGraded} placeholder="Your answer"/>
+                                        {isGraded && !isCorrect && (
+                                            <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    />
+                     {isGraded && !isCorrect && (
+                        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
+                            <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                {isGeneratingExplanations && !explanation ? (
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <Loader2 className="h-3 w-3 animate-spin"/>
+                                        <span>Generating explanation...</span>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     };
