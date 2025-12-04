@@ -132,9 +132,9 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         setIsSubmitting(false);
     };
 
-    const renderQuestion = (question: ReadingQuestion) => {
+    const renderQuestion = (question: ReadingQuestion, index: number) => {
         const userAnswer = userAnswers[question.id];
-        const questionNumber = parseInt(question.id.replace('q', ''));
+        const questionNumber = index + 1;
         const isCorrect = isGraded ? (
              (userAnswer || '').trim().toLowerCase() === question.answer.toLowerCase()
        ) : undefined;
@@ -312,7 +312,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                     <CardContent className="flex-1 overflow-hidden">
                                         <ScrollArea className="h-full pr-4">
                                              <div className="space-y-4">
-                                                {part.questions.map((q) => renderQuestion(q))}
+                                                {part.questions.map((q, index) => renderQuestion(q, allQuestions.findIndex(aq => aq.id === q.id)))}
                                             </div>
                                         </ScrollArea>
                                     </CardContent>

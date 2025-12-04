@@ -141,8 +141,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     };
 
 
-    const renderQuestion = (question: ListeningQuestion) => {
-        const questionNumber = parseInt(question.id.replace('q', ''));
+    const renderQuestion = (question: ListeningQuestion, index: number) => {
+        const questionNumber = index + 1;
         const userAnswer = userAnswers[question.id] || '';
         const isCorrect = isGraded ? (
              (question.type === 'fill-in-the-blank' || question.type === 'note-completion') 
@@ -325,7 +325,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <CardContent className="flex-1 overflow-hidden">
                                             <ScrollArea className="h-full pr-4">
                                                 <div className="space-y-4">
-                                                    {part.questions.map((q) => renderQuestion(q))}
+                                                    {part.questions.map((q, index) => renderQuestion(q, allQuestions.findIndex(aq => aq.id === q.id)))}
                                                 </div>
                                             </ScrollArea>
                                         </CardContent>
