@@ -18,6 +18,8 @@ import { useRouter } from 'next/navigation';
 import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { OpenInFirebaseButton } from '@/components/app/admin/open-in-firebase-button';
+import { getProjectId } from '@/firebase/admin-actions';
+
 
 const questionSchema = z.object({
     id: z.string(),
@@ -62,12 +64,7 @@ export default function CreateListeningTestPage() {
         setIsSubmitting(true);
         try {
             const testId = `L_AC_${uuidv4().slice(0, 4).toUpperCase()}`;
-            const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-            if (!projectId) {
-                throw new Error("Firebase Project ID is not configured in environment variables.");
-            }
-
+            
             const listeningTest = {
                 id: testId,
                 title: values.title,
@@ -81,6 +78,8 @@ export default function CreateListeningTestPage() {
             };
             
             await setDoc(doc(firestore, 'listeningTests', testId), listeningTest);
+
+            const projectId = await getProjectId();
             
             toast({
                 title: 'Success!',

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -18,6 +19,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { FileInput } from '@/components/ui/file-input';
 import { uploadImageToStorage } from '@/lib/firebase/storage';
 import { blobToBase64 } from '@/lib/utils';
+import { getProjectId } from '@/firebase/admin-actions';
+import { OpenInFirebaseButton } from '@/components/app/admin/open-in-firebase-button';
 
 const formSchema = z.object({
   testType: z.enum(['IELTS-Academic', 'IELTS-General', 'PTE']),
@@ -88,10 +91,13 @@ export default function CreateWritingTestPage() {
             };
 
             await setDoc(doc(firestore, 'mockTests', testId), newTest);
+            
+            const projectId = await getProjectId();
 
             toast({
                 title: 'Success!',
                 description: `Writing test "${testId}" has been created.`,
+                action: <OpenInFirebaseButton projectId={projectId} collection="mockTests" docId={testId} />
             });
             router.push('/writing');
         } catch (error) {
