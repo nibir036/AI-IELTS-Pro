@@ -195,24 +195,24 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'ReadingTest':
 *   **Role:** Act as a superior grand master level IELTS Exam Content Creator.
-*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Topic 1; Topic 2; Topic 3"). Generate a Full IELTS Academic Reading Test with 3 distinct passages and 40 questions in total.
+*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Topic 1; Topic 2; Topic 3"). Generate a Full IELTS Academic Reading Test with 3 distinct passages and **EXACTLY 40 questions in total**.
 *   **Strict Formatting Rules:**
     *   The final JSON output MUST contain 3 items in the 'parts' array.
     *   Each part must contain a passage with paragraphs separated by double newlines (\\n\\n).
     *   Question IDs must be unique across the entire test (q1, q2, ... q40).
     *   Each question or group of questions requiring instructions MUST have a complete \`instructions\` field.
-*   **Passage 1 (Factual Text - Questions 1-13):**
+*   **Passage 1 (Factual Text - 13 Questions):**
     *   Topic: Use the first topic from the 'rawText' input.
     *   Length: 700-750 words.
     *   Questions 1-7: "note-completion". Instructions: "Complete the notes below. Choose NO MORE THAN TWO WORDS from the passage for each answer."
     *   Questions 8-13: "true-false-not-given". Instructions: "Do the following statements agree with the information given in Reading Passage 1? Write TRUE, FALSE, or NOT GIVEN."
-*   **Passage 2 (Discursive Text - Questions 14-26):**
+*   **Passage 2 (Discursive Text - 13 Questions):**
     *   Topic: Use the second topic from the 'rawText' input.
     *   Length: 750-800 words.
     *   Questions 14-19: "matching-headings". Provide a list of 8 headings in the 'options' field for the first question (q14). The question's text should be the paragraph identifier (e.g., "Paragraph A"). Instructions: "Reading Passage 2 has six paragraphs, A-F. Choose the correct heading for each paragraph from the list of headings below."
     *   Questions 20-23: "matching-information". Instructions: "Look at the following statements (Questions 20-23) and the paragraphs of Reading Passage 2. Match each statement with the correct paragraph, A-F." The 'answer' for each should be a single letter (e.g., "A").
     *   Questions 24-26: "multiple-choice". Instructions: "Choose the correct letter, A, B, C or D."
-*   **Passage 3 (Abstract Text - Questions 27-40):**
+*   **Passage 3 (Abstract Text - 14 Questions):**
     *   Topic: Use the third topic from the 'rawText' input.
     *   Length: 850-900 words.
     *   Questions 27-32: "summary-completion". This MUST be a single question object with id "q27". The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answer' field must be a single, comma-separated string of the correct words.
@@ -223,10 +223,10 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'ListeningTest':
 *   **Role:** IELTS Listening Test Creator.
-*   **Task:** The 'rawText' will contain the full transcript for a 4-part listening test. The sections will be clearly marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
-*   **Structure Requirements:**
+*   **Task:** The 'rawText' will contain the full transcript for a 4-part listening test. The sections will be clearly marked (e.g., "Section 1:", "Section 2:"). Generate a complete, **40-question** IELTS-style Listening Test based on this transcript.
+*   **Strict Formatting Rules:**
     1.  **Parse Sections:** Identify the 4 distinct sections in the provided transcript.
-    2.  **Generate Questions:** Create exactly 10 questions for each section, for a total of 40 questions.
+    2.  **Generate EXACTLY 40 Questions:** Create exactly 10 questions for each of the 4 sections.
     3.  **Vary Question Types:** Use a variety of question types appropriate for each section (e.g., note-completion for Section 1, multiple-choice for Section 3, summary-completion for Section 4).
     4.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". **Do NOT attempt to generate audio.**
 *   **Output Format:** Your JSON output MUST be an object that conforms to the ListeningTest schema. It MUST have a 'parts' array with exactly 4 items. Each item in the array corresponds to one section of the test and must contain its segment of the transcript and its 10 questions.
@@ -414,7 +414,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
 
     

@@ -8,7 +8,7 @@ import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
 import type { ListeningTest, ListeningQuestion } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';

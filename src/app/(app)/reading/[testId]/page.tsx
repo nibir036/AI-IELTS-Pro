@@ -8,7 +8,7 @@ import { useForm, FormProvider, Controller, useFormContext } from 'react-hook-fo
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, increment } from 'firebase/firestore';
 import type { ReadingTest, ReadingQuestion } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -22,7 +22,6 @@ import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
@@ -470,8 +469,5 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
         </div>
     );
 }
-
-
-    
 
     
