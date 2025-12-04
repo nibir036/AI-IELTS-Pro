@@ -48,8 +48,6 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
     let allQuestions: (ReadingQuestion | ListeningQuestion)[] = [];
     if ('parts' in test && Array.isArray(test.parts)) {
         allQuestions = test.parts.flatMap(p => p.questions);
-    } else if ('questions' in test && Array.isArray(test.questions)) {
-        allQuestions = test.questions;
     }
 
 
@@ -87,7 +85,7 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
                             <p className="flex-1 font-medium">{q.question}</p>
                             </div>
 
-                            {(q.type === 'multiple-choice' || q.type === 'true-false-not-given' || q.type === 'yes-no-not-given' || q.type === 'matching-headings' || q.type === 'matching-sentence-endings') && (
+                            {(q.type === 'multiple-choice' || q.type === 'true-false-not-given' || q.type === 'yes-no-not-given' || q.type === 'matching-headings' || q.type === 'matching-sentence-endings') && q.options && (
                                 <RadioGroup value={userAnswer} disabled>
                                     {q.options?.map((option, index) => (
                                     <div key={index} className="flex items-center space-x-2">
@@ -258,3 +256,5 @@ function SubmissionSkeleton() {
     </div>
   );
 }
+
+    

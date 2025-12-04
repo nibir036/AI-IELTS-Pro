@@ -97,13 +97,19 @@ const ReadingTestSchema = z.object({
   parts: z.array(ReadingTestPartSchema),
 });
 
+const ListeningTestPartSchema = z.object({
+    part: z.number(),
+    title: z.string(),
+    transcript: z.string().describe("The transcript for this specific part of the test."),
+    questions: z.array(PracticeQuestionSchema),
+});
+
 const ListeningTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., L_AC_p9q3."),
     title: z.string(),
     skill: z.enum(["Listening"]),
     audioUrl: z.string().url().describe("A placeholder URL. This will be replaced by the real URL after upload."),
-    transcript: z.string().describe("The full transcript of the audio."),
-    questions: z.array(PracticeQuestionSchema),
+    parts: z.array(ListeningTestPartSchema).describe("An array of 4 parts, each with its own transcript segment and questions."),
 });
 
 const WritingTestSchema = z.object({
@@ -217,11 +223,13 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'ListeningTest':
 *   **Role:** IELTS Listening Test Creator.
-*   **Task:** The 'rawText' will contain the full transcript for the listening test. Generate a complete IELTS-style Listening Test based on this transcript.
+*   **Task:** The 'rawText' will contain the full transcript for a 4-part listening test. The sections will be clearly marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
 *   **Structure Requirements:**
-    1.  **Questions:** Create 10-15 varied questions that test comprehension of the provided transcript. Use a mix of 'multiple-choice' and 'fill-in-the-blank' question types.
-    2.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". **Do NOT attempt to generate audio.**
-*   **Output Format:** Your JSON output MUST be an object that conforms to the ListeningTest schema.
+    1.  **Parse Sections:** Identify the 4 distinct sections in the provided transcript.
+    2.  **Generate Questions:** Create exactly 10 questions for each section, for a total of 40 questions.
+    3.  **Vary Question Types:** Use a variety of question types appropriate for each section (e.g., note-completion for Section 1, multiple-choice for Section 3, summary-completion for Section 4).
+    4.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". **Do NOT attempt to generate audio.**
+*   **Output Format:** Your JSON output MUST be an object that conforms to the ListeningTest schema. It MUST have a 'parts' array with exactly 4 items. Each item in the array corresponds to one section of the test and must contain its segment of the transcript and its 10 questions.
 
 ---
 ### GENERAL RULES ###
@@ -365,7 +373,7 @@ const contentFactoryFlow = ai.defineFlow(
         console.log("Image generation for lesson blocks complete.");
     }
 
-    if (input.contentType === 'ListeningTest' && 'transcript' in structuredContent && 'audioUrl' in structuredContent) {
+    if (input.contentType === 'ListeningTest' && 'parts' in structuredContent) {
       // Bypassing audio generation for long transcripts to avoid timeouts.
       // The prompt now instructs the AI to use a placeholder URL directly.
       console.log("Bypassing audio generation for Listening Test. Using placeholder URL.");
@@ -406,5 +414,7 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
 
     

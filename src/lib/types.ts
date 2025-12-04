@@ -86,16 +86,23 @@ export interface ReadingTest {
 }
 
 
+export interface ListeningTestPart {
+    part: number;
+    title: string;
+    transcript: string;
+    questions: ListeningQuestion[];
+}
+
 export interface ListeningTest {
     id: string;
     title: string;
     skill: 'Listening';
     audioUrl: string;
-    transcript?: string; // Added optional transcript
-    questions: ListeningQuestion[];
+    parts: ListeningTestPart[];
 }
 
-export type ListeningQuestionType = 'multiple-choice' | 'fill-in-the-blank';
+
+export type ListeningQuestionType = 'multiple-choice' | 'fill-in-the-blank' | 'note-completion' | 'summary-completion';
 
 export interface ListeningQuestion {
     id: string;
@@ -168,5 +175,7 @@ export interface PredictTargetDateOutput {
     predictedDate: string;
     reasoning: string;
 }
+
+    
 
     

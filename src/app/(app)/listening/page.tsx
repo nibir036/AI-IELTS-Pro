@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -9,6 +10,12 @@ import type { ListeningTest } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+
+function getTotalQuestions(test: ListeningTest): number {
+    if (!test.parts) return 0;
+    return test.parts.reduce((total, part) => total + part.questions.length, 0);
+}
+
 
 export default function ListeningPage() {
   const { firestore } = useFirebase();
@@ -60,7 +67,7 @@ export default function ListeningPage() {
                 </CardHeader>
                 <CardContent className="flex-1">
                   <p className="text-sm text-muted-foreground">
-                    This practice test contains {test.questions.length} questions of various types to test your comprehension.
+                    This practice test contains {getTotalQuestions(test)} questions of various types to test your comprehension.
                   </p>
                 </CardContent>
                 <CardFooter>
@@ -89,3 +96,5 @@ export default function ListeningPage() {
     </div>
   );
 }
+
+    
