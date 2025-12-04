@@ -18,7 +18,6 @@ import { useRouter } from 'next/navigation';
 import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { OpenInFirebaseButton } from '@/components/app/admin/open-in-firebase-button';
-import { getProjectId } from '@/firebase/admin-actions';
 
 
 const questionSchema = z.object({
@@ -78,14 +77,22 @@ export default function CreateListeningTestPage() {
             };
             
             await setDoc(doc(firestore, 'listeningTests', testId), listeningTest);
-
-            const projectId = await getProjectId();
             
-            toast({
-                title: 'Success!',
-                description: `Listening test "${listeningTest.title}" has been created without an audio file.`,
-                action: <OpenInFirebaseButton projectId={projectId} collection="listeningTests" docId={testId} />
-            });
+            const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+            if (!projectId) {
+                toast({
+                    title: 'Success!',
+                    description: `Listening test "${listeningTest.title}" has been created, but the project ID is missing for the direct link.`,
+                });
+            } else {
+                 toast({
+                    title: 'Success!',
+                    description: `Listening test "${listeningTest.title}" has been created without an audio file.`,
+                    action: <OpenInFirebaseButton projectId={projectId} collection="listeningTests" docId={testId} />
+                });
+            }
+           
             router.push('/listening');
 
         } catch (error: any) {

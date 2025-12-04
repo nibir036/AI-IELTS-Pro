@@ -19,7 +19,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { FileInput } from '@/components/ui/file-input';
 import { uploadImageToStorage } from '@/lib/firebase/storage';
 import { blobToBase64 } from '@/lib/utils';
-import { getProjectId } from '@/firebase/admin-actions';
 import { OpenInFirebaseButton } from '@/components/app/admin/open-in-firebase-button';
 
 const formSchema = z.object({
@@ -92,13 +91,21 @@ export default function CreateWritingTestPage() {
 
             await setDoc(doc(firestore, 'mockTests', testId), newTest);
             
-            const projectId = await getProjectId();
+            const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-            toast({
-                title: 'Success!',
-                description: `Writing test "${testId}" has been created.`,
-                action: <OpenInFirebaseButton projectId={projectId} collection="mockTests" docId={testId} />
-            });
+             if (!projectId) {
+                toast({
+                    title: 'Success!',
+                    description: `Writing test "${testId}" has been created, but the project ID is missing for the direct link.`,
+                });
+            } else {
+                 toast({
+                    title: 'Success!',
+                    description: `Writing test "${testId}" has been created.`,
+                    action: <OpenInFirebaseButton projectId={projectId} collection="mockTests" docId={testId} />
+                });
+            }
+            
             router.push('/writing');
         } catch (error) {
             console.error('Error creating writing test:', error);
