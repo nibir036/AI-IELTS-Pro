@@ -26,6 +26,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
+// Memoize the AudioPlayer to prevent re-renders on parent state changes
+const AudioPlayer = React.memo(function AudioPlayer({ src }: { src: string }) {
+    return (
+        <audio controls src={src} className="w-full">
+            Your browser does not support the audio element.
+        </audio>
+    );
+});
+AudioPlayer.displayName = 'AudioPlayer';
+
 function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
@@ -314,9 +324,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                             <CardDescription>Listen to the audio and answer the questions for this part.</CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
-                                            <audio controls src={part.audioUrl} className="w-full">
-                                                Your browser does not support the audio element.
-                                            </audio>
+                                            <AudioPlayer src={part.audioUrl} />
                                         </CardContent>
                                     </Card>
 
@@ -394,3 +402,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
+
+    
