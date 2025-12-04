@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -17,6 +16,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { OpenInFirebaseButton } from '@/components/app/admin/open-in-firebase-button';
 
 const questionSchema = z.object({
     id: z.string(),
@@ -68,7 +68,10 @@ export default function CreateListeningTestPage() {
                 skill: 'Listening' as const,
                 audioUrl: '', // Leaving this blank for you to fill in manually
                 transcript: values.transcript,
-                questions: values.questions,
+                questions: values.questions.map(q => ({
+                    ...q,
+                    options: q.type === 'multiple-choice' ? (q.options || []) : undefined,
+                })),
             };
             
             await setDoc(doc(firestore, 'listeningTests', testId), listeningTest);
@@ -76,11 +79,7 @@ export default function CreateListeningTestPage() {
             toast({
                 title: 'Success!',
                 description: `Listening test "${listeningTest.title}" has been created without an audio file.`,
-                action: (
-                    <Button variant="outline" size="sm" onClick={() => window.open(`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/firestore/data/~2FlisteningTests~2F${testId}`, '_blank')}>
-                      Open in Firebase
-                    </Button>
-                )
+                action: <OpenInFirebaseButton collection="listeningTests" docId={testId} />
             });
             router.push('/listening');
 
@@ -96,6 +95,8 @@ export default function CreateListeningTestPage() {
         }
     };
     
+    const questionType = form.watch('questions');
+
     return (
         <div className="max-w-4xl mx-auto space-y-6">
              <div>
@@ -184,6 +185,25 @@ export default function CreateListeningTestPage() {
                                             )}
                                         />
                                     </div>
+                                     {questionType[index]?.type === 'multiple-choice' && (
+                                        <FormField
+                                            control={form.control}
+                                            name={`questions.${index}.options`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Options (comma-separated)</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Option A, Option B, Option C"
+                                                            onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()))}
+                                                            value={Array.isArray(field.value) ? field.value.join(', ') : ''}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
                                     <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => remove(index)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
