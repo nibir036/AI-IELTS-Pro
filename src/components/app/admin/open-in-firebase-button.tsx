@@ -1,18 +1,18 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
 
 interface OpenInFirebaseButtonProps {
+    projectId: string;
     collection: string;
     docId: string;
 }
 
-export function OpenInFirebaseButton({ collection, docId }: OpenInFirebaseButtonProps) {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
+export function OpenInFirebaseButton({ projectId, collection, docId }: OpenInFirebaseButtonProps) {
     const handleClick = () => {
         if (!projectId) {
-            console.error("Firebase project ID is not configured.");
+            console.error("Firebase project ID is not available.");
             return;
         }
         const url = `https://console.firebase.google.com/project/${projectId}/firestore/data/~2F${collection}~2F${docId}`;

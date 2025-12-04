@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -61,6 +62,11 @@ export default function CreateListeningTestPage() {
         setIsSubmitting(true);
         try {
             const testId = `L_AC_${uuidv4().slice(0, 4).toUpperCase()}`;
+            const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+            if (!projectId) {
+                throw new Error("Firebase Project ID is not configured in environment variables.");
+            }
 
             const listeningTest = {
                 id: testId,
@@ -79,7 +85,7 @@ export default function CreateListeningTestPage() {
             toast({
                 title: 'Success!',
                 description: `Listening test "${listeningTest.title}" has been created without an audio file.`,
-                action: <OpenInFirebaseButton collection="listeningTests" docId={testId} />
+                action: <OpenInFirebaseButton projectId={projectId} collection="listeningTests" docId={testId} />
             });
             router.push('/listening');
 
