@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -16,10 +17,6 @@ import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { processContent } from '@/ai/flows/content-factory-flow';
-import { FileInput } from '@/components/ui/file-input';
-import { uploadAudioToStorage } from '@/lib/firebase/storage';
-import { blobToBase64 } from '@/lib/utils';
 
 const questionSchema = z.object({
     id: z.string(),
@@ -31,12 +28,8 @@ const questionSchema = z.object({
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
-  audioFile: z.any().optional(),
-  transcript: z.string().optional(),
+  transcript: z.string().min(50, 'A transcript of at least 50 characters must be provided.'),
   questions: z.array(questionSchema).min(1, "At least one question is required."),
-}).refine(data => !!data.audioFile || (!!data.transcript && data.transcript.length > 50), {
-    message: 'Either an audio file must be uploaded, or a transcript of at least 50 characters must be provided.',
-    path: ['transcript'], // You can point this to either field
 });
 
 export default function CreateListeningTestPage() {
@@ -68,45 +61,26 @@ export default function CreateListeningTestPage() {
         setIsSubmitting(true);
         try {
             const testId = `L_AC_${uuidv4().slice(0, 4).toUpperCase()}`;
-            let audioUrl = '';
-
-            if (values.audioFile && values.audioFile.length > 0) {
-                 const file = values.audioFile[0] as File;
-                 const base64Audio = await blobToBase64(file);
-                 const filePath = `listeningTests/${testId}/${file.name}`;
-                 audioUrl = await uploadAudioToStorage(base64Audio.split(',')[1], file.type, filePath);
-            }
 
             const listeningTest = {
                 id: testId,
                 title: values.title,
                 skill: 'Listening' as const,
-                audioUrl: audioUrl,
-                transcript: values.transcript || '',
+                audioUrl: '', // Leaving this blank for you to fill in manually
+                transcript: values.transcript,
                 questions: values.questions,
             };
             
-            // If no audio file, but there is a transcript, let AI generate the audio
-            if (!audioUrl && listeningTest.transcript) {
-                console.log("Generating audio from transcript...");
-                const processResult = await processContent({
-                    contentType: 'ListeningTest',
-                    rawText: `Title: ${listeningTest.title}\nTranscript: ${listeningTest.transcript}`,
-                });
-                
-                if ('audioUrl' in processResult) {
-                    listeningTest.audioUrl = processResult.audioUrl;
-                } else {
-                     throw new Error('AI processing failed to return an audio URL.');
-                }
-            } else if (!audioUrl && !listeningTest.transcript) {
-                throw new Error("No audio source provided. Please upload a file or provide a transcript.");
-            }
-
             await setDoc(doc(firestore, 'listeningTests', testId), listeningTest);
+            
             toast({
                 title: 'Success!',
-                description: `Listening test "${listeningTest.title}" has been created.`,
+                description: `Listening test "${listeningTest.title}" has been created without an audio file.`,
+                action: (
+                    <Button variant="outline" size="sm" onClick={() => window.open(`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/firestore/data/~2FlisteningTests~2F${testId}`, '_blank')}>
+                      Open in Firebase
+                    </Button>
+                )
             });
             router.push('/listening');
 
@@ -125,9 +99,9 @@ export default function CreateListeningTestPage() {
     return (
         <div className="max-w-4xl mx-auto space-y-6">
              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Create Listening Test</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Create Listening Test (Transcript Only)</h1>
                 <p className="text-muted-foreground">
-                Upload an audio file or provide a transcript for AI audio generation.
+                Create a test structure from a transcript. You will add the audio URL manually in the Firebase Console.
                 </p>
             </div>
             <Form {...form}>
@@ -146,41 +120,17 @@ export default function CreateListeningTestPage() {
                                 </FormItem>
                                 )}
                             />
-                            <div className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="audioFile"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Upload Audio File</FormLabel>
-                                            <FormControl>
-                                                <FileInput {...field} accept=".mp3, .wav" />
-                                            </FormControl>
-                                            <FormDescription>Upload an MP3 or WAV file. Max 10MB.</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="relative">
-                                    <div className="absolute inset-0 flex items-center">
-                                        <span className="w-full border-t" />
-                                    </div>
-                                    <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-background px-2 text-muted-foreground">Or</span>
-                                    </div>
-                                </div>
-                             <FormField
+                            <FormField
                                 control={form.control}
                                 name="transcript"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Audio Transcript (for AI generation)</FormLabel>
-                                    <FormControl><Textarea placeholder="If you don't upload an audio file, paste the full audio transcript here and the AI will generate the audio for you." {...field} className="min-h-[200px]" /></FormControl>
+                                    <FormLabel>Audio Transcript</FormLabel>
+                                    <FormControl><Textarea placeholder="Paste the full audio transcript here." {...field} className="min-h-[200px]" /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                                 )}
                             />
-                            </div>
                         </CardContent>
                     </Card>
 
@@ -250,7 +200,6 @@ export default function CreateListeningTestPage() {
                         </CardContent>
                     </Card>
                     
-
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Create Listening Test
