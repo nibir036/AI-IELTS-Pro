@@ -60,7 +60,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         startTimeRef.current = new Date();
     }, []);
 
-    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups?.flatMap(qg => qg.questions) || []) || [], [test.parts]);
+    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions || []) || [], [test.parts]);
     const totalQuestions = allQuestions.length;
 
     const methods = useForm<UserAnswers>({
@@ -103,7 +103,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         if (incorrectQuestions.length > 0) {
             setIsGeneratingExplanations(true);
             const explanationPromises = incorrectQuestions.map(q => {
-                const relevantPart = test.parts.find(p => p.questionGroups?.some(qg => qg.questions.some(pq => pq.id === q.id)));
+                const relevantPart = test.parts.find(p => p.questions?.some(pq => pq.id === q.id));
                  if (!relevantPart?.transcript) return Promise.resolve({ id: q.id, explanation: 'Could not find relevant transcript.' });
 
                 return generateTestCorrectionExplanation({
@@ -157,26 +157,34 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         setIsSubmitting(false);
     };
 
-    const renderQuestionGroup = (questionGroup: ListeningQuestionGroup, partIndex: number) => {
-        if (!questionGroup.questions || questionGroup.questions.length === 0) return null;
+    const renderQuestionGroup = (questions: ListeningQuestion[], partIndex: number) => {
+        if (!questions || questions.length === 0) return null;
+
+        const instructionGroups = questions.reduce((acc, q) => {
+            const instruction = q.instructions || 'default';
+            if (!acc[instruction]) {
+                acc[instruction] = [];
+            }
+            acc[instruction].push(q);
+            return acc;
+        }, {} as Record<string, ListeningQuestion[]>);
         
-        return (
-            <div key={`part-${partIndex}-group-${questionGroup.instructions}`} className="space-y-4 rounded-lg border p-4">
-                 {questionGroup.instructions && (
+        return Object.entries(instructionGroups).map(([instruction, groupQuestions]) => (
+            <div key={`part-${partIndex}-group-${instruction}`} className="space-y-4 rounded-lg border p-4">
+                 {instruction !== 'default' && (
                     <div className="text-sm font-medium text-foreground pb-4 border-b flex items-start gap-2">
                         <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                        <div dangerouslySetInnerHTML={{ __html: questionGroup.instructions }} />
+                        <div dangerouslySetInnerHTML={{ __html: instruction }} />
                     </div>
                 )}
                  <div className="space-y-6">
-                    {questionGroup.questions.map((q, index) => renderQuestion(q, index))}
+                    {groupQuestions.map((q, index) => renderQuestion(q, allQuestions.findIndex(aq => aq.id === q.id) + 1))}
                  </div>
             </div>
-        )
+        ));
     }
 
-    const renderQuestion = (question: ListeningQuestion, index: number) => {
-        const questionNumber = allQuestions.findIndex(aq => aq.id === question.id) + 1;
+    const renderQuestion = (question: ListeningQuestion, questionNumber: number) => {
         const userAnswer = userAnswers[question.id] || '';
         const isCorrect = isGraded ? (
              (question.type === 'fill-in-the-blank' || question.type === 'note-completion') 
@@ -344,7 +352,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <CardContent className="flex-1 overflow-hidden">
                                             <ScrollArea className="h-full pr-4">
                                                 <div className="space-y-6">
-                                                     {part.questionGroups?.map((group) => renderQuestionGroup(group, partIndex))}
+                                                     {renderQuestionGroup(part.questions || [], partIndex)}
                                                 </div>
                                             </ScrollArea>
                                         </CardContent>
@@ -412,5 +420,3 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
-
-    
