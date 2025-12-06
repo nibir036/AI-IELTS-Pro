@@ -157,14 +157,31 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         setIsSubmitting(false);
     };
 
+    const renderQuestionGroup = (questions: ListeningQuestion[], groupIndex: number) => {
+        if (!questions || questions.length === 0) return null;
+        
+        const firstQuestion = questions[0];
+        const instruction = firstQuestion.instructions;
 
-    const renderQuestion = (question: ListeningQuestion, index: number) => {
-        const questionNumber = index + 1;
+        return (
+            <div key={`group-${groupIndex}`} className="space-y-4 rounded-lg border p-4">
+                 {instruction && (
+                    <div className="text-sm font-medium text-foreground pb-4 border-b" dangerouslySetInnerHTML={{ __html: instruction }} />
+                )}
+                 <div className="space-y-6">
+                    {questions.map((q) => renderQuestion(q))}
+                 </div>
+            </div>
+        )
+    }
+
+    const renderQuestion = (question: ListeningQuestion) => {
+        const questionNumber = allQuestions.findIndex(aq => aq.id === question.id) + 1;
         const userAnswer = userAnswers[question.id] || '';
         const isCorrect = isGraded ? (
              (question.type === 'fill-in-the-blank' || question.type === 'note-completion') 
              ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
-             : userAnswer === question.answer
+             : userAnswer === q.answer
         ) : undefined;
         const explanation = explanations[question.id];
 
@@ -176,24 +193,19 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         };
 
         const questionParts = (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && question.question.includes('____')
-            ? question.question.split('____')
+            ? question.question.replace(/____/g, `____(${questionNumber})____`).split(`____(${questionNumber})____`)
             : [question.question];
+        
+        const isInlineInput = questionParts.length > 1 && (question.type === 'fill-in-the-blank' || question.type === 'note-completion');
 
         return (
-            <div key={question.id} className="space-y-4">
-                 {question.instructions && (
-                    <div className="bg-muted/50 p-3 rounded-lg border text-sm text-foreground">
-                        <div className="flex items-start gap-2">
-                           <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                           <div dangerouslySetInnerHTML={{ __html: question.instructions }} />
-                        </div>
-                    </div>
-                )}
-                 <Card className={`p-4 ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
-                    <div className="flex items-start gap-3 mb-4">
-                        <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
-                        <div className="flex-1 font-medium">
-                            {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && questionParts.length > 1 ? (
+            <div key={question.id} className="space-y-2">
+                <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 flex items-center justify-center h-7 w-7 text-xs font-bold text-muted-foreground">{!isInlineInput && questionNumber}</div>
+                    
+                     <div className="flex-1">
+                         <div className="font-medium">
+                            {isInlineInput ? (
                                 <p className="leading-relaxed">
                                     {questionParts[0]}
                                     <Controller
@@ -203,8 +215,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                             <Input
                                                 {...field}
                                                 disabled={isGraded}
-                                                placeholder="Your answer"
-                                                className="inline-block w-40 h-7 p-1 mx-1 align-baseline"
+                                                placeholder={`(${questionNumber})`}
+                                                className="inline-block w-32 h-7 p-1 mx-1 align-baseline"
                                             />
                                         )}
                                     />
@@ -213,61 +225,77 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                             ) : (
                                 <p>{question.question}</p>
                             )}
-                        </div>
-                        {isGraded && (
-                            isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
+                         </div>
+
+                        <Controller
+                            name={question.id as any}
+                            control={control}
+                            render={({ field }) => (
+                                <div className="pt-2">
+                                    {question.type === 'multiple-choice' && (
+                                        <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                                            {question.options?.map((option, index) => (
+                                                <div key={index} className="flex items-center space-x-2">
+                                                    <RadioGroupItem value={option} id={`${question.id}-${index}`} />
+                                                    <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
+                                                        {option}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </RadioGroup>
+                                    )}
+                                </div>
+                            )}
+                        />
+                         {isGraded && !isCorrect && (
+                            <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200">
+                                { (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && (
+                                     <p className="text-xs font-semibold text-green-600 mb-1">Correct answer: {question.answer}</p>
+                                )}
+                                <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                                <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                    {isGeneratingExplanations && !explanation ? (
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <Loader2 className="h-3 w-3 animate-spin"/>
+                                            <span>Generating explanation...</span>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
+                                    )}
+                                </div>
+                            </div>
                         )}
                     </div>
-                
-                    <Controller
-                        name={question.id as any}
-                        control={control}
-                        render={({ field }) => (
-                            <div className="pl-10">
-                                {question.type === 'multiple-choice' && (
-                                    <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
-                                        {question.options?.map((option, index) => (
-                                            <div key={index} className="flex items-center space-x-2">
-                                                <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                                                <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
-                                                    {option}
-                                                </Label>
-                                            </div>
-                                        ))}
-                                    </RadioGroup>
-                                )}
-                                
-                                { (question.type === 'summary-completion') && (
-                                    <div className="relative">
-                                        <Input {...field} disabled={isGraded} placeholder="Your answer" />
-                                        {isGraded && !isCorrect && (
-                                            <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    />
-
-                    {isGraded && !isCorrect && (
-                        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
-                            <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                {isGeneratingExplanations && !explanation ? (
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <Loader2 className="h-3 w-3 animate-spin"/>
-                                        <span>Generating explanation...</span>
-                                    </div>
-                                ) : (
-                                    <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </Card>
+                </div>
             </div>
         );
     };
+
+    const groupQuestionsByInstruction = (questions: ListeningQuestion[]): ListeningQuestion[][] => {
+        if (!questions) return [];
+        const groups: ListeningQuestion[][] = [];
+        let currentGroup: ListeningQuestion[] = [];
+
+        questions.forEach((question, index) => {
+            if (index === 0) {
+                currentGroup.push(question);
+            } else {
+                const prevQuestion = questions[index - 1];
+                if (question.instructions === prevQuestion.instructions) {
+                    currentGroup.push(question);
+                } else {
+                    groups.push(currentGroup);
+                    currentGroup = [question];
+                }
+            }
+        });
+
+        if (currentGroup.length > 0) {
+            groups.push(currentGroup);
+        }
+        return groups;
+    };
+
 
     if (isGraded) {
         return (
@@ -339,8 +367,10 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <CardHeader><CardTitle>Questions</CardTitle></CardHeader>
                                         <CardContent className="flex-1 overflow-hidden">
                                             <ScrollArea className="h-full pr-4">
-                                                <div className="space-y-4">
-                                                    {part.questions.map((q, index) => renderQuestion(q, allQuestions.findIndex(aq => aq.id === q.id)))}
+                                                <div className="space-y-6">
+                                                     {groupQuestionsByInstruction(part.questions).map((group, index) => (
+                                                        renderQuestionGroup(group, index)
+                                                    ))}
                                                 </div>
                                             </ScrollArea>
                                         </CardContent>
