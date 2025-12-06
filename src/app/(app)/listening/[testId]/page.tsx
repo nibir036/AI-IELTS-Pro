@@ -344,9 +344,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <CardContent className="flex-1 overflow-hidden">
                                             <ScrollArea className="h-full pr-4">
                                                 <div className="space-y-6">
-                                                     {part.questionGroups?.map((group) => (
-                                                        renderQuestionGroup(group, partIndex)
-                                                    ))}
+                                                     {part.questionGroups?.map((group) => renderQuestionGroup(group, partIndex))}
                                                 </div>
                                             </ScrollArea>
                                         </CardContent>
