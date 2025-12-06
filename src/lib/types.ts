@@ -86,32 +86,36 @@ export interface ReadingTest {
 }
 
 
+export type ListeningQuestionType = 'multiple-choice' | 'note-completion' | 'fill-in-the-blank';
+
+export interface ListeningQuestion {
+    id: string;
+    question: string;
+    type: ListeningQuestionType;
+    options?: string[];
+    answer: string;
+}
+
+export interface ListeningQuestionGroup {
+    instructions: string;
+    questions: ListeningQuestion[];
+}
+
 export interface ListeningTestPart {
     part: number;
     title: string;
     transcript: string;
-    questions: ListeningQuestion[];
+    audioUrl: string;
+    questionGroups: ListeningQuestionGroup[];
 }
 
 export interface ListeningTest {
     id: string;
     title: string;
     skill: 'Listening';
-    audioUrl: string;
     parts: ListeningTestPart[];
 }
 
-
-export type ListeningQuestionType = 'multiple-choice' | 'fill-in-the-blank' | 'note-completion' | 'summary-completion';
-
-export interface ListeningQuestion {
-    id: string;
-    instructions?: string;
-    question: string;
-    type: ListeningQuestionType;
-    options?: string[];
-    answer: string;
-}
 
 export interface WritingQuestion {
   task: number;
@@ -175,5 +179,3 @@ export interface PredictTargetDateOutput {
     predictedDate: string;
     reasoning: string;
 }
-
-    

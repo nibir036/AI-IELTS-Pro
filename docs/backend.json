@@ -248,55 +248,72 @@
         "required": ["id", "title", "skill", "parts"]
     },
     "ListeningTest": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "ListeningTest",
-        "type": "object",
-        "description": "Represents a listening test with audio and questions.",
-        "properties": {
-            "id": {
-                "type": "string",
-                "description": "Unique identifier for the listening test."
-            },
-            "title": {
-                "type": "string",
-                "description": "Title of the listening test."
-            },
-             "skill": {
-                "type": "string",
-                "enum": ["Listening"]
-            },
-            "audioUrl": {
-                "type": "string",
-                "description": "URL to the audio file for the test.",
-                "format": "uri"
-            },
-            "transcript": {
-              "type": "string",
-              "description": "The full text transcript of the audio file."
-            },
-            "questions": {
-                "type": "array",
-                "description": "An array of questions for the audio.",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": {"type": "string"},
-                        "question": {"type": "string"},
-                        "type": {
-                            "type": "string",
-                            "enum": ["multiple-choice", "fill-in-the-blank"]
-                        },
-                        "options": {
-                            "type": "array",
-                            "items": {"type": "string"}
-                        },
-                        "answer": {"type": "string"}
-                    },
-                    "required": ["id", "question", "type", "answer"]
-                }
-            }
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ListeningTest",
+      "type": "object",
+      "description": "Represents a listening test with audio and questions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the listening test."
         },
-        "required": ["id", "title", "skill", "audioUrl", "questions"]
+        "title": {
+          "type": "string",
+          "description": "Title of the listening test."
+        },
+        "skill": {
+          "type": "string",
+          "enum": ["Listening"]
+        },
+        "parts": {
+          "type": "array",
+          "description": "An array of test parts, each with its own audio, transcript, and grouped questions.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "part": { "type": "number" },
+              "title": { "type": "string" },
+              "audioUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "transcript": { "type": "string" },
+              "questionGroups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "instructions": { "type": "string" },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "question": { "type": "string" },
+                          "type": {
+                            "type": "string",
+                            "enum": ["multiple-choice", "note-completion", "fill-in-the-blank"]
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": { "type": "string" }
+                          },
+                          "answer": { "type": "string" }
+                        },
+                        "required": ["id", "question", "type", "answer"]
+                      }
+                    }
+                  },
+                  "required": ["instructions", "questions"]
+                }
+              }
+            },
+            "required": ["part", "title", "audioUrl", "transcript", "questionGroups"]
+          }
+        }
+      },
+      "required": ["id", "title", "skill", "parts"]
     },
     "Submission": {
       "$schema": "http://json-schema.org/draft-07/schema#",

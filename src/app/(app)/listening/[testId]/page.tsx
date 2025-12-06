@@ -7,7 +7,7 @@ import { notFound, useRouter } from 'next/navigation';
 import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
-import type { ListeningTest, ListeningQuestion } from '@/lib/types';
+import type { ListeningTest, ListeningQuestion, ListeningTestPart, ListeningQuestionGroup } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -60,7 +60,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         startTimeRef.current = new Date();
     }, []);
 
-    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
+    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups.flatMap(qg => qg.questions)) || [], [test.parts]);
     const totalQuestions = allQuestions.length;
 
     const methods = useForm<UserAnswers>({
@@ -103,7 +103,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         if (incorrectQuestions.length > 0) {
             setIsGeneratingExplanations(true);
             const explanationPromises = incorrectQuestions.map(q => {
-                const relevantPart = test.parts.find(p => p.questions.some(pq => pq.id === q.id));
+                const relevantPart = test.parts.find(p => p.questionGroups.some(qg => qg.questions.some(pq => pq.id === q.id)));
                  if (!relevantPart?.transcript) return Promise.resolve({ id: q.id, explanation: 'Could not find relevant transcript.' });
 
                 return generateTestCorrectionExplanation({
@@ -157,19 +157,19 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         setIsSubmitting(false);
     };
 
-    const renderQuestionGroup = (questions: ListeningQuestion[], groupIndex: number) => {
-        if (!questions || questions.length === 0) return null;
+    const renderQuestionGroup = (questionGroup: ListeningQuestionGroup, partIndex: number) => {
+        if (!questionGroup.questions || questionGroup.questions.length === 0) return null;
         
-        const firstQuestion = questions[0];
-        const instruction = firstQuestion.instructions;
-
         return (
-            <div key={`group-${groupIndex}`} className="space-y-4 rounded-lg border p-4">
-                 {instruction && (
-                    <div className="text-sm font-medium text-foreground pb-4 border-b" dangerouslySetInnerHTML={{ __html: instruction }} />
+            <div key={`part-${partIndex}-group-${questionGroup.instructions}`} className="space-y-4 rounded-lg border p-4">
+                 {questionGroup.instructions && (
+                    <div className="text-sm font-medium text-foreground pb-4 border-b flex items-start gap-2">
+                        <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                        <div dangerouslySetInnerHTML={{ __html: questionGroup.instructions }} />
+                    </div>
                 )}
                  <div className="space-y-6">
-                    {questions.map((q) => renderQuestion(q))}
+                    {questionGroup.questions.map((q) => renderQuestion(q))}
                  </div>
             </div>
         )
@@ -181,7 +181,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         const isCorrect = isGraded ? (
              (question.type === 'fill-in-the-blank' || question.type === 'note-completion') 
              ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
-             : userAnswer === q.answer
+             : userAnswer === question.answer
         ) : undefined;
         const explanation = explanations[question.id];
 
@@ -206,8 +206,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                      <div className="flex-1">
                          <div className="font-medium">
                             {isInlineInput ? (
-                                <p className="leading-relaxed">
-                                    {questionParts[0]}
+                                <div className="leading-relaxed flex flex-wrap items-center">
+                                    <span className="mr-2" dangerouslySetInnerHTML={{ __html: questionParts[0]}} />
                                     <Controller
                                         name={question.id as any}
                                         control={control}
@@ -220,10 +220,10 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                             />
                                         )}
                                     />
-                                    {questionParts[1]}
-                                </p>
+                                    <span dangerouslySetInnerHTML={{ __html: questionParts[1]}}/>
+                                </div>
                             ) : (
-                                <p>{question.question}</p>
+                                <p dangerouslySetInnerHTML={{ __html: question.question }} />
                             )}
                          </div>
 
@@ -270,32 +270,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             </div>
         );
     };
-
-    const groupQuestionsByInstruction = (questions: ListeningQuestion[]): ListeningQuestion[][] => {
-        if (!questions) return [];
-        const groups: ListeningQuestion[][] = [];
-        let currentGroup: ListeningQuestion[] = [];
-
-        questions.forEach((question, index) => {
-            if (index === 0) {
-                currentGroup.push(question);
-            } else {
-                const prevQuestion = questions[index - 1];
-                if (question.instructions === prevQuestion.instructions) {
-                    currentGroup.push(question);
-                } else {
-                    groups.push(currentGroup);
-                    currentGroup = [question];
-                }
-            }
-        });
-
-        if (currentGroup.length > 0) {
-            groups.push(currentGroup);
-        }
-        return groups;
-    };
-
 
     if (isGraded) {
         return (
@@ -350,7 +324,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                             ))}
                         </TabsList>
                         
-                        {test.parts.map((part) => (
+                        {test.parts.map((part, partIndex) => (
                              <TabsContent key={part.part} value={`part-${part.part}`} className="mt-4">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-32rem)]">
                                     <Card>
@@ -368,8 +342,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <CardContent className="flex-1 overflow-hidden">
                                             <ScrollArea className="h-full pr-4">
                                                 <div className="space-y-6">
-                                                     {groupQuestionsByInstruction(part.questions).map((group, index) => (
-                                                        renderQuestionGroup(group, index)
+                                                     {part.questionGroups.map((group) => (
+                                                        renderQuestionGroup(group, partIndex)
                                                     ))}
                                                 </div>
                                             </ScrollArea>
@@ -438,5 +412,3 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
-
-    
