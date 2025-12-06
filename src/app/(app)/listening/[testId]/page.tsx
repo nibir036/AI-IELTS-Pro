@@ -60,7 +60,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         startTimeRef.current = new Date();
     }, []);
 
-    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups.flatMap(qg => qg.questions)) || [], [test.parts]);
+    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups?.flatMap(qg => qg.questions) || []) || [], [test.parts]);
     const totalQuestions = allQuestions.length;
 
     const methods = useForm<UserAnswers>({
@@ -103,7 +103,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         if (incorrectQuestions.length > 0) {
             setIsGeneratingExplanations(true);
             const explanationPromises = incorrectQuestions.map(q => {
-                const relevantPart = test.parts.find(p => p.questionGroups.some(qg => qg.questions.some(pq => pq.id === q.id)));
+                const relevantPart = test.parts.find(p => p.questionGroups?.some(qg => qg.questions.some(pq => pq.id === q.id)));
                  if (!relevantPart?.transcript) return Promise.resolve({ id: q.id, explanation: 'Could not find relevant transcript.' });
 
                 return generateTestCorrectionExplanation({
@@ -342,7 +342,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <CardContent className="flex-1 overflow-hidden">
                                             <ScrollArea className="h-full pr-4">
                                                 <div className="space-y-6">
-                                                     {part.questionGroups.map((group) => (
+                                                     {part.questionGroups?.map((group) => (
                                                         renderQuestionGroup(group, partIndex)
                                                     ))}
                                                 </div>
