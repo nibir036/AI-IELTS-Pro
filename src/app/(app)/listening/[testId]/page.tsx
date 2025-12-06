@@ -7,13 +7,13 @@ import { notFound, useRouter } from 'next/navigation';
 import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
-import type { ListeningTest, ListeningQuestion, ListeningTestPart, ListeningQuestionGroup } from '@/lib/types';
+import type { ListeningTest, ListeningQuestion, ListeningQuestionGroup } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, Loader2, Lightbulb, List, Headphones, Info } from 'lucide-react';
+import { ChevronRight, Loader2, Lightbulb, Info } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -169,13 +169,13 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     </div>
                 )}
                  <div className="space-y-6">
-                    {questionGroup.questions.map((q) => renderQuestion(q))}
+                    {questionGroup.questions.map((q, index) => renderQuestion(q, index))}
                  </div>
             </div>
         )
     }
 
-    const renderQuestion = (question: ListeningQuestion) => {
+    const renderQuestion = (question: ListeningQuestion, index: number) => {
         const questionNumber = allQuestions.findIndex(aq => aq.id === question.id) + 1;
         const userAnswer = userAnswers[question.id] || '';
         const isCorrect = isGraded ? (
@@ -321,8 +321,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
                     <Tabs defaultValue="part-1" className="w-full">
                         <TabsList className="grid w-full grid-cols-4">
-                            {test.parts.map(part => (
-                                <TabsTrigger key={part.part} value={`part-${part.part}`}>Part {part.part}</TabsTrigger>
+                            {test.parts.map((part, index) => (
+                                <TabsTrigger key={part.part} value={`part-${part.part}`}>Part {index + 1}</TabsTrigger>
                             ))}
                         </TabsList>
                         
