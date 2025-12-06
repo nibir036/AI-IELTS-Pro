@@ -201,7 +201,9 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         return (
             <div key={question.id} className="space-y-2">
                 <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 flex items-center justify-center h-7 w-7 text-xs font-bold text-muted-foreground">{!isInlineInput && questionNumber}</div>
+                    {!isInlineInput && (
+                         <div className="flex-shrink-0 flex items-center justify-center h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
+                    )}
                     
                      <div className="flex-1">
                          <div className="font-medium">
@@ -412,3 +414,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
+
+    
