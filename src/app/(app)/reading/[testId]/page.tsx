@@ -13,18 +13,16 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, Lightbulb, Loader2, Info } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, Lightbulb, Loader2, Info, AlertTriangle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type UserAnswers = Record<string, string>;
-type AnswerExplanations = Record<string, string>;
 
 function ReadingTestComponent({ test }: { test: ReadingTest }) {
     const { firestore, user: authUser } = useFirebase();
@@ -35,8 +33,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
 
     const [isGraded, setIsGraded] = React.useState(false);
     const [score, setScore] = React.useState(0);
-    const [explanations, setExplanations] = React.useState<AnswerExplanations>({});
-    const [isGeneratingExplanations, setIsGeneratingExplanations] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions) || [], [test.parts]);
@@ -69,36 +65,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
         });
         const finalScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 9.0 : 0;
         setScore(finalScore);
-        
-        const incorrectQuestions = allQuestions.filter(q => {
-            const userAnswer = data[q.id] || '';
-            return userAnswer.trim().toLowerCase() !== q.answer.toLowerCase();
-        });
-
-
-        let newExplanations: AnswerExplanations = {};
-        if (incorrectQuestions.length > 0) {
-            setIsGeneratingExplanations(true);
-            const explanationPromises = incorrectQuestions.map(q => {
-                 const relevantPart = test.parts.find(p => p.questions.some(pq => pq.id === q.id));
-                 if (!relevantPart) return Promise.resolve({ id: q.id, explanation: 'Could not find relevant passage.' });
-
-                 return generateTestCorrectionExplanation({
-                    context: relevantPart.passage,
-                    question: q.question,
-                    userAnswer: data[q.id] || "No answer",
-                    correctAnswer: q.answer
-                }).then(result => ({ id: q.id, explanation: result.explanation }))
-                  .catch(err => ({id: q.id, explanation: 'Could not generate explanation.'}))
-            });
-
-            const results = await Promise.all(explanationPromises);
-            results.forEach(res => {
-                newExplanations[res.id] = res.explanation;
-            });
-            setExplanations(newExplanations);
-            setIsGeneratingExplanations(false);
-        }
 
         if (authUser && firestore && userProfile) {
             const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
@@ -108,7 +74,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                 skill: 'Reading',
                 testId: test.id,
                 inputData: data,
-                aiReport: newExplanations,
+                aiReport: {}, // No AI report for reading tests
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
             });
@@ -133,19 +99,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
     };
 
     const renderQuestion = (question: ReadingQuestion, index: number) => {
-        const userAnswer = userAnswers[question.id];
         const questionNumber = index + 1;
-        const isCorrect = isGraded ? (
-             (userAnswer || '').trim().toLowerCase() === question.answer.toLowerCase()
-       ) : undefined;
-        const explanation = explanations[question.id];
-
-        const getOptionClass = (option: string) => {
-            if (!isGraded) return '';
-            if (option.toLowerCase() === question.answer.toLowerCase()) return 'text-green-600 font-bold';
-            if (userAnswer && option.toLowerCase() === userAnswer.toLowerCase() && option.toLowerCase() !== question.answer.toLowerCase()) return 'text-red-600';
-            return 'text-muted-foreground';
-        };
 
         const getOptionsForType = (q: ReadingQuestion) => {
             if (q.type === 'true-false-not-given') return ['True', 'False', 'Not Given'];
@@ -179,9 +133,6 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                      <div className="flex items-start gap-3 mb-4">
                         <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-muted h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
                          <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
-                         {isGraded && (
-                            isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
-                        )}
                     </div>
                     <Controller
                         name={question.id as any}
@@ -193,7 +144,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                         {options.map((option, index) => (
                                             <div key={index} className="flex items-center space-x-2">
                                                 <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                                                <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
+                                                <Label htmlFor={`${question.id}-${index}`}>
                                                     {option}
                                                 </Label>
                                             </div>
@@ -204,29 +155,11 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                                  {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion' || question.type === 'matching-information' || question.type === 'matching-headings') && (
                                     <div className="relative">
                                         <Input {...field} disabled={isGraded} placeholder="Your answer"/>
-                                        {isGraded && !isCorrect && (
-                                            <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
-                                        )}
                                     </div>
                                 )}
                             </div>
                         )}
                     />
-                     {isGraded && !isCorrect && (
-                        <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800 ml-10">
-                            <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                {isGeneratingExplanations && !explanation ? (
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <Loader2 className="h-3 w-3 animate-spin"/>
-                                        <span>Generating explanation...</span>
-                                    </div>
-                                ) : (
-                                    <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         );
@@ -242,7 +175,7 @@ function ReadingTestComponent({ test }: { test: ReadingTest }) {
                     <p className="text-muted-foreground">({(totalQuestions > 0 ? (score / 9.0) * 100 : 0).toFixed(0)}% accuracy)</p>
                 </CardHeader>
                  <CardContent className="text-center">
-                     <p className="text-muted-foreground mb-6">You can now review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
+                     <p className="text-muted-foreground mb-6">You can now review your detailed results, including correct and incorrect answers, on your submissions page.</p>
                     <Button onClick={() => router.push(`/submissions`)} size="lg">
                         View My Submissions <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
@@ -381,8 +314,14 @@ export default function ReadingTaskPage({ params }: { params: Promise<{ testId: 
     
     if (!test.parts) {
         return (
-             <div className="flex items-center justify-center h-full">
-                <p>This test is not formatted correctly and cannot be displayed.</p>
+            <div className="flex flex-col items-center justify-center h-full text-center py-10">
+                <Card className="max-w-lg p-8">
+                    <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+                    <CardTitle className="mt-4">Test Data Corrupted</CardTitle>
+                    <CardDescription className="mt-2">
+                        This reading test could not be loaded because its data is missing key fields like `parts`. Please regenerate it using the Admin Content Factory.
+                    </CardDescription>
+                </Card>
             </div>
         );
     }

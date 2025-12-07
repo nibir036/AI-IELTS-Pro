@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 function getTotalQuestions(test: ReadingTest): number {
     if (!test.parts) return 0;
-    return test.parts.reduce((total, part) => total + part.questions.length, 0);
+    return test.parts.reduce((total, part) => total + (part.questions?.length || 0), 0);
 }
 
 export default function ReadingPage() {

@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 function getTotalQuestions(test: ListeningTest): number {
     if (!test.parts) return 0;
-    return test.parts.reduce((total, part) => total + part.questions.length, 0);
+    return test.parts.reduce((total, part) => total + (part.questionGroups?.reduce((qTotal, qg) => qTotal + qg.questions.length, 0) || 0), 0);
 }
 
 
@@ -96,5 +96,3 @@ export default function ListeningPage() {
     </div>
   );
 }
-
-    

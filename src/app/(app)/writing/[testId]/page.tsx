@@ -1,10 +1,11 @@
+
 'use client';
 
 import { use } from 'react';
 import { notFound } from "next/navigation";
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import type { MockTest, WritingQuestion } from '@/lib/types';
+import type { MockTest } from '@/lib/types';
 import { WritingEvaluation } from "@/components/app/writing/writing-evaluation";
 import { Skeleton } from '@/components/ui/skeleton';
 

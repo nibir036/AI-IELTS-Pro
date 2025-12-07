@@ -10,7 +10,7 @@ import { generatePersonalizedLearningPath } from '@/ai/flows/personalized-learni
 import type { Lesson, User, LearningPath as LearningPathType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, documentId, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, documentId, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -96,7 +96,7 @@ export function LearningPath({ user }: LearningPathProps) {
 
     const { data: learningPath, isLoading: isPathLoading, error: pathError } = useDoc<LearningPathType>(learningPathDocRef);
 
-    const handleRegeneratePath = useCallback(async () => {
+    const handleGeneratePath = useCallback(async (isRefreshing = false) => {
         if (!user || !firestore) return;
 
         setIsGenerating(true);
@@ -107,30 +107,25 @@ export function LearningPath({ user }: LearningPathProps) {
                 nativeLanguage: user.nativeLanguage,
             });
 
-            if (user.learningPathId && result.lessonIds) {
-                // Update the existing document
-                const pathRef = doc(firestore, `users/${user.id}/learningPaths`, user.learningPathId);
-                await updateDoc(pathRef, { lessonIds: result.lessonIds });
-                toast({ title: "Success", description: "Your learning path has been refreshed." });
+            if (result.lessonIds) {
+                 if (user.learningPathId && isRefreshing) {
+                    // Update the existing document
+                    const pathRef = doc(firestore, `users/${user.id}/learningPaths`, user.learningPathId);
+                    await updateDoc(pathRef, { lessonIds: result.lessonIds });
+                    toast({ title: "Success", description: "Your learning path has been refreshed." });
+                }
             }
         } catch (err: any) {
-            console.error("Error regenerating learning path:", err);
+            console.error("Error generating learning path:", err);
             toast({
                 variant: "destructive",
                 title: "AI Service Error",
-                description: "Could not regenerate your learning path at this time.",
+                description: "Could not generate your learning path at this time.",
             });
         } finally {
             setIsGenerating(false);
         }
     }, [user, firestore, toast]);
-    
-     useEffect(() => {
-        // Automatically generate a learning path if one doesn't exist and user has a score.
-        if (!isPathLoading && !learningPath && user?.learningPathId === '' && user?.currentBand > 0 && !isGenerating) {
-            handleRegeneratePath();
-        }
-    }, [isPathLoading, learningPath, user, isGenerating, handleRegeneratePath]);
 
     const renderContent = () => {
         const isLoading = isPathLoading || isGenerating;
@@ -167,7 +162,7 @@ export function LearningPath({ user }: LearningPathProps) {
         return (
             <div className="text-center text-muted-foreground py-10">
                 <p>Your learning path is empty.</p>
-                <Button onClick={handleRegeneratePath} disabled={isGenerating} className="mt-4">
+                <Button onClick={() => handleGeneratePath(true)} disabled={isGenerating} className="mt-4">
                     {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
                     Generate Path
                 </Button>
@@ -184,7 +179,7 @@ export function LearningPath({ user }: LearningPathProps) {
                         <CardDescription>AI-recommended lessons to help you reach your target band score.</CardDescription>
                     </div>
                     {user?.learningPathId && (
-                        <Button onClick={handleRegeneratePath} variant="ghost" size="sm" disabled={isGenerating}>
+                        <Button onClick={() => handleGeneratePath(true)} variant="ghost" size="sm" disabled={isGenerating}>
                              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
                             Refresh
                         </Button>

@@ -13,5 +13,3 @@ export const lessons: Lesson[] = [];
 export const mockTests: MockTest[] = [];
 export const readingTests: ReadingTest[] = [];
 export const listeningTests: ListeningTest[] = [];
-
-    

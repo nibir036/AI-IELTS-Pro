@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 function ComprehensionTestReview({ submission }: { submission: Submission }) {
@@ -41,18 +42,15 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
         return <Skeleton className="h-96 w-full" />;
     }
 
-    if (!test) {
+    if (!test || !test.parts) {
         return <p>Test content could not be found for this submission.</p>;
     }
     
-    let allQuestions: (ReadingQuestion | ListeningQuestion)[] = [];
-    if ('parts' in test && Array.isArray(test.parts)) {
-        allQuestions = test.parts.flatMap(p => p.questions);
-    }
+    const allQuestions = test.parts.flatMap(p => (p as any).questions || (p as any).questionGroups?.flatMap((qg: any) => qg.questions)) as (ReadingQuestion | ListeningQuestion)[];
 
 
-    const userAnswers = submission.inputData as Record<string, string>;
-    const explanations = submission.aiReport as Record<string, string> | null;
+    const userAnswers = submission.inputData as Record<string, any>;
+    const correctAnswers = (test as any).answers || allQuestions.reduce((acc, q) => ({...acc, [q.id]: q.answer}), {} as Record<string, string>);
 
     return (
         <Card>
@@ -66,28 +64,35 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
                 <ScrollArea className="h-[60vh] pr-4">
                     <div className="space-y-4">
                     {allQuestions.map(q => {
-                        const userAnswer = userAnswers[q.id] || '';
-                        const isCorrect = (q.type === 'fill-in-the-blank' || q.type === 'note-completion')
-                            ? userAnswer.trim().toLowerCase() === q.answer.toLowerCase()
-                            : userAnswer === q.answer;
-                        const explanation = explanations?.[q.id];
+                        const userAnswer = userAnswers[q.id];
+                        const correctAnswer = correctAnswers[q.id];
+                        let isCorrect = false;
+                        
+                        if (q.type === 'multiple-choice-multiple-answer') {
+                            const correctAnswersSet = new Set(correctAnswer.split(',').map((s:string) => s.trim()).sort());
+                            const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
+                            isCorrect = correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
+                        } else {
+                            isCorrect = (userAnswer as string || '').trim().toLowerCase() === correctAnswer.toLowerCase();
+                        }
 
                         const getOptionClass = (option: string) => {
-                            if (option === q.answer) return 'text-green-600 font-bold';
-                            if (option === userAnswer && option !== q.answer) return 'text-red-600';
+                            if (correctAnswer.includes(option)) return 'text-green-600 font-bold';
+                            if (Array.isArray(userAnswer) && userAnswer.includes(option) && !correctAnswer.includes(option)) return 'text-red-600';
+                            if (userAnswer === option && !correctAnswer.includes(option)) return 'text-red-600';
                             return 'text-muted-foreground';
                         };
 
                         return (
                         <Card key={q.id} className={`p-4 ${!isCorrect ? 'border-red-500' : 'border-green-500'}`}>
                             <div className="flex items-start gap-2 mb-4">
-                            {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />}
-                            <p className="flex-1 font-medium">{q.question}</p>
+                                {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />}
+                                <p className="flex-1 font-medium" dangerouslySetInnerHTML={{__html: q.question}}/>
                             </div>
 
-                            {(q.type === 'multiple-choice' || q.type === 'true-false-not-given' || q.type === 'yes-no-not-given' || q.type === 'matching-headings' || q.type === 'matching-sentence-endings') && q.options && (
+                            {q.type === 'multiple-choice' && q.options && (
                                 <RadioGroup value={userAnswer} disabled>
-                                    {q.options?.map((option, index) => (
+                                    {q.options.map((option, index) => (
                                     <div key={index} className="flex items-center space-x-2">
                                         <RadioGroupItem value={option} id={`${q.id}-${index}`} />
                                         <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
@@ -98,18 +103,29 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
                                 </RadioGroup>
                             )}
 
-                             {(q.type === 'fill-in-the-blank' || q.type === 'note-completion' || q.type === 'summary-completion' || q.type === 'matching-information') && (
+                             {q.type === 'multiple-choice-multiple-answer' && q.options && (
+                                <div className="space-y-2">
+                                    {q.options.map((option, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                        <Checkbox id={`${q.id}-${index}`} checked={userAnswer?.includes(option)} disabled />
+                                        <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>{option}</Label>
+                                    </div>
+                                    ))}
+                                </div>
+                            )}
+
+                             {(q.type === 'fill-in-the-blank' || q.type === 'note-completion' || q.type === 'summary-completion') && (
                                 <div>
-                                    <Input value={userAnswer} disabled />
-                                    {!isCorrect && <p className="text-xs text-green-600 mt-1">Correct answer: {q.answer}</p>}
+                                    <Input value={userAnswer} disabled className={!isCorrect ? 'border-red-500' : ''} />
+                                    {!isCorrect && <p className="text-xs text-green-600 mt-1">Correct answer: {correctAnswer}</p>}
                                 </div>
                             )}
                             
-                            {!isCorrect && explanation && (
+                            {!isCorrect && (submission.aiReport as any)?.[q.id] && (
                                 <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
                                     <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
                                         <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                        <p className="text-xs">{explanation}</p>
+                                        <p className="text-xs">{(submission.aiReport as any)[q.id]}</p>
                                     </div>
                                 </div>
                             )}
@@ -145,8 +161,27 @@ export default function SubmissionPage({ params }: { params: Promise<{ submissio
       );
     }
     
-    if (submission.skill === 'Writing') {
-      return <WritingEvaluationResults result={submission.aiReport as AiPoweredWritingEvaluationOutput} />;
+    if (submission.skill === 'Writing' && submission.aiReport && ('task1' in submission.aiReport || 'task2' in submission.aiReport)) {
+      const report = submission.aiReport as { task1: AiPoweredWritingEvaluationOutput | null, task2: AiPoweredWritingEvaluationOutput | null };
+      const finalScore = report.task1 && report.task2 
+          ? ((report.task1.overallBand + report.task2.overallBand * 2) / 3)
+          : (report.task1?.overallBand || report.task2?.overallBand || 0);
+
+      return (
+          <div className="space-y-6">
+              {report.task1 && report.task2 && (
+                   <Card className="bg-primary/10 border-primary/30">
+                        <CardHeader>
+                            <CardTitle className="text-xl text-primary">Overall Test Result</CardTitle>
+                            <CardDescription>Your estimated overall writing band is: <span className="text-2xl font-bold text-primary">{finalScore.toFixed(1)}</span></CardDescription>
+                            <p className="text-xs text-muted-foreground pt-2">Task 2 is weighted more heavily in the official IELTS test, which is reflected in this combined score.</p>
+                        </CardHeader>
+                    </Card>
+              )}
+             {report.task1 && <WritingEvaluationResults result={report.task1} title="Task 1 Analysis" />}
+             {report.task2 && <WritingEvaluationResults result={report.task2} title="Task 2 Analysis" />}
+          </div>
+      );
     }
 
     if (submission.skill === 'Speaking') {
@@ -256,5 +291,3 @@ function SubmissionSkeleton() {
     </div>
   );
 }
-
-    

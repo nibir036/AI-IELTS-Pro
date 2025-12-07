@@ -80,7 +80,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             let isCorrect = false;
 
             if (q.type === 'multiple-choice-multiple-answer') {
-                const correctAnswersSet = new Set(correctAnswer.split(',').sort());
+                const correctAnswersSet = new Set(correctAnswer.split(',').map(s => s.trim()).sort());
                 const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
                 isCorrect = correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
             } else {
@@ -159,7 +159,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                 {question.type === 'multiple-choice' && (
                                 <>
                                     <p className="font-medium mb-2" dangerouslySetInnerHTML={{ __html: question.question }} />
-                                    <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                                    <RadioGroup onValueChange={field.onChange} value={field.value as string} disabled={isGraded}>
                                     {question.options?.map((option, index) => (
                                         <div key={index} className="flex items-center space-x-2">
                                         <RadioGroupItem value={option} id={`${question.id}-${index}`} />
@@ -193,7 +193,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         </div>
                                     </>
                                 )}
-                                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && (
+                                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion') && (
                                    <div className="flex items-center flex-wrap font-medium">
                                         <span>{questionTextParts[0]}</span>
                                         <Input {...field} disabled={isGraded} placeholder="........" className="w-40 inline-block mx-2 h-8" />
@@ -220,7 +220,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                         <p className="text-muted-foreground">({(totalQuestions > 0 ? (score / 9.0) * 100 : 0).toFixed(0)}% accuracy)</p>
                     </CardHeader>
                     <CardContent className="text-center">
-                        <p className="text-muted-foreground mb-6">You can now review your detailed results, including AI-powered explanations for incorrect answers, on your submissions page.</p>
+                        <p className="text-muted-foreground mb-6">You can now review your detailed results, including correct and incorrect answers, on your submissions page.</p>
                         <Button onClick={() => router.push(`/submissions`)} size="lg">
                             View My Submissions <ChevronRight className="ml-2 h-4 w-4" />
                         </Button>
