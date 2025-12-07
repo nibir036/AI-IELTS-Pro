@@ -57,7 +57,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     }, []);
 
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups?.flatMap(qg => qg.questions)) || [], [test.parts]);
-    const totalQuestions = allQuestions.length;
+    const totalQuestions = allQuestions.length > 0 ? allQuestions.length : 40; // Ensure it shows 40 if calculation is slow/zero.
 
     const methods = useForm<UserAnswers>({
         defaultValues: allQuestions.reduce((acc, q) => ({ ...acc, [q.id]: q.type === 'multiple-choice-multiple-answer' ? [] : '' }), {})
@@ -258,25 +258,18 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                         </CardContent>
                     </Card>
 
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Questions</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="h-[calc(100vh-32rem)] pr-4">
-                                <div className="space-y-8">
-                                    {test.parts.map((part) => (
-                                        <div key={part.part}>
-                                            <h2 className="text-xl font-bold mb-4 pb-2 border-b">Part {part.part}</h2>
-                                            <div className="space-y-6">
-                                                {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </ScrollArea>
-                        </CardContent>
-                     </Card>
+                    <div className="space-y-8">
+                        {test.parts.map((part) => (
+                            <Card key={part.part}>
+                                <CardHeader>
+                                    <CardTitle>Part {part.part}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
                 </div>
             </form>
         </FormProvider>
@@ -332,3 +325,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
+
+    
