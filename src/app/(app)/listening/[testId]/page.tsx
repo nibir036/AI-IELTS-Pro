@@ -19,7 +19,6 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,7 +57,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         startTimeRef.current = new Date();
     }, []);
 
-    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups.flatMap(qg => qg.questions)) || [], [test.parts]);
+    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups?.flatMap(qg => qg.questions)) || [], [test.parts]);
     const totalQuestions = allQuestions.length;
 
     const methods = useForm<UserAnswers>({
@@ -71,19 +70,21 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
     
     const onSubmit = async (data: UserAnswers) => {
-        if (!test) return;
+        if (!test || !test.answers) return;
         setIsSubmitting(true);
 
         let correctCount = 0;
         allQuestions.forEach(q => {
             const userAnswer = data[q.id];
+            const correctAnswer = test.answers[q.id];
             let isCorrect = false;
+
             if (q.type === 'multiple-choice-multiple-answer') {
-                const correctAnswers = q.answer.split(',').sort();
-                const givenAnswers = (Array.isArray(userAnswer) ? userAnswer : []).sort();
-                isCorrect = JSON.stringify(correctAnswers) === JSON.stringify(givenAnswers);
+                const correctAnswersSet = new Set(correctAnswer.split(',').sort());
+                const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
+                isCorrect = correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
             } else {
-                 isCorrect = (userAnswer as string || '').trim().toLowerCase() === q.answer.toLowerCase();
+                 isCorrect = (userAnswer as string || '').trim().toLowerCase() === correctAnswer.toLowerCase();
             }
 
             if (isCorrect) {
@@ -140,61 +141,72 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     }
     
     const renderQuestion = (question: ListeningQuestion) => {
-      const questionNumber = allQuestions.findIndex(q => q.id === question.id) + 1;
-  
-      return (
-        <div key={question.id} className="space-y-2">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 flex items-center justify-center h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
-            <div className="flex-1">
-              <p className="font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
-  
-              <Controller
-                name={question.id as any}
-                control={control}
-                render={({ field }) => (
-                  <div className="pt-2">
-                    {question.type === 'multiple-choice' && (
-                      <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
-                        {question.options?.map((option, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                            <Label htmlFor={`${question.id}-${index}`}>{option}</Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    )}
-                    {question.type === 'multiple-choice-multiple-answer' && (
-                      <div className="space-y-2">
-                        {question.options?.map((option, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`${question.id}-${index}`}
-                              checked={(field.value as string[])?.includes(option)}
-                              onCheckedChange={(checked) => {
-                                const currentValue = field.value as string[] || [];
-                                if (checked) {
-                                  field.onChange([...currentValue, option]);
-                                } else {
-                                  field.onChange(currentValue.filter(v => v !== option));
-                                }
-                              }}
-                            />
-                            <Label htmlFor={`${question.id}-${index}`}>{option}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && (
-                      <Input {...field} disabled={isGraded} placeholder="Your answer" />
-                    )}
-                  </div>
-                )}
-              />
+        const questionNumberMatch = question.id.match(/\d+$/);
+        const questionNumber = questionNumberMatch ? questionNumberMatch[0] : question.id;
+        
+        const questionTextParts = question.question.split('____');
+
+        return (
+            <div key={question.id} className="space-y-2">
+                <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 flex items-center justify-center h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
+                    <div className="flex-1">
+                        <Controller
+                            name={question.id}
+                            control={control}
+                            render={({ field }) => (
+                            <div className="pt-2">
+                                {question.type === 'multiple-choice' && (
+                                <>
+                                    <p className="font-medium mb-2" dangerouslySetInnerHTML={{ __html: question.question }} />
+                                    <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                                    {question.options?.map((option, index) => (
+                                        <div key={index} className="flex items-center space-x-2">
+                                        <RadioGroupItem value={option} id={`${question.id}-${index}`} />
+                                        <Label htmlFor={`${question.id}-${index}`}>{option}</Label>
+                                        </div>
+                                    ))}
+                                    </RadioGroup>
+                                </>
+                                )}
+                                {question.type === 'multiple-choice-multiple-answer' && (
+                                    <>
+                                        <p className="font-medium mb-2" dangerouslySetInnerHTML={{ __html: question.question }} />
+                                        <div className="space-y-2">
+                                            {question.options?.map((option, index) => (
+                                            <div key={index} className="flex items-center space-x-2">
+                                                <Checkbox
+                                                id={`${question.id}-${index}`}
+                                                checked={(field.value as string[])?.includes(option)}
+                                                onCheckedChange={(checked) => {
+                                                    const currentValue = field.value as string[] || [];
+                                                    if (checked) {
+                                                    field.onChange([...currentValue, option]);
+                                                    } else {
+                                                    field.onChange(currentValue.filter(v => v !== option));
+                                                    }
+                                                }}
+                                                />
+                                                <Label htmlFor={`${question.id}-${index}`}>{option}</Label>
+                                            </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && (
+                                   <div className="flex items-center flex-wrap font-medium">
+                                        <span>{questionTextParts[0]}</span>
+                                        <Input {...field} disabled={isGraded} placeholder="........" className="w-40 inline-block mx-2 h-8" />
+                                        <span>{questionTextParts[1]}</span>
+                                   </div>
+                                )}
+                            </div>
+                            )}
+                        />
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      );
+        );
     };
 
     if (isGraded) {
@@ -268,7 +280,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <CardContent className="flex-1 overflow-hidden">
                                             <ScrollArea className="h-full pr-4">
                                                 <div className="space-y-6">
-                                                     {part.questionGroups.map((group) => renderQuestionGroup(group))}
+                                                     {(part.questionGroups || []).map((group) => renderQuestionGroup(group))}
                                                 </div>
                                             </ScrollArea>
                                         </CardContent>
@@ -314,7 +326,7 @@ function TestDataError() {
                 <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
                 <CardTitle className="mt-4">Test Data Corrupted</CardTitle>
                 <CardDescription className="mt-2">
-                    This listening test could not be loaded because its data is missing or formatted incorrectly.
+                    This listening test could not be loaded because its data is missing key fields like `parts` or `questionGroups`. Please regenerate it using the Admin Content Factory.
                 </CardDescription>
             </Card>
         </div>

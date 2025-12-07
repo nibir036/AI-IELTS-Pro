@@ -90,11 +90,9 @@ export type ListeningQuestionType = 'multiple-choice' | 'note-completion' | 'fil
 
 export interface ListeningQuestion {
     id: string;
-    instructions?: string;
     question: string;
     type: ListeningQuestionType;
     options?: string[];
-    answer: string; // For multiple-choice-multiple-answer, this will be a comma-separated string, e.g., "A,C,E"
 }
 
 export interface ListeningQuestionGroup {
@@ -116,6 +114,7 @@ export interface ListeningTest {
     skill: 'Listening';
     audioUrl?: string; 
     parts: ListeningTestPart[];
+    answers: Record<string, string>; // e.g. { "q1": "C", "q2": "18th" }
 }
 
 

@@ -286,10 +286,9 @@
                           "options": {
                             "type": "array",
                             "items": { "type": "string" }
-                          },
-                          "answer": { "type": "string" }
+                          }
                         },
-                        "required": ["id", "question", "type", "answer"]
+                        "required": ["id", "question", "type"]
                       }
                     }
                   },
@@ -299,9 +298,16 @@
             },
             "required": ["part", "title", "transcript", "questionGroups"]
           }
+        },
+        "answers": {
+            "type": "object",
+            "description": "A map of question IDs to their correct answers.",
+            "additionalProperties": {
+                "type": "string"
+            }
         }
       },
-      "required": ["id", "title", "skill", "parts"]
+      "required": ["id", "title", "skill", "parts", "answers"]
     },
     "Submission": {
       "$schema": "http://json-schema.org/draft-07/schema#",

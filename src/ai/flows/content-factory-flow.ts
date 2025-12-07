@@ -17,7 +17,7 @@ import { generateAudioFromText } from './text-to-speech-flow';
 import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
-import { Lesson, SpeakingTest } from '@/lib/types';
+import { Lesson, ListeningTest, SpeakingTest } from '@/lib/types';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
@@ -39,7 +39,12 @@ const PracticeQuestionSchema = z.object({
 
 const ListeningQuestionGroupSchema = z.object({
     instructions: z.string().describe("The specific instructions for this block of questions."),
-    questions: z.array(PracticeQuestionSchema),
+    questions: z.array(z.object({
+        id: z.string(),
+        question: z.string(),
+        type: z.enum(["multiple-choice", "note-completion", "fill-in-the-blank", "summary-completion", "multiple-choice-multiple-answer"]),
+        options: z.array(z.string()).optional(),
+    })),
 });
 
 const GrammarTableRowSchema = z.object({
@@ -73,7 +78,7 @@ const LessonSchema = z.object({
   level: z.enum(['Basic', 'Intermediate', 'Advanced', 'All Levels', "Part 1", "Part 2", "Part 3"]),
   content_en: z.string().describe("A brief, one-sentence summary of the lesson's content."),
   contentBlocks: z.array(ContentBlockSchema).describe("An array of structured content blocks that make up the lesson."),
-  exercises: z.array(PracticeExerciseSchema).optional().describe("An array of practice exercises with answer keys."),
+  exercises: z.array(PracticeExerciseSchema).optional().describe("An array of practice exercises with answer key."),
 });
 
 const SpeakingPromptSetSchema = z.object({
@@ -115,6 +120,7 @@ const ListeningTestSchema = z.object({
     skill: z.enum(["Listening"]),
     audioUrl: z.string().url().optional().describe("A placeholder URL for the full test audio."),
     parts: z.array(ListeningTestPartSchema).describe("An array of 4 parts, each with its own transcript segment and question groups."),
+    answers: z.record(z.string()).describe("A key-value map of question IDs to correct answers."),
 });
 
 const WritingTestSchema = z.object({
@@ -229,20 +235,23 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Creator.
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
+*   **STRICT JSON Structure:** You MUST generate a single JSON object with two top-level keys: \`testData\` and \`answers\`.
+    *   The \`testData\` object must conform to the structure of \`ListeningTest\` from the schema, BUT with the \`answers\` map being an empty object \`{}\`. The \`questions\` objects inside \`testData\` MUST NOT contain an \`answer\` field.
+    *   The \`answers\` object must be a simple key-value map where each key is a question ID (e.g., "q1") and the value is the string of the correct answer.
 *   **Strict Formatting Rules:**
-    1.  **Structure:** Create 4 'parts', each with its own segment of the transcript.
-    2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
+    1.  **Structure:** Create 4 'parts' inside \`testData\`, each with its own segment of the transcript.
+    2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array.
     3.  **Specific Question Format (Apply this structure exactly):**
         *   **Part 1:**
             *   Questions 1-2: \`multiple-choice\` (single answer from A, B, or C).
             *   Questions 3-10: \`fill-in-the-blank\` or \`note-completion\`.
         *   **Part 2:**
             *   Questions 11-15: \`fill-in-the-blank\` or \`note-completion\`.
-            *   Questions 16-18: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options. The \`answer\` field must be a comma-separated string (e.g., "A,D,F").
-            *   Questions 19-20: \`multiple-choice-multiple-answer\`. Instructions must say "Choose TWO answers, A-E". Provide 5 options. The \`answer\` field must be a comma-separated string (e.g., "B,E").
+            *   Questions 16-18: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options. The answer in the \`answers\` map must be a comma-separated string (e.g., "A,D,F").
+            *   Questions 19-20: \`multiple-choice-multiple-answer\`. Instructions must say "Choose TWO answers, A-E". Provide 5 options. The answer in the \`answers\` map must be a comma-separated string (e.g., "B,E").
         *   **Part 3:**
             *   Questions 21-24: \`multiple-choice\` (single answer from A, B, or C).
-            *   Questions 25-27: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options. The \`answer\` field must be a comma-separated string.
+            *   Questions 25-27: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options.
             *   Questions 28-30: \`fill-in-the-blank\` or \`note-completion\`.
         *   **Part 4:**
             *   Questions 31-40: \`fill-in-the-blank\` or \`note-completion\` (typically one-word answers).
@@ -300,13 +309,29 @@ const contentFactoryFlow = ai.defineFlow(
       retryOn: isRetryableGoogleAIError,
     });
     
-    const structuredContent = result.output;
+    let structuredContent = result.output;
 
     if (!structuredContent) {
       throw new Error("Failed to generate structured content from the AI prompt.");
     }
     console.log("Structured content generated.");
     
+    // Handle the new ListeningTest format
+    if (input.contentType === 'ListeningTest' && 'testData' in structuredContent && 'answers' in structuredContent) {
+      const listeningTestData = structuredContent.testData as Omit<ListeningTest, 'answers'>;
+      const listeningAnswers = structuredContent.answers as Record<string, string>;
+
+      // Combine them into the final ListeningTest object
+      const finalListeningTest: ListeningTest = {
+          ...listeningTestData,
+          answers: listeningAnswers,
+      };
+      
+      // Re-assign structuredContent to the final, combined object
+      structuredContent = finalListeningTest;
+    }
+
+
     // 4. Post-process for media generation and saving
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
         const batch = firestore.batch();
@@ -416,14 +441,14 @@ const contentFactoryFlow = ai.defineFlow(
     if (input.contentType !== 'SpeakingPrompt') {
         let targetCollection: string;
 
-        if ('skill' in structuredContent) {
+        if ('skill' in structuredContent && typeof structuredContent.skill === 'string') {
              switch (structuredContent.skill) {
                 case 'Reading': targetCollection = 'readingTests'; break;
                 case 'Listening': targetCollection = 'listeningTests'; break;
                 case 'Writing': targetCollection = 'mockTests'; break;
                 default: throw new Error(`Unknown skill type for saving: ${structuredContent.skill}`);
             }
-        } else if ('type' in structuredContent && structuredContent.type) {
+        } else if ('type' in structuredContent && typeof structuredContent.type === 'string') {
              switch (structuredContent.type) {
                 case 'Grammar':
                 case 'Vocabulary':
@@ -439,9 +464,13 @@ const contentFactoryFlow = ai.defineFlow(
             throw new Error("Could not determine target collection for saving.");
         }
       
-        const docRef = firestore.collection(targetCollection).doc(structuredContent.id);
-        await docRef.set(structuredContent);
-        console.log(`Content saved to '${targetCollection}/${structuredContent.id}'.`);
+        if ('id' in structuredContent && typeof structuredContent.id === 'string') {
+            const docRef = firestore.collection(targetCollection).doc(structuredContent.id);
+            await docRef.set(structuredContent);
+            console.log(`Content saved to '${targetCollection}/${structuredContent.id}'.`);
+        } else {
+             throw new Error("Generated content is missing a valid 'id' property.");
+        }
     }
 
     return structuredContent;
