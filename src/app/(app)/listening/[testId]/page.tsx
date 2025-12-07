@@ -57,12 +57,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     }, []);
 
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups?.flatMap(qg => qg.questions)) || [], [test.parts]);
-    const totalQuestions = React.useMemo(() => {
-        return test.parts?.reduce((acc, part) => {
-            const partQuestions = part.questionGroups?.reduce((qAcc, qg) => qAcc + qg.questions.length, 0) || 0;
-            return acc + partQuestions;
-        }, 0) || 0;
-    }, [test.parts]);
+    const totalQuestions = allQuestions.length;
 
     const methods = useForm<UserAnswers>({
         defaultValues: allQuestions.reduce((acc, q) => ({ ...acc, [q.id]: q.type === 'multiple-choice-multiple-answer' ? [] : '' }), {})
@@ -330,3 +325,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
+
+    

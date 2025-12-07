@@ -45,7 +45,7 @@ const ListeningQuestionGroupSchema = z.object({
         question: z.string(),
         type: z.enum(["multiple-choice", "note-completion", "fill-in-the-blank", "summary-completion", "multiple-choice-multiple-answer"]),
         options: z.array(z.string()).optional(),
-        answer: z.string().describe("The correct answer. For multiple answers, use a comma-separated string like 'A,D,F'."),
+        answer: z.string().describe("The correct answer. For multiple-choice questions, this MUST be the full text of the option (e.g. 'a display of instruments'), not just the letter. For multiple-choice-multiple-answer questions, this must be a comma-separated string of the full text of the correct options."),
     })),
 });
 
@@ -206,7 +206,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 *   **Task:** The user will provide three inputs: \`rawText\` (the full 40-question test paper), \`transcript\` (the full audio transcript), and \`answers\` (a comma-separated list of all 40 correct answers). Your task is to precisely parse and combine these three inputs into a single, valid JSON object.
 *   **STRICT JSON Structure:**
     1.  **Parse Question Paper (\`rawText\`):** Group consecutive questions that share the same instructions (e.g., "Questions 1-5", "Choose THREE letters A-G") into a single object within the \`questionGroups\` array. Each group MUST have an \`instructions\` string and a \`questions\` array.
-    2.  **Assign Answers (\`answers\`):** Take the comma-separated answers string and assign the correct answer to the \`answer\` field of each corresponding question object (q1, q2, ... q40).
+    2.  **Assign Answers (\`answers\`):** Take the comma-separated answers string and assign the correct answer to the \`answer\` field of each corresponding question object (q1, q2, ... q40). For multiple-choice questions, the answer MUST be the full text of the option (e.g. "a display of instruments"), NOT just the letter.
     3.  **Divide Transcript (\`transcript\`):** Logically divide the full transcript into four segments and place each segment into the 'transcript' field of the corresponding 'part' object (Part 1, Part 2, Part 3, Part 4).
     4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
     5.  **Output:** Your entire output must be a single JSON object conforming to the ListeningTest schema.
@@ -363,16 +363,12 @@ const contentFactoryFlow = ai.defineFlow(
         let targetCollection: string;
         const content = structuredContent as any;
 
-        if (content.type === "ListeningTest" || content.skill === 'Reading' || content.skill === 'Writing' || content.skill === 'Listening') {
+        if (content.skill) {
              switch (content.skill) {
                 case 'Reading': targetCollection = 'readingTests'; break;
                 case 'Listening': targetCollection = 'listeningTests'; break;
                 case 'Writing': targetCollection = 'mockTests'; break;
                 default:
-                    if(content.type === "ListeningTest"){
-                       targetCollection = 'listeningTests';
-                       break;
-                    }
                     throw new Error(`Unknown skill type for saving: ${content.skill}`);
             }
         } else if (content.type) {
@@ -382,6 +378,9 @@ const contentFactoryFlow = ai.defineFlow(
                 case 'Tips':
                 case 'Speaking':
                     targetCollection = 'lessons';
+                    break;
+                case 'ListeningTest':
+                    targetCollection = 'listeningTests';
                     break;
                 default:
                      throw new Error(`Unknown content type for saving: ${content.type}`);
