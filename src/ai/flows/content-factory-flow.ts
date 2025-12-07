@@ -17,7 +17,7 @@ import { generateAudioFromText } from './text-to-speech-flow';
 import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
-import { Lesson, ListeningTest, SpeakingTest, MockTest } from '@/lib/types';
+import { Lesson, ListeningTest, MockTest, SpeakingTest } from '@/lib/types';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
@@ -155,6 +155,12 @@ export async function processContent(
   return contentFactoryFlow(input);
 }
 
+const ListeningTestAiOutputSchema = z.object({
+  testData: ListeningTestSchema,
+  answers: z.object({
+    __dummy: z.never().optional(),
+  }).catchall(z.string()),
+});
 
 const prompt = ai.definePrompt({
   name: 'contentFactoryPrompt',
@@ -237,12 +243,10 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Creator.
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
-*   **STRICT JSON Structure:** You MUST generate a single JSON object. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats. This JSON MUST have two top-level keys: \`testData\` and \`answers\`.
-    *   \`testData\`: Conforms to the ListeningTest schema (excluding the \`answers\` field).
-    *   \`answers\`: A flat JSON object mapping every question ID (e.g., "q1", "q2") to its correct string answer.
+*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats.
 *   **Strict Formatting Rules:**
-    1.  **Structure:** Create 4 'parts' inside \`testData\`, each with its own segment of the transcript.
-    2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
+    1.  **Structure:** Create 4 'parts' inside the main object, each with its own segment of the transcript.
+    2.  **Question Grouping:** Within each part, group questions under a 'questionGroups' array. Each object in this array must have an 'instructions' string and a 'questions' array. This is critical for handling multiple question formats within one part.
     3.  **Specific Question Format (Apply this structure exactly):**
         *   **Part 1:**
             *   Questions 1-2: \`multiple-choice\` (single answer from A, B, or C).
@@ -258,6 +262,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
         *   **Part 4:**
             *   Questions 31-40: \`fill-in-the-blank\` or \`note-completion\` (typically one-word answers).
     4.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
+    5.  **Answers Map:** You must provide a separate 'answers' map at the top level of the JSON object, containing a key-value pair for every single question from q1 to q40.
 
 ---
 ### GENERAL RULES ###
@@ -319,20 +324,19 @@ const contentFactoryFlow = ai.defineFlow(
     console.log("Structured content generated.");
     
     // Handle the new ListeningTest format where AI returns { testData, answers }
-    if (input.contentType === 'ListeningTest' && 'testData' in structuredContent && 'answers' in structuredContent) {
-      const listeningTestData = structuredContent.testData as Omit<ListeningTest, 'answers'>;
-      const listeningAnswers = structuredContent.answers as Record<string, string>;
-
-      // Combine them into the final ListeningTest object
-      const finalListeningTest: ListeningTest = {
-          ...(listeningTestData as any), // Cast to any to satisfy TS for a moment
-          answers: listeningAnswers,
-      };
-      
-      // Re-assign structuredContent to the final, combined object
-      structuredContent = finalListeningTest;
+    if (input.contentType === 'ListeningTest') {
+        const parsedAsListeningTest = ListeningTestAiOutputSchema.safeParse(result.output);
+        if (parsedAsListeningTest.success) {
+            const { testData, answers } = parsedAsListeningTest.data;
+            // Combine them into the final ListeningTest object that matches ProcessContentOutputSchema
+            const finalListeningTest: ListeningTest = {
+                ...testData,
+                answers: answers,
+            };
+            structuredContent = finalListeningTest;
+            console.log("Successfully parsed and combined ListeningTest data from AI.");
+        }
     }
-
 
     // 4. Post-process for media generation and saving
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
@@ -371,7 +375,7 @@ const contentFactoryFlow = ai.defineFlow(
 
                 const [header, base64Data] = imageResult.imageDataUri.split(',');
                 const contentType = header.split(':')[1].split(';')[0];
-                const filePath = `writing-tasks/${structuredContent.id}/task1_image.png`;
+                const filePath = `writing-tasks/${(structuredContent as MockTest).id}/task1_image.png`;
                 
                 const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
                 task1.imageUrl = publicUrl;
@@ -397,7 +401,7 @@ const contentFactoryFlow = ai.defineFlow(
                      if (imageResult.imageDataUri.startsWith('data:')) {
                         const [header, base64Data] = imageResult.imageDataUri.split(',');
                         const contentType = header.split(':')[1].split(';')[0];
-                        const filePath = `lesson-images/${structuredContent.id}/block_${index}.png`;
+                        const filePath = `lesson-images/${(structuredContent as Lesson).id}/block_${index}.png`;
                         
                         const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
                         block.generatedImageUrl = publicUrl;
@@ -480,5 +484,4 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
+ 
