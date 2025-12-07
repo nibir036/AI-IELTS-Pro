@@ -7,13 +7,13 @@ import { notFound, useRouter } from 'next/navigation';
 import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
-import type { ListeningTest, ListeningQuestion, ListeningQuestionGroup } from '@/lib/types';
+import type { ListeningTest, ListeningQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { ChevronRight, Loader2, Lightbulb, Info } from 'lucide-react';
+import { ChevronRight, Loader2, Lightbulb, Info, AlertTriangle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -62,6 +62,15 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
     const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions || []) || [], [test.parts]);
     const totalQuestions = allQuestions.length;
+    
+    // Create a map to get the global question number from its ID
+    const questionNumberMap = React.useMemo(() => {
+        const map = new Map<string, number>();
+        allQuestions.forEach((q, index) => {
+            map.set(q.id, index + 1);
+        });
+        return map;
+    }, [allQuestions]);
 
     const methods = useForm<UserAnswers>({
         defaultValues: allQuestions.reduce((acc, q) => ({ ...acc, [q.id]: '' }), {})
@@ -75,7 +84,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const onSubmit = async (data: UserAnswers) => {
         if (!test) return;
         setIsSubmitting(true);
-        
 
         let correctCount = 0;
         allQuestions.forEach(q => {
@@ -178,7 +186,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     </div>
                 )}
                  <div className="space-y-6">
-                    {groupQuestions.map((q, index) => renderQuestion(q, allQuestions.findIndex(aq => aq.id === q.id) + 1))}
+                    {groupQuestions.map((q) => renderQuestion(q, questionNumberMap.get(q.id) || 0))}
                  </div>
             </div>
         ));
@@ -200,8 +208,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             return 'text-muted-foreground';
         };
 
-        const questionParts = (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && question.question.includes('____')
-            ? question.question.replace(/____/g, `____(${questionNumber})____`).split(`____(${questionNumber})____`)
+        const questionParts = (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && question.question.includes('__________')
+            ? question.question.replace(/__________/g, `____(${questionNumber})____`).split(`____(${questionNumber})____`)
             : [question.question];
         
         const isInlineInput = questionParts.length > 1 && (question.type === 'fill-in-the-blank' || question.type === 'note-completion');
@@ -343,7 +351,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                             <CardDescription>Listen to the audio and answer the questions for this part.</CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
-                                            <AudioPlayer src={part.audioUrl} />
+                                            <AudioPlayer src={part.audioUrl || test.audioUrl || ''} />
                                         </CardContent>
                                     </Card>
 
@@ -391,6 +399,20 @@ function TestPageSkeleton() {
     )
 }
 
+function TestDataError() {
+    return (
+         <div className="flex flex-col items-center justify-center h-full text-center py-10">
+            <Card className="max-w-lg p-8">
+                <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+                <CardTitle className="mt-4">Test Data Corrupted</CardTitle>
+                <CardDescription className="mt-2">
+                    This listening test could not be loaded because its data is missing or formatted incorrectly.
+                </CardDescription>
+            </Card>
+        </div>
+    )
+}
+
 export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
     const { testId } = use(params);
     const { firestore } = useFirebase();
@@ -409,13 +431,10 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     if (!test) {
         notFound();
     }
-
-     if (!test.parts || test.parts.length === 0) {
-        return (
-             <div className="flex items-center justify-center h-full">
-                <p>This test is not formatted correctly and cannot be displayed.</p>
-            </div>
-        );
+    
+    // Validate the test data structure
+    if (!test.parts || !Array.isArray(test.parts) || test.parts.length === 0) {
+      return <TestDataError />;
     }
     
     return <ListeningTestComponent test={test} />;

@@ -86,33 +86,30 @@ export interface ReadingTest {
 }
 
 
-export type ListeningQuestionType = 'multiple-choice' | 'note-completion' | 'fill-in-the-blank';
+export type ListeningQuestionType = 'multiple-choice' | 'note-completion' | 'fill-in-the-blank' | 'summary-completion';
 
 export interface ListeningQuestion {
     id: string;
+    instructions?: string;
     question: string;
     type: ListeningQuestionType;
     options?: string[];
     answer: string;
 }
 
-export interface ListeningQuestionGroup {
-    instructions: string;
-    questions: ListeningQuestion[];
-}
-
 export interface ListeningTestPart {
     part: number;
     title: string;
     transcript: string;
-    audioUrl: string;
-    questionGroups: ListeningQuestionGroup[];
+    audioUrl?: string; // audioUrl is now optional at the part level
+    questions: ListeningQuestion[];
 }
 
 export interface ListeningTest {
     id: string;
     title: string;
     skill: 'Listening';
+    audioUrl?: string; // Main audioUrl at the top level
     parts: ListeningTestPart[];
 }
 
