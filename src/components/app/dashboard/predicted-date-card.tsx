@@ -14,6 +14,8 @@ interface PredictedDateCardProps {
   user: User;
 }
 
+const PREDICTION_CACHE_KEY = 'predictionCache';
+
 export function PredictedDateCard({ user }: PredictedDateCardProps) {
   const { firestore } = useFirebase();
   const [prediction, setPrediction] = useState<PredictTargetDateOutput | null>(null);
@@ -33,6 +35,15 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
 
   useEffect(() => {
     async function fetchPrediction() {
+        // Attempt to load from session storage first
+        const cachedPrediction = sessionStorage.getItem(PREDICTION_CACHE_KEY);
+        if (cachedPrediction) {
+            setPrediction(JSON.parse(cachedPrediction));
+            setStatus('success');
+            setIsLoading(false);
+            return;
+        }
+
       // Don't run if the user has no initial score
       if (user.currentBand === 0) {
           setStatus('initial');
@@ -70,6 +81,7 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
           submissions: submissionSummary,
         });
         setPrediction(result);
+        sessionStorage.setItem(PREDICTION_CACHE_KEY, JSON.stringify(result)); // Cache the result
         setStatus('success');
       } catch (error) {
         console.error("Error fetching prediction:", error);
