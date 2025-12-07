@@ -120,7 +120,7 @@ const ListeningTestSchema = z.object({
     skill: z.enum(["Listening"]),
     audioUrl: z.string().url().optional().describe("A placeholder URL for the full test audio."),
     parts: z.array(ListeningTestPartSchema).describe("An array of 4 parts, each with its own transcript segment and question groups."),
-    answers: z.record(z.string()).describe("A key-value map of question IDs to correct answers."),
+    answers: z.object({}).catchall(z.string()).describe("A key-value map of question IDs to correct answers."),
 });
 
 const WritingTestSchema = z.object({
@@ -235,12 +235,10 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Creator.
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
-*   **STRICT JSON Structure:** You MUST generate a single JSON object with two top-level keys: \`testData\` and \`answers\`.
-    *   The \`testData\` object must conform to the structure of \`ListeningTest\` from the schema, BUT with the \`answers\` map being an empty object \`{}\`. The \`questions\` objects inside \`testData\` MUST NOT contain an \`answer\` field.
-    *   The \`answers\` object must be a simple key-value map where each key is a question ID (e.g., "q1") and the value is the string of the correct answer.
+*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats.
 *   **Strict Formatting Rules:**
     1.  **Structure:** Create 4 'parts' inside \`testData\`, each with its own segment of the transcript.
-    2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array.
+    2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
     3.  **Specific Question Format (Apply this structure exactly):**
         *   **Part 1:**
             *   Questions 1-2: \`multiple-choice\` (single answer from A, B, or C).
@@ -476,3 +474,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
