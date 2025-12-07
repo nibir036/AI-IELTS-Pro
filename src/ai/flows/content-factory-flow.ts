@@ -333,16 +333,18 @@ const contentFactoryFlow = ai.defineFlow(
     if ('contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
         console.log("Generating images for lesson blocks...");
         const lesson = structuredContent as Lesson;
-        const imageGenerationPromises = lesson.contentBlocks.map(async (block, index) => {
+        
+        // Use a sequential for...of loop to avoid rate limiting
+        for (const block of lesson.contentBlocks) {
             if (block.type === 'image_placeholder' && block.imageHint) {
                 try {
                     console.log(`Generating image for prompt: "${block.imageHint}"`);
                     const imageResult = await generateLessonImage(block.imageHint);
                     
-                     if (imageResult.imageDataUri.startsWith('data:')) {
+                    if (imageResult.imageDataUri.startsWith('data:')) {
                         const [header, base64Data] = imageResult.imageDataUri.split(',');
                         const contentType = header.split(':')[1].split(';')[0];
-                        const filePath = `lesson-images/${lesson.id}/block_${index}.png`;
+                        const filePath = `lesson-images/${lesson.id}/block_${lesson.contentBlocks.indexOf(block)}.png`;
                         
                         const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
                         block.generatedImageUrl = publicUrl;
@@ -355,10 +357,7 @@ const contentFactoryFlow = ai.defineFlow(
                     block.generatedImageUrl = "https://picsum.photos/seed/error/600/400";
                 }
             }
-            return block;
-        });
-
-        lesson.contentBlocks = await Promise.all(imageGenerationPromises);
+        }
         console.log("Image generation for lesson blocks complete.");
     }
 
@@ -407,5 +406,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
