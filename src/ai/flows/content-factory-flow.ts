@@ -268,7 +268,7 @@ const contentFactoryFlow = ai.defineFlow(
         console.warn("Could not query knowledge base. Proceeding without it.", e);
     }
 
-    // 3. Call the AI with the input text and the retrieved knowledge
+    // 3. Call the AI to generate structured text content
     console.log("Generating structured content from AI...");
     const result = await withRetry(() => prompt({ ...input, knowledge }), {
       retryOn: isRetryableGoogleAIError,
@@ -281,7 +281,7 @@ const contentFactoryFlow = ai.defineFlow(
     }
     console.log("Structured content generated.");
     
-    // 4. Post-process for Speaking prompts (they are a special case, a set of documents)
+    // 4. Handle SpeakingPromptSet: it's a special case, a set of documents
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
         const batch = firestore.batch();
 
@@ -299,11 +299,11 @@ const contentFactoryFlow = ai.defineFlow(
 
         await batch.commit();
         console.log("Speaking prompts saved successfully to 'speakingTests' collection.");
-        return structuredContent; // Return the set itself to satisfy the flow's output schema
+        return structuredContent; // Return the set to satisfy the flow's output schema
     }
 
 
-    // 5. Post-process for media generation - STRICTLY only for Writing and Lesson types
+    // 5. Post-process for media generation - STRICTLY only for WritingTest and Lesson types
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
         console.log("Processing Writing Test for image generation...");
         const mockTest = structuredContent as MockTest;
@@ -311,9 +311,9 @@ const contentFactoryFlow = ai.defineFlow(
         if (task1 && task1.topic) {
             try {
                 console.log(`Generating image for Task 1: "${task1.topic}"`);
-                // Wrap the image generation in its own retry logic
                 const imageResult = await withRetry(() => generateWritingTaskImage(task1.topic), {
                     retryOn: isRetryableGoogleAIError,
+                    retries: 2, // Be less aggressive with retries for non-critical images
                 });
                 
                 if (!imageResult.imageDataUri || !imageResult.imageDataUri.startsWith('data:')) {
@@ -329,14 +329,15 @@ const contentFactoryFlow = ai.defineFlow(
                 console.log(`Task 1 image uploaded to ${publicUrl}`);
 
             } catch (imgError: any) {
-                console.error(`CRITICAL: Failed to generate or upload image for Task 1: "${task1.topic}"`, imgError);
+                console.error(`CRITICAL: Failed to generate or upload image for Task 1.`, imgError);
                  // Throw a new error that includes the structured content, so the client can handle it.
+                 // This allows for manual upload as a fallback.
                  const errorWithData = new Error(`Image generation failed. Partial content: ${JSON.stringify(structuredContent)}`);
                  throw errorWithData;
             }
         }
     } else if (input.contentType === 'Lesson' && 'contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
-        console.log("Generating images for lesson blocks...");
+        console.log("Processing Lesson for image generation...");
         const lesson = structuredContent as Lesson;
         
         // Use a sequential for...of loop to avoid rate limiting
@@ -359,7 +360,7 @@ const contentFactoryFlow = ai.defineFlow(
                     }
                 } catch (imgError) {
                     console.error(`Failed to generate or upload image for prompt: "${block.imageHint}"`, imgError);
-                    block.generatedImageUrl = "https://picsum.photos/seed/error/600/400";
+                    block.generatedImageUrl = "https://picsum.photos/seed/error/600/400"; // Fallback placeholder
                 }
             }
         }
@@ -367,55 +368,32 @@ const contentFactoryFlow = ai.defineFlow(
     }
 
 
-     // Final step for single-object content types: save to Firestore
-    if (input.contentType === 'ListeningTest') {
-        const content = structuredContent as any;
-        if (content.id) {
-            const docRef = firestore.collection('listeningTests').doc(content.id);
-            await docRef.set(content);
-            console.log(`Content saved to 'listeningTests/${content.id}'.`);
-        } else {
-            throw new Error("Generated listening test is missing a valid 'id' property.");
-        }
-    } else if (input.contentType !== 'SpeakingPrompt') {
-        let targetCollection: string;
+     // 6. Final step for single-object content types: save to Firestore
+    if (input.contentType !== 'SpeakingPrompt') {
+        let targetCollection: string | null = null;
         const content = structuredContent as any;
 
-        if (content.skill) {
-             switch (content.skill) {
-                case 'Reading': targetCollection = 'readingTests'; break;
-                case 'Writing': targetCollection = 'mockTests'; break;
-                default:
-                    throw new Error(`Unknown skill type for saving: ${content.skill}`);
-            }
-        } else if (content.type) {
-             switch (content.type) {
-                case 'Grammar':
-                case 'Vocabulary':
-                case 'Tips':
-                case 'Speaking':
-                    targetCollection = 'lessons';
-                    break;
-                case 'ListeningTest':
-                    targetCollection = 'listeningTests';
-                    break;
-                default:
-                     throw new Error(`Unknown content type for saving: ${content.type}`);
-            }
+        if (input.contentType === 'Lesson') {
+            targetCollection = 'lessons';
+        } else if (input.contentType === 'ReadingTest') {
+            targetCollection = 'readingTests';
+        } else if (input.contentType === 'WritingTest') {
+            targetCollection = 'mockTests';
+        } else if (input.contentType === 'ListeningTest') {
+            targetCollection = 'listeningTests';
         }
-        else {
-            throw new Error("Could not determine target collection for saving.");
-        }
-      
-        if (content.id) {
+
+        if (targetCollection && content.id) {
             const docRef = firestore.collection(targetCollection).doc(content.id);
             await docRef.set(content);
             console.log(`Content saved to '${targetCollection}/${content.id}'.`);
         } else {
-             throw new Error("Generated content is missing a valid 'id' property.");
+             throw new Error(`Could not determine target collection or ID for saving content type: ${input.contentType}.`);
         }
     }
 
     return structuredContent;
   }
 );
+
+    

@@ -95,66 +95,36 @@ export default function AdminPage() {
         answers: contentType === 'ListeningTest' ? answers : undefined,
        });
 
-      let targetCollection: string;
-        if ('skill' in aiResult && aiResult.skill) {
-             switch (aiResult.skill) {
-                case 'Reading': targetCollection = 'readingTests'; break;
-                case 'Listening': targetCollection = 'listeningTests'; break;
-                case 'Writing': targetCollection = 'mockTests'; break;
-                default: 
-                    if ('type' in aiResult && aiResult.type === "ListeningTest") {
-                        targetCollection = 'listeningTests';
-                        break;
-                    }
-                    throw new Error(`Unknown skill type for saving: ${aiResult.skill}`);
-            }
-        } else if ('type' in aiResult && aiResult.type) {
-             switch (aiResult.type) {
-                case 'Grammar':
-                case 'Vocabulary':
-                case 'Tips':
-                case 'Speaking':
-                    targetCollection = 'lessons';
-                    break;
-                case 'SpeakingPromptSet':
-                    // This type is handled inside the flow, but we can return early here.
-                     toast({
-                        title: "Content Saved!",
-                        description: `New speaking prompts were successfully generated and saved.`,
-                    });
-                    setInputText('');
-                    setIsProcessing(false);
-                    return;
-                default:
-                     throw new Error(`Unknown content type for saving: ${aiResult.type}`);
-            }
+        if ('type' in aiResult && aiResult.type === 'SpeakingPromptSet') {
+            toast({
+                title: "Content Saved!",
+                description: `New speaking prompts were successfully generated and saved.`,
+            });
+        } else {
+             toast({
+                title: "Content Saved!",
+                description: `New content was successfully generated and saved.`,
+            });
         }
-        else {
-            throw new Error("Could not determine target collection for saving. The AI result is malformed.");
-        }
-      
-      if ('id' in aiResult && aiResult.id) {
-        const docRef = doc(firestore, targetCollection, aiResult.id);
-        await setDoc(docRef, aiResult);
-        toast({
-            title: "Content Saved!",
-            description: `New content was successfully saved to '${targetCollection}'.`,
-        });
-        setInputText(''); // Clear input on success
+        
+        setInputText('');
         setTranscript('');
         setAnswers('');
-      } else {
-          throw new Error("Generated content is missing a valid 'id' property.");
-      }
 
     } catch (err: any) {
       console.error("Error processing content:", err);
+      // Check if the error is the special bypass error with partial data
       if (err.message && err.message.includes('Image generation failed. Partial content:')) {
           const jsonString = err.message.substring(err.message.indexOf('{'));
           try {
               const partialResult = JSON.parse(jsonString);
               setPartialTestData(partialResult);
               setError("Image generation failed. Please upload an image for Task 1 and save the test manually.");
+               toast({
+                  variant: 'default',
+                  title: "Image Generation Failed",
+                  description: "Please upload an image manually to complete the test.",
+              });
           } catch (parseError) {
               setError(`An error occurred: ${err.message}`);
           }
