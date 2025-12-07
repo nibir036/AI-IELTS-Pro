@@ -396,6 +396,9 @@ const contentFactoryFlow = ai.defineFlow(
                 case 'Speaking':
                     targetCollection = 'lessons';
                     break;
+                case 'ListeningTest':
+                    targetCollection = 'listeningTests';
+                    break;
                 default:
                      throw new Error(`Unknown content type for saving: ${content.type}`);
             }
@@ -416,5 +419,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
