@@ -17,7 +17,7 @@ import { generateAudioFromText } from './text-to-speech-flow';
 import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
-import { Lesson, ListeningTest, MockTest, SpeakingTest } from '@/lib/types';
+import { Lesson, ListeningTest, MockTest, ReadingTest, SpeakingTest } from '@/lib/types';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
@@ -115,15 +115,15 @@ const ListeningTestPartSchema = z.object({
 });
 
 const ListeningTestSchema = z.object({
+    type: z.literal("ListeningTest").describe("A discriminator field for the schema union."),
     id: z.string().describe("A unique ID for the test, e.g., L_AC_p9q3."),
     title: z.string(),
     skill: z.enum(["Listening"]),
     audioUrl: z.string().url().optional().describe("A placeholder URL for the full test audio."),
     parts: z.array(ListeningTestPartSchema).describe("An array of 4 parts, each with its own transcript segment and question groups."),
-    answers: z.object({
-        __dummy: z.never().optional().describe("This field is a dummy to satisfy the Gemini API's schema validation requirement that objects must have properties. Actual answers use the catchall pattern."),
-    }).catchall(z.string()).describe("A key-value map of question IDs to correct answers."),
+    answers: z.record(z.string(), z.string()).describe("A key-value map of question IDs to correct answers."),
 });
+
 
 const WritingTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., IELTS_Writing_z1w5."),
@@ -155,12 +155,6 @@ export async function processContent(
   return contentFactoryFlow(input);
 }
 
-const ListeningTestAiOutputSchema = z.object({
-  testData: ListeningTestSchema,
-  answers: z.object({
-    __dummy: z.never().optional(),
-  }).catchall(z.string()),
-});
 
 const prompt = ai.definePrompt({
   name: 'contentFactoryPrompt',
@@ -243,9 +237,9 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Creator.
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
-*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats. For this to work, the AI must return a JSON object with two top-level keys: \`testData\` (which matches the ListeningTestSchema but without the answers map) and \`answers\` (which is a simple key-value map of question IDs to correct answers).
+*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats.
 *   **Strict Formatting Rules:**
-    1.  **Structure:** Create 4 'parts' inside \`testData\`, each with its own segment of the transcript.
+    1.  **Structure:** Create 4 'parts', each with its own segment of the transcript.
     2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
     3.  **Specific Question Format (Apply this structure exactly):**
         *   **Part 1:**
@@ -315,28 +309,13 @@ const contentFactoryFlow = ai.defineFlow(
       retryOn: isRetryableGoogleAIError,
     });
     
-    let structuredContent = result.output;
+    const structuredContent = result.output;
 
     if (!structuredContent) {
       throw new Error("Failed to generate structured content from the AI prompt.");
     }
     console.log("Structured content generated.");
     
-    // Handle the new ListeningTest format where AI returns { testData, answers }
-    if (input.contentType === 'ListeningTest') {
-        const parsedAsListeningTest = ListeningTestAiOutputSchema.safeParse(result.output);
-        if (parsedAsListeningTest.success) {
-            const { testData, answers } = parsedAsListeningTest.data;
-            // Combine them into the final ListeningTest object that matches ProcessContentOutputSchema
-            const finalListeningTest: ListeningTest = {
-                ...testData,
-                answers: answers,
-            };
-            structuredContent = finalListeningTest;
-            console.log("Successfully parsed and combined ListeningTest data from AI.");
-        }
-    }
-
     // 4. Post-process for media generation and saving
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
         const batch = firestore.batch();
@@ -463,6 +442,8 @@ const contentFactoryFlow = ai.defineFlow(
                 case 'Speaking':
                     targetCollection = 'lessons';
                     break;
+                case 'ListeningTest':
+                    targetCollection = 'listeningTests'; break;
                 default:
                      throw new Error(`Unknown content type for saving: ${content.type}`);
             }
