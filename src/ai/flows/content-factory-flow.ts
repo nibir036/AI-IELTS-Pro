@@ -198,8 +198,12 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'ReadingTest':
 *   **Role:** Act as a superior grand master level IELTS Exam Content Creator.
-*   **Task:** The 'rawText' will contain three topics. Generate a Full IELTS Academic Reading Test with 3 distinct passages and **EXACTLY 40 questions in total**.
-*   **Strict Formatting Rules:** Follow the detailed structure for passages and question types as previously defined. Ensure all 40 questions have unique IDs.
+*   - **Task:** The 'rawText' will contain one topic. Generate a FULL IELTS Academic Reading Test with 3 distinct passages and **EXACTLY 40 questions in total**. Each passage should be around 750-850 words.
+*   **Strict Formatting Rules:**
+    1.  **Passages:** Create three unique, academic-style passages based on the provided topic.
+    2.  **Question Variety:** Include a wide variety of question types across the 40 questions (e.g., multiple-choice, T/F/NG, matching headings, summary completion, etc.).
+    3.  **Unique IDs:** Ensure all 40 questions have unique IDs (q1, q2, ... q40).
+*   **Output Format:** Your entire output must be a single JSON object conforming to the ReadingTest schema.
 
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Content Parser.
@@ -330,7 +334,7 @@ const contentFactoryFlow = ai.defineFlow(
         }
     }
 
-    if ('contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
+    if (input.contentType === 'Lesson' && 'contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
         console.log("Generating images for lesson blocks...");
         const lesson = structuredContent as Lesson;
         
