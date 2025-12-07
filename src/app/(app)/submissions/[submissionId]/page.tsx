@@ -5,7 +5,7 @@ import { use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import type { Submission, AiPoweredWritingEvaluationOutput, AiPoweredSpeakingEvaluationOutput, ReadingTest, ListeningTest, ReadingQuestion, ListeningQuestion } from '@/lib/types';
+import type { Submission, AiPoweredWritingEvaluationOutput, AiPoweredSpeakingEvaluationOutput, ReadingTest, ListeningTest, ReadingQuestion, ListeningQuestion, ListeningQuestionGroup } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, BookOpen, CheckCircle, Headphones, Lightbulb, XCircle } from 'lucide-react';
@@ -49,6 +49,93 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
     const allQuestions = test.parts.flatMap(p => (p as any).questions || (p as any).questionGroups?.flatMap((qg: any) => qg.questions)) as (ReadingQuestion | ListeningQuestion)[];
     const userAnswers = submission.inputData as Record<string, any>;
 
+    const renderQuestionGroup = (group: ListeningQuestionGroup, partNumber: number, groupIndex: number) => {
+        return (
+            <div key={`${partNumber}-${groupIndex}`} className="space-y-4">
+                 <div className="text-sm font-medium text-foreground pb-2 border-b">{group.instructions}</div>
+                 <div className="space-y-6">
+                    {group.questions.map((q) => renderQuestion(q))}
+                 </div>
+            </div>
+        );
+    }
+
+    const renderQuestion = (q: ReadingQuestion | ListeningQuestion) => {
+        const userAnswer = userAnswers[q.id];
+        const correctAnswer = q.answer;
+        let isCorrect = false;
+        
+        if (q.type === 'multiple-choice-multiple-answer') {
+            const correctAnswersSet = new Set(correctAnswer.split(',').map((s:string) => s.trim()).sort());
+            const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
+            isCorrect = correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
+        } else {
+            isCorrect = (userAnswer as string || '').trim().toLowerCase() === correctAnswer.toLowerCase();
+        }
+
+        const getOptionClass = (option: string) => {
+            if (correctAnswer.includes(option)) return 'text-green-600 font-bold';
+            if (Array.isArray(userAnswer) && userAnswer.includes(option) && !correctAnswer.includes(option)) return 'text-red-600';
+            if (userAnswer === option && !correctAnswer.includes(option)) return 'text-red-600';
+            return 'text-muted-foreground';
+        };
+
+        const questionTextParts = q.question.split('____');
+
+        return (
+            <Card key={q.id} className={`p-4 ${!isCorrect ? 'border-red-500' : 'border-green-500'}`}>
+                <div className="flex items-start gap-2 mb-4">
+                    {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />}
+                    <p className="flex-1 font-medium" dangerouslySetInnerHTML={{__html: q.question}}/>
+                </div>
+
+                {q.type === 'multiple-choice' && q.options && (
+                    <RadioGroup value={userAnswer} disabled>
+                        {q.options.map((option, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                            <RadioGroupItem value={option} id={`${q.id}-${index}`} />
+                            <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
+                            {option}
+                            </Label>
+                        </div>
+                        ))}
+                    </RadioGroup>
+                )}
+
+                 {q.type === 'multiple-choice-multiple-answer' && q.options && (
+                    <div className="space-y-2">
+                        {q.options.map((option, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                            <Checkbox id={`${q.id}-${index}`} checked={userAnswer?.includes(option)} disabled />
+                            <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>{option}</Label>
+                        </div>
+                        ))}
+                    </div>
+                )}
+
+                 {(q.type === 'fill-in-the-blank' || q.type === 'note-completion' || q.type === 'summary-completion') && (
+                    <div>
+                         <div className="flex items-center flex-wrap font-medium">
+                            <span dangerouslySetInnerHTML={{__html: questionTextParts[0]}} />
+                            <Input value={userAnswer} disabled className={`w-40 inline-block mx-2 h-8 ${!isCorrect ? 'border-red-500' : ''}`} />
+                            <span dangerouslySetInnerHTML={{__html: questionTextParts[1]}} />
+                       </div>
+                        {!isCorrect && <p className="text-xs text-green-600 mt-1">Correct answer: {correctAnswer}</p>}
+                    </div>
+                )}
+                
+                {!isCorrect && (submission.aiReport as any)?.[q.id] && (
+                    <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs">{(submission.aiReport as any)[q.id]}</p>
+                        </div>
+                    </div>
+                )}
+            </Card>
+        );
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -59,76 +146,18 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-[60vh] pr-4">
-                    <div className="space-y-4">
-                    {allQuestions.map(q => {
-                        const userAnswer = userAnswers[q.id];
-                        const correctAnswer = q.answer;
-                        let isCorrect = false;
-                        
-                        if (q.type === 'multiple-choice-multiple-answer') {
-                            const correctAnswersSet = new Set(correctAnswer.split(',').map((s:string) => s.trim()).sort());
-                            const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
-                            isCorrect = correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
-                        } else {
-                            isCorrect = (userAnswer as string || '').trim().toLowerCase() === correctAnswer.toLowerCase();
-                        }
-
-                        const getOptionClass = (option: string) => {
-                            if (correctAnswer.includes(option)) return 'text-green-600 font-bold';
-                            if (Array.isArray(userAnswer) && userAnswer.includes(option) && !correctAnswer.includes(option)) return 'text-red-600';
-                            if (userAnswer === option && !correctAnswer.includes(option)) return 'text-red-600';
-                            return 'text-muted-foreground';
-                        };
-
-                        return (
-                        <Card key={q.id} className={`p-4 ${!isCorrect ? 'border-red-500' : 'border-green-500'}`}>
-                            <div className="flex items-start gap-2 mb-4">
-                                {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />}
-                                <p className="flex-1 font-medium" dangerouslySetInnerHTML={{__html: q.question}}/>
+                     <div className="space-y-8">
+                        {test.parts.map((part) => (
+                            <div key={part.part}>
+                                <h2 className="text-xl font-bold mb-4 pb-2 border-b">Part {part.part}</h2>
+                                <div className="space-y-6">
+                                    {(part as any).questionGroups 
+                                        ? (part as any).questionGroups.map((group: ListeningQuestionGroup, groupIndex: number) => renderQuestionGroup(group, part.part, groupIndex))
+                                        : (part as any).questions.map((q: ReadingQuestion) => renderQuestion(q))
+                                    }
+                                </div>
                             </div>
-
-                            {q.type === 'multiple-choice' && q.options && (
-                                <RadioGroup value={userAnswer} disabled>
-                                    {q.options.map((option, index) => (
-                                    <div key={index} className="flex items-center space-x-2">
-                                        <RadioGroupItem value={option} id={`${q.id}-${index}`} />
-                                        <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
-                                        {option}
-                                        </Label>
-                                    </div>
-                                    ))}
-                                </RadioGroup>
-                            )}
-
-                             {q.type === 'multiple-choice-multiple-answer' && q.options && (
-                                <div className="space-y-2">
-                                    {q.options.map((option, index) => (
-                                    <div key={index} className="flex items-center space-x-2">
-                                        <Checkbox id={`${q.id}-${index}`} checked={userAnswer?.includes(option)} disabled />
-                                        <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>{option}</Label>
-                                    </div>
-                                    ))}
-                                </div>
-                            )}
-
-                             {(q.type === 'fill-in-the-blank' || q.type === 'note-completion' || q.type === 'summary-completion') && (
-                                <div>
-                                    <Input value={userAnswer} disabled className={!isCorrect ? 'border-red-500' : ''} />
-                                    {!isCorrect && <p className="text-xs text-green-600 mt-1">Correct answer: {correctAnswer}</p>}
-                                </div>
-                            )}
-                            
-                            {!isCorrect && (submission.aiReport as any)?.[q.id] && (
-                                <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
-                                    <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                                        <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                        <p className="text-xs">{(submission.aiReport as any)[q.id]}</p>
-                                    </div>
-                                </div>
-                            )}
-                        </Card>
-                        );
-                    })}
+                        ))}
                     </div>
                 </ScrollArea>
             </CardContent>
@@ -288,3 +317,5 @@ function SubmissionSkeleton() {
     </div>
   );
 }
+
+    

@@ -20,7 +20,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type UserAnswers = Record<string, string | string[]>;
@@ -126,9 +125,9 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         setIsSubmitting(false);
     };
 
-    const renderQuestionGroup = (group: ListeningQuestionGroup) => {
+    const renderQuestionGroup = (group: ListeningQuestionGroup, partNumber: number, groupIndex: number) => {
         return (
-            <div key={group.instructions} className="space-y-4 rounded-lg border p-4">
+            <div key={`${partNumber}-${groupIndex}`} className="space-y-4 rounded-lg border p-4">
                  <div className="text-sm font-medium text-foreground pb-4 border-b flex items-start gap-2">
                     <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
                     <div dangerouslySetInnerHTML={{ __html: group.instructions }} />
@@ -237,58 +236,46 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     <Card>
                         <CardHeader>
                             <h1 className="text-3xl font-bold tracking-tight">{test.title}</h1>
-                            <p className="text-muted-foreground">A full-length listening mock test.</p>
+                            <p className="text-muted-foreground">A full-length listening mock test. Press play and answer all questions.</p>
                         </CardHeader>
-                        <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                             <div>
-                                <Progress value={progress} className="w-48" />
-                                <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
+                        <CardContent className="space-y-4">
+                           <AudioPlayer src={test.audioUrl || ''} />
+                           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+                                <div>
+                                    <Progress value={progress} className="w-48" />
+                                    <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
+                                </div>
+                                <Button
+                                    type="submit"
+                                    size="lg"
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    Submit & Grade Full Test
+                                </Button>
                             </div>
-                            <Button
-                                type="submit"
-                                size="lg"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                Submit & Grade Full Test
-                            </Button>
                         </CardContent>
                     </Card>
 
-                    <Tabs defaultValue="part-1" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4">
-                            {test.parts.map((part) => (
-                                <TabsTrigger key={part.part} value={`part-${part.part}`}>Part {part.part}</TabsTrigger>
-                            ))}
-                        </TabsList>
-                        
-                        {test.parts.map((part) => (
-                             <TabsContent key={part.part} value={`part-${part.part}`} className="mt-4">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-32rem)]">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>{part.title || `Part ${part.part}`}</CardTitle>
-                                            <CardDescription>Listen to the audio and answer the questions for this part.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <AudioPlayer src={part.audioUrl || test.audioUrl || ''} />
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card className="flex flex-col h-full">
-                                        <CardHeader><CardTitle>Questions</CardTitle></CardHeader>
-                                        <CardContent className="flex-1 overflow-hidden">
-                                            <ScrollArea className="h-full pr-4">
-                                                <div className="space-y-6">
-                                                     {(part.questionGroups || []).map((group) => renderQuestionGroup(group))}
-                                                </div>
-                                            </ScrollArea>
-                                        </CardContent>
-                                    </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Questions</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ScrollArea className="h-[calc(100vh-32rem)] pr-4">
+                                <div className="space-y-8">
+                                    {test.parts.map((part) => (
+                                        <div key={part.part}>
+                                            <h2 className="text-xl font-bold mb-4 pb-2 border-b">Part {part.part}</h2>
+                                            <div className="space-y-6">
+                                                {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </TabsContent>
-                        ))}
-                    </Tabs>
+                            </ScrollArea>
+                        </CardContent>
+                     </Card>
                 </div>
             </form>
         </FormProvider>
@@ -299,22 +286,7 @@ function TestPageSkeleton() {
     return (
          <div className="space-y-6">
             <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-30rem)]">
-                <Card className="flex flex-col h-full">
-                    <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
-                    <CardContent className="flex-1 space-y-4">
-                        <Skeleton className="h-14 w-full" />
-                    </CardContent>
-                </Card>
-                <Card className="flex flex-col h-full">
-                    <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
-                    <CardContent className="flex-1 space-y-4">
-                        <Skeleton className="h-24 w-full" />
-                        <Skeleton className="h-24 w-full" />
-                    </CardContent>
-                </Card>
-            </div>
+            <Skeleton className="h-[60vh] w-full" />
          </div>
     )
 }
@@ -359,3 +331,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
+
+    

@@ -85,7 +85,7 @@ const SpeakingPromptSetSchema = z.object({
     type: z.enum(["SpeakingPromptSet"]).describe("A discriminator field for the schema union."),
     prompts: z.array(z.object({
         id: z.string().describe("A unique ID for the lesson, e.g., SPEAKING_a4f8."),
-        title: z.string().describe("The title of the prompt, e.g., 'Speaking: Holidays'."),
+        title: z.string().describe("The title of the prompt, e.g., 'Speaking: Holidays'.").default('Speaking'),
         level: z.enum(["Part 1", "Part 2", "Part 3"]),
         content_en: z.string().describe("The full content of the speaking prompt for that part."),
         skill: z.enum(['Speaking']).default('Speaking'),
@@ -235,26 +235,13 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Creator.
-*   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
-*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats.
+*   **Task:** The 'rawText' input contains a full, pre-formatted 40-question listening paper. Your task is to convert this paper into the required JSON format and invent a plausible transcript that matches the questions and answers.
+*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema.
 *   **Strict Formatting Rules:**
-    1.  **Structure:** Create 4 'parts', each with its own segment of the transcript.
-    2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
-    3.  **Answers:** For every single question, you MUST include the correct 'answer' inside the question object. For multiple-answer questions, the answer must be a comma-separated string (e.g., "A,D,F").
-    4.  **Specific Question Format (Apply this structure exactly for exactly 40 questions):**
-        *   **Part 1 (10 Questions):**
-            *   Questions 1-5: \`note-completion\` or \`fill-in-the-blank\`.
-            *   Questions 6-10: \`multiple-choice\` (single answer from A, B, or C).
-        *   **Part 2 (10 Questions):**
-            *   Questions 11-15: \`note-completion\` or \`fill-in-the-blank\`.
-            *   Questions 16-18: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options.
-            *   Questions 19-20: \`multiple-choice-multiple-answer\`. Instructions must say "Choose TWO answers, A-E". Provide 5 options.
-        *   **Part 3 (10 Questions):**
-            *   Questions 21-25: \`multiple-choice\` (single answer from A, B, or C).
-            *   Questions 26-30: \`matching\` or \`multiple-choice-multiple-answer\`.
-        *   **Part 4 (10 Questions):**
-            *   Questions 31-40: \`note-completion\` or \`fill-in-the-blank\` (typically one-word answers).
-    5.  **Audio URL:** Set the 'audioUrl' field for EACH of the 4 parts to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". Do NOT set a top-level audioUrl.
+    1.  **Invent Transcript:** Create a realistic, detailed transcript for a 4-part listening test. The transcript MUST contain the answers to all 40 questions from the 'rawText'. Divide this transcript logically into 4 segments and place each segment into the 'transcript' field of the corresponding 'part' object.
+    2.  **Question Grouping:** Analyze the provided questions. Group consecutive questions that share the same instructions (e.g., "Questions 1-5", "Choose THREE letters A-G") into a single object within the \`questionGroups\` array. Each group MUST have an \`instructions\` string and a \`questions\` array.
+    3.  **Answers:** For every single question, you MUST infer the correct 'answer' from the transcript you invent. The answer MUST be included inside the question object. For multiple-answer questions, the answer must be a comma-separated string (e.g., "A,D,F").
+    4.  **Audio URL:** For the top-level \`audioUrl\` and for EACH of the 4 parts, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
 
 ---
 ### GENERAL RULES ###
@@ -308,7 +295,7 @@ const contentFactoryFlow = ai.defineFlow(
       retryOn: isRetryableGoogleAIError,
     });
     
-    const structuredContent = result.output;
+    let structuredContent = result.output;
 
     if (!structuredContent) {
       throw new Error("Failed to generate structured content from the AI prompt.");
