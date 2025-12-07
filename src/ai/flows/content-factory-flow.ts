@@ -370,14 +370,13 @@ const contentFactoryFlow = ai.defineFlow(
 
 
      // Final step for single-object content types: save to Firestore
-    if (input.contentType !== 'SpeakingPrompt') {
+    if (input.contentType !== 'SpeakingPrompt' && input.contentType !== 'ListeningTest') {
         let targetCollection: string;
         const content = structuredContent as any;
 
         if (content.skill) {
              switch (content.skill) {
                 case 'Reading': targetCollection = 'readingTests'; break;
-                case 'Listening': targetCollection = 'listeningTests'; break;
                 case 'Writing': targetCollection = 'mockTests'; break;
                 default:
                     throw new Error(`Unknown skill type for saving: ${content.skill}`);
@@ -389,9 +388,6 @@ const contentFactoryFlow = ai.defineFlow(
                 case 'Tips':
                 case 'Speaking':
                     targetCollection = 'lessons';
-                    break;
-                case 'ListeningTest':
-                    targetCollection = 'listeningTests';
                     break;
                 default:
                      throw new Error(`Unknown content type for saving: ${content.type}`);
@@ -407,6 +403,18 @@ const contentFactoryFlow = ai.defineFlow(
             console.log(`Content saved to '${targetCollection}/${content.id}'.`);
         } else {
              throw new Error("Generated content is missing a valid 'id' property.");
+        }
+    }
+
+     // Save Listening test separately without image generation
+    if (input.contentType === 'ListeningTest') {
+        const content = structuredContent as any;
+        if (content.id) {
+            const docRef = firestore.collection('listeningTests').doc(content.id);
+            await docRef.set(content);
+            console.log(`Content saved to 'listeningTests/${content.id}'.`);
+        } else {
+            throw new Error("Generated listening test is missing a valid 'id' property.");
         }
     }
 

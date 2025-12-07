@@ -18,3 +18,6 @@ import('@/ai/flows/content-factory-flow.ts');
 import('@/ai/flows/process-pdf-flow.ts');
 import('@/ai/flows/generate-lesson-image-flow.ts');
 import('@/ai/flows/generate-writing-task-image-flow.ts');
+import('@/ai/flows/process-image-flow.ts');
+
+    
