@@ -15,6 +15,7 @@ interface PredictedDateCardProps {
 }
 
 const PREDICTION_CACHE_KEY = 'predictionCache';
+const SUBMISSION_COUNT_CACHE_KEY = 'submissionCountCache';
 
 export function PredictedDateCard({ user }: PredictedDateCardProps) {
   const { firestore } = useFirebase();
@@ -35,14 +36,19 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
 
   useEffect(() => {
     async function fetchPrediction() {
-        // Attempt to load from session storage first
         const cachedPrediction = sessionStorage.getItem(PREDICTION_CACHE_KEY);
-        if (cachedPrediction) {
-            setPrediction(JSON.parse(cachedPrediction));
-            setStatus('success');
-            setIsLoading(false);
-            return;
+        const cachedSubmissionCount = sessionStorage.getItem(SUBMISSION_COUNT_CACHE_KEY);
+
+        // If we have submissions, check if we need to refresh the cache
+        if (submissions && cachedPrediction && cachedSubmissionCount) {
+             if (submissions.length === parseInt(cachedSubmissionCount, 10)) {
+                 setPrediction(JSON.parse(cachedPrediction));
+                 setStatus('success');
+                 setIsLoading(false);
+                 return; // No new submissions, so we use the cached prediction
+             }
         }
+
 
       // Don't run if the user has no initial score
       if (user.currentBand === 0) {
@@ -82,6 +88,7 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
         });
         setPrediction(result);
         sessionStorage.setItem(PREDICTION_CACHE_KEY, JSON.stringify(result)); // Cache the result
+        sessionStorage.setItem(SUBMISSION_COUNT_CACHE_KEY, submissions.length.toString()); // Cache submission count
         setStatus('success');
       } catch (error) {
         console.error("Error fetching prediction:", error);

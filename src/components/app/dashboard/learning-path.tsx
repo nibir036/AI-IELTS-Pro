@@ -10,7 +10,7 @@ import { generatePersonalizedLearningPath } from '@/ai/flows/personalized-learni
 import type { Lesson, User, LearningPath as LearningPathType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, documentId, doc } from 'firebase/firestore';
+import { collection, query, where, documentId, doc, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -124,6 +124,13 @@ export function LearningPath({ user }: LearningPathProps) {
             setIsGenerating(false);
         }
     }, [user, firestore, toast]);
+    
+     useEffect(() => {
+        // Automatically generate a learning path if one doesn't exist and user has a score.
+        if (!isPathLoading && !learningPath && user?.learningPathId === '' && user?.currentBand > 0 && !isGenerating) {
+            handleRegeneratePath();
+        }
+    }, [isPathLoading, learningPath, user, isGenerating, handleRegeneratePath]);
 
     const renderContent = () => {
         const isLoading = isPathLoading || isGenerating;
@@ -190,4 +197,3 @@ export function LearningPath({ user }: LearningPathProps) {
         </Card>
     );
 }
- 

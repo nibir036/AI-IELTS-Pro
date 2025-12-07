@@ -13,7 +13,7 @@ import Image from 'next/image';
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Separator } from '@/components/ui/separator';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getTranslation } from '@/ai/flows/multilingual-support';
@@ -86,12 +86,22 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
     const [translatedContent, setTranslatedContent] = useState<string | null>(null);
     const canTranslate = user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && block.content;
 
-    const handleTranslateToggle = async () => {
+    const handleTranslateToggle = useCallback(async () => {
         if (isTranslating) return;
 
-        // If we already have a translation, just toggle the view.
+        const translationKey = `translation_${user?.nativeLanguage}_${block.content}`;
+
+        // If we already have a translation in component state, just toggle the view.
         if (translatedContent) {
             setIsTranslated(!isTranslated);
+            return;
+        }
+
+        // Check session storage cache first
+        const cachedTranslation = sessionStorage.getItem(translationKey);
+        if (cachedTranslation) {
+            setTranslatedContent(cachedTranslation);
+            setIsTranslated(true);
             return;
         }
 
@@ -101,10 +111,11 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
         setIsTranslating(true);
         try {
             const result = await getTranslation({
-                text: block.content!.replace(/<[^>]*>?/gm, ''), // Strip HTML for translation
+                text: block.content!, // Pass content with HTML tags
                 nativeLanguage: user.nativeLanguage,
             });
             setTranslatedContent(result.translatedText);
+            sessionStorage.setItem(translationKey, result.translatedText); // Cache the result
             setIsTranslated(true); // Show the translation immediately
         } catch (error) {
             console.error('Translation error:', error);
@@ -116,7 +127,7 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
         } finally {
             setIsTranslating(false);
         }
-    };
+    }, [isTranslating, translatedContent, canTranslate, isTranslated, block.content, user?.nativeLanguage, toast]);
     
     const displayContent = isTranslated ? translatedContent : block.content;
 
