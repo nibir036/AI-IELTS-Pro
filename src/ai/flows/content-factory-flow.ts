@@ -82,7 +82,7 @@ const LessonSchema = z.object({
 });
 
 const SpeakingPromptSetSchema = z.object({
-    type: z.enum(["SpeakingPromptSet"]),
+    type: z.enum(["SpeakingPromptSet"]).describe("A discriminator field for the schema union."),
     prompts: z.array(z.object({
         id: z.string().describe("A unique ID for the lesson, e.g., SPEAKING_a4f8."),
         title: z.string().describe("The title of the prompt, e.g., 'Speaking: Holidays'."),
@@ -239,7 +239,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
 *   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats.
 *   **Strict Formatting Rules:**
-    1.  **Structure:** Create 4 'parts' inside the main object, each with its own segment of the transcript.
+    1.  **Structure:** Create 4 'parts' in the output, each with its own segment of the transcript.
     2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
     3.  **Specific Question Format (Apply this structure exactly):**
         *   **Part 1:**
@@ -255,8 +255,8 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
             *   Questions 28-30: \`fill-in-the-blank\` or \`note-completion\`.
         *   **Part 4:**
             *   Questions 31-40: \`fill-in-the-blank\` or \`note-completion\` (typically one-word answers).
-    4.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
-    5.  **Answers Map:** You MUST create a top-level \`answers\` object that contains a key-value pair for every single question from q1 to q40.
+    4.  **Answers Map:** You MUST create a top-level \`answers\` object that contains a key-value pair for every single question from q1 to q40.
+    5.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
 
 ---
 ### GENERAL RULES ###
@@ -342,7 +342,8 @@ const contentFactoryFlow = ai.defineFlow(
     // 5. Post-process for media generation
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
         console.log("Processing Writing Test for image generation...");
-        const task1 = (structuredContent as MockTest).questions.find(q => q.taskType === 'Task 1');
+        const mockTest = structuredContent as MockTest;
+        const task1 = mockTest.questions.find(q => q.taskType === 'Task 1');
         if (task1 && task1.topic) {
             try {
                 console.log(`Generating image for Task 1: "${task1.topic}"`);
@@ -354,7 +355,7 @@ const contentFactoryFlow = ai.defineFlow(
 
                 const [header, base64Data] = imageResult.imageDataUri.split(',');
                 const contentType = header.split(':')[1].split(';')[0];
-                const filePath = `writing-tasks/${(structuredContent as MockTest).id}/task1_image.png`;
+                const filePath = `writing-tasks/${mockTest.id}/task1_image.png`;
                 
                 const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
                 task1.imageUrl = publicUrl;
@@ -371,7 +372,8 @@ const contentFactoryFlow = ai.defineFlow(
 
     if ('contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
         console.log("Generating images for lesson blocks...");
-        const imageGenerationPromises = structuredContent.contentBlocks.map(async (block, index) => {
+        const lesson = structuredContent as Lesson;
+        const imageGenerationPromises = lesson.contentBlocks.map(async (block, index) => {
             if (block.type === 'image_placeholder' && block.imageHint) {
                 try {
                     console.log(`Generating image for prompt: "${block.imageHint}"`);
@@ -380,7 +382,7 @@ const contentFactoryFlow = ai.defineFlow(
                      if (imageResult.imageDataUri.startsWith('data:')) {
                         const [header, base64Data] = imageResult.imageDataUri.split(',');
                         const contentType = header.split(':')[1].split(';')[0];
-                        const filePath = `lesson-images/${(structuredContent as Lesson).id}/block_${index}.png`;
+                        const filePath = `lesson-images/${lesson.id}/block_${index}.png`;
                         
                         const publicUrl = await uploadImageToStorage(base64Data, contentType, filePath);
                         block.generatedImageUrl = publicUrl;
@@ -396,7 +398,7 @@ const contentFactoryFlow = ai.defineFlow(
             return block;
         });
 
-        structuredContent.contentBlocks = await Promise.all(imageGenerationPromises);
+        lesson.contentBlocks = await Promise.all(imageGenerationPromises);
         console.log("Image generation for lesson blocks complete.");
     }
 
