@@ -17,7 +17,7 @@ import { generateAudioFromText } from './text-to-speech-flow';
 import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
 import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
-import { Lesson, ListeningTest, SpeakingTest } from '@/lib/types';
+import { Lesson, ListeningTest, SpeakingTest, MockTest } from '@/lib/types';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
@@ -237,7 +237,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Creator.
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
-*   **STRICT JSON Structure:** You MUST generate a single JSON object. The AI must decide the question types based on the transcript content and standard IELTS formats. This JSON MUST have two top-level keys: \`testData\` and \`answers\`.
+*   **STRICT JSON Structure:** You MUST generate a single JSON object. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats. This JSON MUST have two top-level keys: \`testData\` and \`answers\`.
     *   \`testData\`: Conforms to the ListeningTest schema (excluding the \`answers\` field).
     *   \`answers\`: A flat JSON object mapping every question ID (e.g., "q1", "q2") to its correct string answer.
 *   **Strict Formatting Rules:**
@@ -318,14 +318,14 @@ const contentFactoryFlow = ai.defineFlow(
     }
     console.log("Structured content generated.");
     
-    // Handle the new ListeningTest format
+    // Handle the new ListeningTest format where AI returns { testData, answers }
     if (input.contentType === 'ListeningTest' && 'testData' in structuredContent && 'answers' in structuredContent) {
       const listeningTestData = structuredContent.testData as Omit<ListeningTest, 'answers'>;
       const listeningAnswers = structuredContent.answers as Record<string, string>;
 
       // Combine them into the final ListeningTest object
       const finalListeningTest: ListeningTest = {
-          ...listeningTestData,
+          ...(listeningTestData as any), // Cast to any to satisfy TS for a moment
           answers: listeningAnswers,
       };
       
@@ -359,7 +359,7 @@ const contentFactoryFlow = ai.defineFlow(
     // 5. Post-process for media generation
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
         console.log("Processing Writing Test for image generation...");
-        const task1 = structuredContent.questions.find(q => q.taskType === 'Task 1');
+        const task1 = (structuredContent as MockTest).questions.find(q => q.taskType === 'Task 1');
         if (task1 && task1.topic) {
             try {
                 console.log(`Generating image for Task 1: "${task1.topic}"`);
@@ -418,23 +418,24 @@ const contentFactoryFlow = ai.defineFlow(
     }
 
     if (input.contentType === 'ListeningTest' && 'parts' in structuredContent && 'skill' in structuredContent && structuredContent.skill === 'Listening') {
+      const listeningTest = structuredContent as ListeningTest;
       // Generate one audio file for the entire test transcript
-      const fullTranscript = structuredContent.parts.map(p => p.transcript).join('\n\n');
+      const fullTranscript = listeningTest.parts.map(p => p.transcript).join('\n\n');
       console.log("Generating single audio file for full listening test transcript...");
       try {
         const audioResult = await generateAudioFromText(fullTranscript);
         if (audioResult.audioDataUri) {
           const [header, base64Data] = audioResult.audioDataUri.split(',');
           const contentType = header.split(':')[1].split(';')[0];
-          const filePath = `listening-tests/${structuredContent.id}/${structuredContent.id}.wav`;
+          const filePath = `listening-tests/${listeningTest.id}/${listeningTest.id}.wav`;
           
           const publicUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
-          structuredContent.audioUrl = publicUrl;
+          listeningTest.audioUrl = publicUrl;
           console.log(`Full test audio uploaded to ${publicUrl}`);
         }
       } catch (audioError) {
         console.error("Failed to generate or upload full test audio. The test will have no audio.", audioError);
-        structuredContent.audioUrl = ''; // Ensure it's an empty string on failure
+        listeningTest.audioUrl = ''; // Ensure it's an empty string on failure
       }
     }
 
@@ -442,16 +443,17 @@ const contentFactoryFlow = ai.defineFlow(
      // Final step for single-object content types: save to Firestore
     if (input.contentType !== 'SpeakingPrompt') {
         let targetCollection: string;
+        const content = structuredContent as any;
 
-        if ('skill' in structuredContent && typeof structuredContent.skill === 'string') {
-             switch (structuredContent.skill) {
+        if (content.skill) {
+             switch (content.skill) {
                 case 'Reading': targetCollection = 'readingTests'; break;
                 case 'Listening': targetCollection = 'listeningTests'; break;
                 case 'Writing': targetCollection = 'mockTests'; break;
-                default: throw new Error(`Unknown skill type for saving: ${structuredContent.skill}`);
+                default: throw new Error(`Unknown skill type for saving: ${content.skill}`);
             }
-        } else if ('type' in structuredContent && typeof structuredContent.type === 'string') {
-             switch (structuredContent.type) {
+        } else if (content.type) {
+             switch (content.type) {
                 case 'Grammar':
                 case 'Vocabulary':
                 case 'Tips':
@@ -459,17 +461,17 @@ const contentFactoryFlow = ai.defineFlow(
                     targetCollection = 'lessons';
                     break;
                 default:
-                     throw new Error(`Unknown content type for saving: ${structuredContent.type}`);
+                     throw new Error(`Unknown content type for saving: ${content.type}`);
             }
         }
         else {
             throw new Error("Could not determine target collection for saving.");
         }
       
-        if ('id' in structuredContent && typeof structuredContent.id === 'string') {
-            const docRef = firestore.collection(targetCollection).doc(structuredContent.id);
-            await docRef.set(structuredContent);
-            console.log(`Content saved to '${targetCollection}/${structuredContent.id}'.`);
+        if (content.id) {
+            const docRef = firestore.collection(targetCollection).doc(content.id);
+            await docRef.set(content);
+            console.log(`Content saved to '${targetCollection}/${content.id}'.`);
         } else {
              throw new Error("Generated content is missing a valid 'id' property.");
         }
