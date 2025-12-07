@@ -214,7 +214,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
         *   Group consecutive questions that share the same instructions into a single object within the \`questionGroups\` array. Each group MUST have an \`instructions\` string and a \`questions\` array.
     2.  **Assign Answers (\`answers\`):**
         *   Take the comma-separated answers string and assign the correct answer to the \`answer\` field of each corresponding question object (q1, q2, ... q40).
-        *   For multiple-choice questions, the answer MUST be the full text of the option (e.g. "a display of instruments"), NOT just the letter.
+        *   **CRITICAL ANSWER RULE:** For multiple-choice questions (including multiple-answer), the answer MUST be the full text of the option (e.g., "a display of instruments"), NOT just the letter (e.g., 'B').
         *   For multiple-choice-multiple-answer questions (e.g., "Choose TWO letters A-E"), the 'answer' field must be a comma-separated string of the full text of the correct options.
     3.  **Divide Transcript (\`transcript\`):** Logically divide the full transcript into four segments and place each segment into the 'transcript' field of the corresponding 'part' object (Part 1, Part 2, Part 3, Part 4).
     4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
@@ -303,7 +303,7 @@ const contentFactoryFlow = ai.defineFlow(
     }
 
 
-    // 5. Post-process for media generation
+    // 5. Post-process for media generation - STRICTLY only for Writing and Lesson types
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
         console.log("Processing Writing Test for image generation...");
         const mockTest = structuredContent as MockTest;
@@ -335,9 +335,7 @@ const contentFactoryFlow = ai.defineFlow(
                  throw errorWithData;
             }
         }
-    }
-
-    if (input.contentType === 'Lesson' && 'contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
+    } else if (input.contentType === 'Lesson' && 'contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
         console.log("Generating images for lesson blocks...");
         const lesson = structuredContent as Lesson;
         
@@ -370,7 +368,16 @@ const contentFactoryFlow = ai.defineFlow(
 
 
      // Final step for single-object content types: save to Firestore
-    if (input.contentType !== 'SpeakingPrompt' && input.contentType !== 'ListeningTest') {
+    if (input.contentType === 'ListeningTest') {
+        const content = structuredContent as any;
+        if (content.id) {
+            const docRef = firestore.collection('listeningTests').doc(content.id);
+            await docRef.set(content);
+            console.log(`Content saved to 'listeningTests/${content.id}'.`);
+        } else {
+            throw new Error("Generated listening test is missing a valid 'id' property.");
+        }
+    } else if (input.contentType !== 'SpeakingPrompt') {
         let targetCollection: string;
         const content = structuredContent as any;
 
@@ -403,18 +410,6 @@ const contentFactoryFlow = ai.defineFlow(
             console.log(`Content saved to '${targetCollection}/${content.id}'.`);
         } else {
              throw new Error("Generated content is missing a valid 'id' property.");
-        }
-    }
-
-     // Save Listening test separately without image generation
-    if (input.contentType === 'ListeningTest') {
-        const content = structuredContent as any;
-        if (content.id) {
-            const docRef = firestore.collection('listeningTests').doc(content.id);
-            await docRef.set(content);
-            console.log(`Content saved to 'listeningTests/${content.id}'.`);
-        } else {
-            throw new Error("Generated listening test is missing a valid 'id' property.");
         }
     }
 
