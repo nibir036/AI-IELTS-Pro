@@ -237,7 +237,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Creator.
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
-*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. Crucially, the correct 'answer' for each question MUST be included within its question object.
+*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats.
 *   **Strict Formatting Rules:**
     1.  **Structure:** Create 4 'parts', each with its own segment of the transcript.
     2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
@@ -256,7 +256,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
             *   Questions 28-30: \`fill-in-the-blank\` or \`note-completion\`.
         *   **Part 4:**
             *   Questions 31-40: \`fill-in-the-blank\` or \`note-completion\` (typically one-word answers).
-    5.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
+    5.  **Audio URL:** Set the 'audioUrl' field for EACH of the 4 parts to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". Do NOT set a top-level audioUrl.
 
 ---
 ### GENERAL RULES ###
@@ -400,28 +400,6 @@ const contentFactoryFlow = ai.defineFlow(
 
         lesson.contentBlocks = await Promise.all(imageGenerationPromises);
         console.log("Image generation for lesson blocks complete.");
-    }
-
-    if (input.contentType === 'ListeningTest' && 'parts' in structuredContent && 'skill' in structuredContent && structuredContent.skill === 'Listening') {
-      const listeningTest = structuredContent as ListeningTest;
-      // Generate one audio file for the entire test transcript
-      const fullTranscript = listeningTest.parts.map(p => p.transcript).join('\n\n');
-      console.log("Generating single audio file for full listening test transcript...");
-      try {
-        const audioResult = await generateAudioFromText(fullTranscript);
-        if (audioResult.audioDataUri) {
-          const [header, base64Data] = audioResult.audioDataUri.split(',');
-          const contentType = header.split(':')[1].split(';')[0];
-          const filePath = `listening-tests/${listeningTest.id}/${listeningTest.id}.wav`;
-          
-          const publicUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
-          listeningTest.audioUrl = publicUrl;
-          console.log(`Full test audio uploaded to ${publicUrl}`);
-        }
-      } catch (audioError) {
-        console.error("Failed to generate or upload full test audio. The test will have no audio.", audioError);
-        listeningTest.audioUrl = ''; // Ensure it's an empty string on failure
-      }
     }
 
 
