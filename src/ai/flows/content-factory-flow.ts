@@ -44,6 +44,7 @@ const ListeningQuestionGroupSchema = z.object({
         question: z.string(),
         type: z.enum(["multiple-choice", "note-completion", "fill-in-the-blank", "summary-completion", "multiple-choice-multiple-answer"]),
         options: z.array(z.string()).optional(),
+        answer: z.string().describe("The correct answer. For multiple answers, use a comma-separated string like 'A,D,F'."),
     })),
 });
 
@@ -121,7 +122,6 @@ const ListeningTestSchema = z.object({
     skill: z.enum(["Listening"]),
     audioUrl: z.string().url().optional().describe("A placeholder URL for the full test audio."),
     parts: z.array(ListeningTestPartSchema).describe("An array of 4 parts, each with its own transcript segment and question groups."),
-    answers: z.record(z.string(), z.string()).describe("A key-value map of question IDs to correct answers."),
 });
 
 
@@ -237,25 +237,25 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 #### IF contentType is 'ListeningTest':
 *   **Role:** Elite IELTS Listening Test Creator.
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
-*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats.
+*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. Crucially, the correct 'answer' for each question MUST be included within its question object.
 *   **Strict Formatting Rules:**
-    1.  **Structure:** Create 4 'parts' in the output, each with its own segment of the transcript.
+    1.  **Structure:** Create 4 'parts', each with its own segment of the transcript.
     2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
-    3.  **Specific Question Format (Apply this structure exactly):**
+    3.  **Answers:** For every single question, you MUST include the correct 'answer' inside the question object. For multiple-answer questions, the answer must be a comma-separated string (e.g., "A,D,F").
+    4.  **Specific Question Format (Apply this structure exactly):**
         *   **Part 1:**
             *   Questions 1-2: \`multiple-choice\` (single answer from A, B, or C).
             *   Questions 3-10: \`fill-in-the-blank\` or \`note-completion\`.
         *   **Part 2:**
             *   Questions 11-15: \`fill-in-the-blank\` or \`note-completion\`.
-            *   Questions 16-18: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options. The answer in the \`answers\` map must be a comma-separated string (e.g., "A,D,F").
-            *   Questions 19-20: \`multiple-choice-multiple-answer\`. Instructions must say "Choose TWO answers, A-E". Provide 5 options. The answer in the \`answers\` map must be a comma-separated string (e.g., "B,E").
+            *   Questions 16-18: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options.
+            *   Questions 19-20: \`multiple-choice-multiple-answer\`. Instructions must say "Choose TWO answers, A-E". Provide 5 options.
         *   **Part 3:**
             *   Questions 21-24: \`multiple-choice\` (single answer from A, B, or C).
             *   Questions 25-27: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options.
             *   Questions 28-30: \`fill-in-the-blank\` or \`note-completion\`.
         *   **Part 4:**
             *   Questions 31-40: \`fill-in-the-blank\` or \`note-completion\` (typically one-word answers).
-    4.  **Answers Map:** You MUST create a top-level \`answers\` object that contains a key-value pair for every single question from q1 to q40.
     5.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
 
 ---

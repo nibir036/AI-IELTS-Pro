@@ -70,13 +70,13 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
     
     const onSubmit = async (data: UserAnswers) => {
-        if (!test || !test.answers) return;
+        if (!test || !allQuestions) return;
         setIsSubmitting(true);
 
         let correctCount = 0;
         allQuestions.forEach(q => {
             const userAnswer = data[q.id];
-            const correctAnswer = test.answers[q.id];
+            const correctAnswer = q.answer;
             let isCorrect = false;
 
             if (q.type === 'multiple-choice-multiple-answer') {

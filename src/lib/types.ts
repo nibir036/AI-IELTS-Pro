@@ -93,6 +93,7 @@ export interface ListeningQuestion {
     question: string;
     type: ListeningQuestionType;
     options?: string[];
+    answer: string; // The correct answer for the question
 }
 
 export interface ListeningQuestionGroup {
@@ -114,7 +115,6 @@ export interface ListeningTest {
     skill: 'Listening';
     audioUrl?: string; 
     parts: ListeningTestPart[];
-    answers: Record<string, string>; // e.g. { "q1": "C", "q2": "18th" }
 }
 
 

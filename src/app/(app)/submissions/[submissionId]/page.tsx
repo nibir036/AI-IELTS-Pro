@@ -47,10 +47,7 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
     }
     
     const allQuestions = test.parts.flatMap(p => (p as any).questions || (p as any).questionGroups?.flatMap((qg: any) => qg.questions)) as (ReadingQuestion | ListeningQuestion)[];
-
-
     const userAnswers = submission.inputData as Record<string, any>;
-    const correctAnswers = (test as any).answers || allQuestions.reduce((acc, q) => ({...acc, [q.id]: q.answer}), {} as Record<string, string>);
 
     return (
         <Card>
@@ -65,7 +62,7 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
                     <div className="space-y-4">
                     {allQuestions.map(q => {
                         const userAnswer = userAnswers[q.id];
-                        const correctAnswer = correctAnswers[q.id];
+                        const correctAnswer = q.answer;
                         let isCorrect = false;
                         
                         if (q.type === 'multiple-choice-multiple-answer') {
