@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -6,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { BookOpen, ArrowRight, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { generatePersonalizedLearningPath } from '@/ai/flows/personalized-learning-path';
-import type { Lesson, User } from '@/lib/types';
+import type { Lesson, User, LearningPath as LearningPathType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, documentId } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, documentId, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -41,7 +42,7 @@ function RecommendedLessons({ lessonIds }: { lessonIds: string[] }) {
 
     const lessonsQuery = useMemoFirebase(() => {
         if (!firestore || lessonIds.length === 0) return null;
-        // Firestore 'in' query is limited to 30 items, but we only show 3.
+        // Firestore 'in' query is limited to 30 items, but we only show a few.
         return query(collection(firestore, 'lessons'), where(documentId(), 'in', lessonIds.slice(0, 10)));
     }, [firestore, lessonIds]);
 
@@ -55,9 +56,12 @@ function RecommendedLessons({ lessonIds }: { lessonIds: string[] }) {
         return <p className="text-center text-muted-foreground">No recommended lessons found.</p>;
     }
     
+    // Sort lessons to match the order from the learning path
+    const sortedLessons = recommendedLessons.sort((a, b) => lessonIds.indexOf(a.id) - lessonIds.indexOf(b.id));
+    
     return (
         <div className="space-y-4">
-          {recommendedLessons.map((lesson) => (
+          {sortedLessons.map((lesson) => (
             <div key={lesson.id} className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-4">
                 <div className="rounded-md bg-muted p-2">
@@ -80,105 +84,110 @@ function RecommendedLessons({ lessonIds }: { lessonIds: string[] }) {
 }
 
 export function LearningPath({ user }: LearningPathProps) {
-  const [lessonIds, setLessonIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+    const { firestore } = useFirebase();
+    const { toast } = useToast();
+    const [isGenerating, setIsGenerating] = useState(false);
 
-  const fetchLearningPath = useCallback(async () => {
-    if (!user) return;
+    // Fetch the learning path document using the ID from the user profile
+    const learningPathDocRef = useMemoFirebase(() => {
+        if (!firestore || !user?.learningPathId) return null;
+        return doc(firestore, `users/${user.id}/learningPaths`, user.learningPathId);
+    }, [firestore, user?.id, user?.learningPathId]);
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const input = {
-        currentBand: user.currentBand,
-        targetBand: user.targetBand,
-        nativeLanguage: user.nativeLanguage,
-      };
-      
-      const result = await generatePersonalizedLearningPath(input);
+    const { data: learningPath, isLoading: isPathLoading, error: pathError } = useDoc<LearningPathType>(learningPathDocRef);
 
-      if (result.lessonIds && result.lessonIds.length > 0) {
-          // We only take the top 3 recommendations to display
-          setLessonIds(result.lessonIds);
-      } else {
-          setLessonIds([]);
-      }
-    } catch (err: any) {
-      console.error("Error generating learning path:", err);
-      setError("The AI service is currently unavailable. Please try again in a moment.");
-      toast({
-        variant: "destructive",
-        title: "AI Service Error",
-        description: "Could not generate your learning path at this time.",
-      })
-      setLessonIds([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, toast]);
+    const handleRegeneratePath = useCallback(async () => {
+        if (!user || !firestore) return;
 
-  useEffect(() => {
-    if(user.learningPathId || user.currentBand > 0) {
-      fetchLearningPath();
-    } else {
-        setIsLoading(false);
-    }
-  }, [fetchLearningPath, user]);
-  
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <ShimmerSkeleton />
-      );
-    }
+        setIsGenerating(true);
+        try {
+            const result = await generatePersonalizedLearningPath({
+                currentBand: user.currentBand,
+                targetBand: user.targetBand,
+                nativeLanguage: user.nativeLanguage,
+            });
 
-    if (error) {
+            if (user.learningPathId && result.lessonIds) {
+                // Update the existing document
+                const pathRef = doc(firestore, `users/${user.id}/learningPaths`, user.learningPathId);
+                await updateDoc(pathRef, { lessonIds: result.lessonIds });
+                toast({ title: "Success", description: "Your learning path has been refreshed." });
+            }
+        } catch (err: any) {
+            console.error("Error regenerating learning path:", err);
+            toast({
+                variant: "destructive",
+                title: "AI Service Error",
+                description: "Could not regenerate your learning path at this time.",
+            });
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [user, firestore, toast]);
+
+    const renderContent = () => {
+        const isLoading = isPathLoading || isGenerating;
+        
+        if (isLoading && !learningPath) {
+            return <ShimmerSkeleton />;
+        }
+
+        if (pathError) {
+            return (
+                <div className="text-center text-destructive py-10">
+                    <AlertTriangle className="mx-auto h-8 w-8 mb-2" />
+                    <p className="font-semibold">Could not load path</p>
+                    <p className="text-sm text-muted-foreground">{pathError.message}</p>
+                </div>
+            )
+        }
+
+        if (!user?.learningPathId && user.currentBand === 0) {
+            return (
+                <div className="text-center text-muted-foreground py-10">
+                    <p className="mb-4">Your AI-powered learning path will appear here once you have an initial band score.</p>
+                    <Button asChild>
+                        <Link href="/diagnostic-test">Take Diagnostic Test</Link>
+                    </Button>
+                </div>
+            );
+        }
+        
+        if (learningPath?.lessonIds && learningPath.lessonIds.length > 0) {
+            return <RecommendedLessons lessonIds={learningPath.lessonIds} />;
+        }
+
         return (
-             <div className="text-center text-destructive py-10">
-                <AlertTriangle className="mx-auto h-8 w-8 mb-2" />
-                <p className="font-semibold">Could not generate path</p>
-                <p className="text-sm text-muted-foreground mb-4">{error}</p>
-                <Button onClick={fetchLearningPath} variant="outline">
-                    <RefreshCw className="mr-2 h-4 w-4"/>
-                    Try Again
+            <div className="text-center text-muted-foreground py-10">
+                <p>Your learning path is empty.</p>
+                <Button onClick={handleRegeneratePath} disabled={isGenerating} className="mt-4">
+                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                    Generate Path
                 </Button>
             </div>
-        )
-    }
+        );
+    };
 
-    if (!user?.learningPathId && user.currentBand === 0) {
-      return (
-         <div className="text-center text-muted-foreground py-10">
-            <p className="mb-4">Your AI-powered learning path will appear here once you have an initial band score.</p>
-            <Button asChild>
-                <Link href="/diagnostic-test">Take Diagnostic Test</Link>
-            </Button>
-        </div>
-      )
-    }
-
-    if (lessonIds.length > 0) {
-      return <RecommendedLessons lessonIds={lessonIds} />;
-    }
-    
     return (
-      <div className="text-center text-muted-foreground py-10">
-        <p>Your learning path is empty. Explore lessons on your own!</p>
-      </div>
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Your Personalized Learning Path</CardTitle>
+                        <CardDescription>AI-recommended lessons to help you reach your target band score.</CardDescription>
+                    </div>
+                    {user?.learningPathId && (
+                        <Button onClick={handleRegeneratePath} variant="ghost" size="sm" disabled={isGenerating}>
+                             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                            Refresh
+                        </Button>
+                    )}
+                </div>
+            </CardHeader>
+            <CardContent>
+                {renderContent()}
+            </CardContent>
+        </Card>
     );
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Your Personalized Learning Path</CardTitle>
-        <CardDescription>AI-recommended lessons to help you reach your target band score.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {renderContent()}
-      </CardContent>
-    </Card>
-  );
 }
+ 
