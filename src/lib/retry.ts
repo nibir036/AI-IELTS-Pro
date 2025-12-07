@@ -43,12 +43,13 @@ export async function withRetry<T>(
  * A specific error filter for the withRetry function that checks for
  * common transient network or service overload errors from Google AI.
  * @param error The error object to inspect.
- * @returns True if the error is a 503 or includes network failure messages.
+ * @returns True if the error is retryable.
  */
 export function isRetryableGoogleAIError(error: any): boolean {
   if (typeof error?.message === 'string') {
     return (
-      error.message.includes('503') ||
+      error.message.includes('429') || // Rate limit exceeded
+      error.message.includes('503') || // Service unavailable
       error.message.includes('Service Unavailable') ||
       error.message.includes('The model is overloaded') ||
       error.message.includes('Failed to fetch')
