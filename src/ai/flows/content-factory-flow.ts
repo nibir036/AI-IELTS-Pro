@@ -313,7 +313,7 @@ const contentFactoryFlow = ai.defineFlow(
                 console.log(`Generating image for Task 1: "${task1.topic}"`);
                 const imageResult = await withRetry(() => generateWritingTaskImage(task1.topic), {
                     retryOn: isRetryableGoogleAIError,
-                    retries: 2, // Be less aggressive with retries for non-critical images
+                    retries: 2,
                 });
                 
                 if (!imageResult.imageDataUri || !imageResult.imageDataUri.startsWith('data:')) {
@@ -330,8 +330,6 @@ const contentFactoryFlow = ai.defineFlow(
 
             } catch (imgError: any) {
                 console.error(`CRITICAL: Failed to generate or upload image for Task 1.`, imgError);
-                 // Throw a new error that includes the structured content, so the client can handle it.
-                 // This allows for manual upload as a fallback.
                  const errorWithData = new Error(`Image generation failed. Partial content: ${JSON.stringify(structuredContent)}`);
                  throw errorWithData;
             }
@@ -340,7 +338,6 @@ const contentFactoryFlow = ai.defineFlow(
         console.log("Processing Lesson for image generation...");
         const lesson = structuredContent as Lesson;
         
-        // Use a sequential for...of loop to avoid rate limiting
         for (const block of lesson.contentBlocks) {
             if (block.type === 'image_placeholder' && block.imageHint) {
                 try {
@@ -395,5 +392,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
