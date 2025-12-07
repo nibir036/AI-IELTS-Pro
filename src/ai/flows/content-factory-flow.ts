@@ -30,12 +30,16 @@ export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
 
 const PracticeQuestionSchema = z.object({
   id: z.string().describe("A unique ID for the question (e.g., q1, q2)."),
-  instructions: z.string().optional().describe("Instructions for this block of questions, e.g., 'Choose the correct heading for each paragraph.'"),
-  question: z.string().describe("The question text. For 'summary-completion', this should be the full paragraph with placeholders like '__(27)__'."),
-  type: z.enum(["multiple-choice", "true-false-not-given", "note-completion", "matching-headings", "matching-information", "summary-completion", "yes-no-not-given", "matching-sentence-endings", "fill-in-the-blank"]).describe("The type of question."),
+  question: z.string().describe("The question text. For 'summary-completion', this should be the full paragraph with placeholders like '__(27)__'. For form-style questions, this should be the label like 'Name:'."),
+  type: z.enum(["multiple-choice", "true-false-not-given", "note-completion", "matching-headings", "matching-information", "summary-completion", "yes-no-not-given", "matching-sentence-endings", "fill-in-the-blank", "multiple-choice-multiple-answer"]).describe("The type of question."),
   options: z.array(z.string()).optional().describe("A list of options for the question (e.g., for multiple-choice, or the list of headings for matching)."),
-  answer: z.string().describe("The correct answer to the question. For summary-completion, this is a comma-separated string of words."),
+  answer: z.string().describe("The correct answer. For multiple answers, use a comma-separated string like 'A,C'."),
   answerBox: z.array(z.string()).optional().describe("For summary-completion, a box of words to choose from."),
+});
+
+const ListeningQuestionGroupSchema = z.object({
+    instructions: z.string().describe("The specific instructions for this block of questions."),
+    questions: z.array(PracticeQuestionSchema),
 });
 
 const GrammarTableRowSchema = z.object({
@@ -100,16 +104,17 @@ const ReadingTestSchema = z.object({
 const ListeningTestPartSchema = z.object({
     part: z.number(),
     title: z.string(),
+    audioUrl: z.string().url().optional(),
     transcript: z.string().describe("The transcript for this specific part of the test."),
-    questions: z.array(PracticeQuestionSchema),
+    questionGroups: z.array(ListeningQuestionGroupSchema),
 });
 
 const ListeningTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., L_AC_p9q3."),
     title: z.string(),
     skill: z.enum(["Listening"]),
-    audioUrl: z.string().url().describe("A placeholder URL. This will be replaced by the real URL after upload."),
-    parts: z.array(ListeningTestPartSchema).describe("An array of 4 parts, each with its own transcript segment and questions."),
+    audioUrl: z.string().url().optional().describe("A placeholder URL for the full test audio."),
+    parts: z.array(ListeningTestPartSchema).describe("An array of 4 parts, each with its own transcript segment and question groups."),
 });
 
 const WritingTestSchema = z.object({
@@ -200,7 +205,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     *   The final JSON output MUST contain 3 items in the 'parts' array.
     *   Each part must contain a passage with paragraphs separated by double newlines (\\n\\n).
     *   Question IDs must be unique across the entire test (q1, q2, ... q40).
-    *   Each question or group of questions requiring instructions MUST have a complete \`instructions\` field.
+    *   Each question or group of questions requiring instructions MUST have an \`id\` field in the question object. The \`instructions\` field should be added to the \`questionGroups\`.
 *   **Passage 1 (Factual Text - 13 Questions):**
     *   Topic: Use the first topic from the 'rawText' input.
     *   Length: 700-750 words.
@@ -222,14 +227,26 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     *   Questions 37-40: "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field for the first question of this block (q37). Instructions: "Complete each sentence with the correct ending, A-G, below."
 
 #### IF contentType is 'ListeningTest':
-*   **Role:** IELTS Listening Test Creator.
-*   **Task:** The 'rawText' will contain the full transcript for a 4-part listening test. The sections will be clearly marked (e.g., "Section 1:", "Section 2:"). Generate a complete, **40-question** IELTS-style Listening Test based on this transcript.
+*   **Role:** Elite IELTS Listening Test Creator.
+*   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
 *   **Strict Formatting Rules:**
-    1.  **Parse Sections:** Identify the 4 distinct sections in the provided transcript.
-    2.  **Generate EXACTLY 40 Questions:** Create exactly 10 questions for each of the 4 sections.
-    3.  **Vary Question Types:** Use a variety of question types appropriate for each section (e.g., note-completion for Section 1, multiple-choice for Section 3, summary-completion for Section 4).
-    4.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". **Do NOT attempt to generate audio.**
-*   **Output Format:** Your JSON output MUST be an object that conforms to the ListeningTest schema. It MUST have a 'parts' array with exactly 4 items. Each item in the array corresponds to one section of the test and must contain its segment of the transcript and its 10 questions.
+    1.  **Structure:** Create 4 'parts', each with its own segment of the transcript.
+    2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
+    3.  **Specific Question Format (Apply this structure exactly):**
+        *   **Part 1:**
+            *   Questions 1-2: \`multiple-choice\` (single answer from A, B, or C).
+            *   Questions 3-10: \`fill-in-the-blank\` or \`note-completion\`.
+        *   **Part 2:**
+            *   Questions 11-15: \`fill-in-the-blank\` or \`note-completion\`.
+            *   Questions 16-18: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options. The \`answer\` field must be a comma-separated string (e.g., "A,D,F").
+            *   Questions 19-20: \`multiple-choice-multiple-answer\`. Instructions must say "Choose TWO answers, A-E". Provide 5 options. The \`answer\` field must be a comma-separated string (e.g., "B,E").
+        *   **Part 3:**
+            *   Questions 21-24: \`multiple-choice\` (single answer from A, B, or C).
+            *   Questions 25-27: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options. The \`answer\` field must be a comma-separated string.
+            *   Questions 28-30: \`fill-in-the-blank\` or \`note-completion\`.
+        *   **Part 4:**
+            *   Questions 31-40: \`fill-in-the-blank\` or \`note-completion\` (typically one-word answers).
+    4.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
 
 ---
 ### GENERAL RULES ###
@@ -245,7 +262,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 - **Raw Text to Process:** '{{{rawText}}}'
 `,
   config: {
-    temperature: 0.4, 
+    temperature: 0.2, 
   }
 });
 
@@ -373,11 +390,27 @@ const contentFactoryFlow = ai.defineFlow(
         console.log("Image generation for lesson blocks complete.");
     }
 
-    if (input.contentType === 'ListeningTest' && 'parts' in structuredContent) {
-      // Bypassing audio generation for long transcripts to avoid timeouts.
-      // The prompt now instructs the AI to use a placeholder URL directly.
-      console.log("Bypassing audio generation for Listening Test. Using placeholder URL.");
+    if (input.contentType === 'ListeningTest' && 'parts' in structuredContent && 'skill' in structuredContent && structuredContent.skill === 'Listening') {
+      // Generate one audio file for the entire test transcript
+      const fullTranscript = structuredContent.parts.map(p => p.transcript).join('\n\n');
+      console.log("Generating single audio file for full listening test transcript...");
+      try {
+        const audioResult = await generateAudioFromText(fullTranscript);
+        if (audioResult.audioDataUri) {
+          const [header, base64Data] = audioResult.audioDataUri.split(',');
+          const contentType = header.split(':')[1].split(';')[0];
+          const filePath = `listening-tests/${structuredContent.id}/${structuredContent.id}.wav`;
+          
+          const publicUrl = await uploadAudioToStorage(base64Data, contentType, filePath);
+          structuredContent.audioUrl = publicUrl;
+          console.log(`Full test audio uploaded to ${publicUrl}`);
+        }
+      } catch (audioError) {
+        console.error("Failed to generate or upload full test audio. The test will have no audio.", audioError);
+        structuredContent.audioUrl = ''; // Ensure it's an empty string on failure
+      }
     }
+
 
      // Final step for single-object content types: save to Firestore
     if (input.contentType !== 'SpeakingPrompt') {
@@ -414,5 +447,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    

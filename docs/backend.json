@@ -253,30 +253,18 @@
       "type": "object",
       "description": "Represents a listening test with audio and questions.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the listening test."
-        },
-        "title": {
-          "type": "string",
-          "description": "Title of the listening test."
-        },
-        "skill": {
-          "type": "string",
-          "enum": ["Listening"]
-        },
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "skill": { "enum": ["Listening"] },
+        "audioUrl": { "type": "string", "format": "uri" },
         "parts": {
           "type": "array",
-          "description": "An array of test parts, each with its own audio, transcript, and grouped questions.",
           "items": {
             "type": "object",
             "properties": {
               "part": { "type": "number" },
               "title": { "type": "string" },
-              "audioUrl": {
-                "type": "string",
-                "format": "uri"
-              },
+              "audioUrl": { "type": "string", "format": "uri" },
               "transcript": { "type": "string" },
               "questionGroups": {
                 "type": "array",
@@ -293,7 +281,7 @@
                           "question": { "type": "string" },
                           "type": {
                             "type": "string",
-                            "enum": ["multiple-choice", "note-completion", "fill-in-the-blank"]
+                            "enum": ["multiple-choice", "note-completion", "fill-in-the-blank", "summary-completion", "multiple-choice-multiple-answer"]
                           },
                           "options": {
                             "type": "array",
@@ -309,7 +297,7 @@
                 }
               }
             },
-            "required": ["part", "title", "audioUrl", "transcript", "questionGroups"]
+            "required": ["part", "title", "transcript", "questionGroups"]
           }
         }
       },

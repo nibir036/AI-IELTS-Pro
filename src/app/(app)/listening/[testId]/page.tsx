@@ -7,12 +7,13 @@ import { notFound, useRouter } from 'next/navigation';
 import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, increment, collection } from 'firebase/firestore';
-import type { ListeningTest, ListeningQuestion } from '@/lib/types';
+import type { ListeningTest, ListeningQuestion, ListeningQuestionGroup } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronRight, Loader2, Lightbulb, Info, AlertTriangle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,8 +24,7 @@ import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 
-type UserAnswers = Record<string, string>;
-type AnswerExplanations = Record<string, string>;
+type UserAnswers = Record<string, string | string[]>;
 
 // Memoize the AudioPlayer to prevent re-renders on parent state changes
 const AudioPlayer = React.memo(function AudioPlayer({ src }: { src: string }) {
@@ -52,33 +52,22 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
     const [isGraded, setIsGraded] = React.useState(false);
     const [score, setScore] = React.useState(0);
-    const [explanations, setExplanations] = React.useState<AnswerExplanations>({});
-    const [isGeneratingExplanations, setIsGeneratingExplanations] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     React.useEffect(() => {
         startTimeRef.current = new Date();
     }, []);
 
-    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questions || []) || [], [test.parts]);
+    const allQuestions = React.useMemo(() => test.parts?.flatMap(p => p.questionGroups.flatMap(qg => qg.questions)) || [], [test.parts]);
     const totalQuestions = allQuestions.length;
-    
-    // Create a map to get the global question number from its ID
-    const questionNumberMap = React.useMemo(() => {
-        const map = new Map<string, number>();
-        allQuestions.forEach((q, index) => {
-            map.set(q.id, index + 1);
-        });
-        return map;
-    }, [allQuestions]);
 
     const methods = useForm<UserAnswers>({
-        defaultValues: allQuestions.reduce((acc, q) => ({ ...acc, [q.id]: '' }), {})
+        defaultValues: allQuestions.reduce((acc, q) => ({ ...acc, [q.id]: q.type === 'multiple-choice-multiple-answer' ? [] : '' }), {})
     });
     const { watch, handleSubmit: handleFormSubmit, control } = methods;
 
     const userAnswers = watch();
-    const answeredQuestions = Object.values(userAnswers).filter(val => val && val.trim() !== '').length;
+    const answeredQuestions = Object.values(userAnswers).filter(val => (Array.isArray(val) ? val.length > 0 : val && val.trim() !== '')).length;
     const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
     
     const onSubmit = async (data: UserAnswers) => {
@@ -87,10 +76,16 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
         let correctCount = 0;
         allQuestions.forEach(q => {
-            const userAnswer = data[q.id] || '';
-            const isCorrect = (q.type === 'fill-in-the-blank' || q.type === 'note-completion')
-                ? userAnswer.trim().toLowerCase() === q.answer.toLowerCase()
-                : userAnswer === q.answer;
+            const userAnswer = data[q.id];
+            let isCorrect = false;
+            if (q.type === 'multiple-choice-multiple-answer') {
+                const correctAnswers = q.answer.split(',').sort();
+                const givenAnswers = (Array.isArray(userAnswer) ? userAnswer : []).sort();
+                isCorrect = JSON.stringify(correctAnswers) === JSON.stringify(givenAnswers);
+            } else {
+                 isCorrect = (userAnswer as string || '').trim().toLowerCase() === q.answer.toLowerCase();
+            }
+
             if (isCorrect) {
                 correctCount++;
             }
@@ -98,41 +93,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         
         const finalScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 9.0 : 0;
         setScore(finalScore);
-
-        const incorrectQuestions = allQuestions.filter(q => {
-            const userAnswer = data[q.id] || '';
-            const isCorrect = (q.type === 'fill-in-the-blank' || q.type === 'note-completion')
-                ? userAnswer.trim().toLowerCase() === q.answer.toLowerCase()
-                : userAnswer === q.answer;
-            return !isCorrect;
-        });
-
-        let newExplanations: AnswerExplanations = {};
-        if (incorrectQuestions.length > 0) {
-            setIsGeneratingExplanations(true);
-            const explanationPromises = incorrectQuestions.map(q => {
-                const relevantPart = test.parts.find(p => p.questions?.some(pq => pq.id === q.id));
-                 if (!relevantPart?.transcript) return Promise.resolve({ id: q.id, explanation: 'Could not find relevant transcript.' });
-
-                return generateTestCorrectionExplanation({
-                    context: relevantPart.transcript,
-                    question: q.question,
-                    userAnswer: data[q.id] || "No answer",
-                    correctAnswer: q.answer
-                }).then(result => ({ id: q.id, explanation: result.explanation }))
-                  .catch(err => {
-                    console.error("Error generating explanation for question", q.id, err);
-                    return { id: q.id, explanation: "Could not generate explanation at this time."};
-                  })
-            });
-
-            const results = await Promise.all(explanationPromises);
-            results.forEach(res => {
-                newExplanations[res.id] = res.explanation;
-            });
-            setExplanations(newExplanations);
-            setIsGeneratingExplanations(false);
-        }
         
         if (authUser && firestore && userProfile) {
             const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
@@ -142,7 +102,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                 skill: 'Listening',
                 testId: test.id,
                 inputData: data,
-                aiReport: newExplanations,
+                aiReport: {}, // Explanations will be generated on the submission page
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
             });
@@ -165,128 +125,76 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         setIsSubmitting(false);
     };
 
-    const renderQuestionGroup = (questions: ListeningQuestion[], partIndex: number) => {
-        if (!questions || questions.length === 0) return null;
-
-        const instructionGroups = questions.reduce((acc, q) => {
-            const instruction = q.instructions || 'default';
-            if (!acc[instruction]) {
-                acc[instruction] = [];
-            }
-            acc[instruction].push(q);
-            return acc;
-        }, {} as Record<string, ListeningQuestion[]>);
-        
-        return Object.entries(instructionGroups).map(([instruction, groupQuestions]) => (
-            <div key={`part-${partIndex}-group-${instruction}`} className="space-y-4 rounded-lg border p-4">
-                 {instruction !== 'default' && (
-                    <div className="text-sm font-medium text-foreground pb-4 border-b flex items-start gap-2">
-                        <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                        <div dangerouslySetInnerHTML={{ __html: instruction }} />
-                    </div>
-                )}
+    const renderQuestionGroup = (group: ListeningQuestionGroup) => {
+        return (
+            <div key={group.instructions} className="space-y-4 rounded-lg border p-4">
+                 <div className="text-sm font-medium text-foreground pb-4 border-b flex items-start gap-2">
+                    <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                    <div dangerouslySetInnerHTML={{ __html: group.instructions }} />
+                </div>
                  <div className="space-y-6">
-                    {groupQuestions.map((q) => renderQuestion(q, questionNumberMap.get(q.id) || 0))}
+                    {group.questions.map((q) => renderQuestion(q))}
                  </div>
             </div>
-        ));
-    }
-
-    const renderQuestion = (question: ListeningQuestion, questionNumber: number) => {
-        const userAnswer = userAnswers[question.id] || '';
-        const isCorrect = isGraded ? (
-             (question.type === 'fill-in-the-blank' || question.type === 'note-completion') 
-             ? userAnswer.trim().toLowerCase() === question.answer.toLowerCase()
-             : userAnswer === question.answer
-        ) : undefined;
-        const explanation = explanations[question.id];
-
-        const getOptionClass = (option: string) => {
-            if (!isGraded) return '';
-            if (option === question.answer) return 'text-green-600 font-bold';
-            if (option === userAnswer && option !== question.answer) return 'text-red-600';
-            return 'text-muted-foreground';
-        };
-
-        const questionParts = (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && question.question.includes('__________')
-            ? question.question.replace(/__________/g, `____(${questionNumber})____`).split(`____(${questionNumber})____`)
-            : [question.question];
-        
-        const isInlineInput = questionParts.length > 1 && (question.type === 'fill-in-the-blank' || question.type === 'note-completion');
-
-        return (
-            <div key={question.id} className="space-y-2">
-                <div className="flex items-start gap-3">
-                    {!isInlineInput && (
-                         <div className="flex-shrink-0 flex items-center justify-center h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
-                    )}
-                    
-                     <div className="flex-1">
-                         <div className="font-medium">
-                            {isInlineInput ? (
-                                <div className="leading-relaxed flex flex-wrap items-center">
-                                    <span className="mr-2" dangerouslySetInnerHTML={{ __html: questionParts[0]}} />
-                                    <Controller
-                                        name={question.id as any}
-                                        control={control}
-                                        render={({ field }) => (
-                                            <Input
-                                                {...field}
-                                                disabled={isGraded}
-                                                placeholder={`(${questionNumber})`}
-                                                className="inline-block w-32 h-7 p-1 mx-1 align-baseline"
-                                            />
-                                        )}
-                                    />
-                                    <span dangerouslySetInnerHTML={{ __html: questionParts[1]}}/>
-                                </div>
-                            ) : (
-                                <p dangerouslySetInnerHTML={{ __html: question.question }} />
-                            )}
-                         </div>
-
-                        <Controller
-                            name={question.id as any}
-                            control={control}
-                            render={({ field }) => (
-                                <div className="pt-2">
-                                    {question.type === 'multiple-choice' && (
-                                        <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
-                                            {question.options?.map((option, index) => (
-                                                <div key={index} className="flex items-center space-x-2">
-                                                    <RadioGroupItem value={option} id={`${question.id}-${index}`} />
-                                                    <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>
-                                                        {option}
-                                                    </Label>
-                                                </div>
-                                            ))}
-                                        </RadioGroup>
-                                    )}
-                                </div>
-                            )}
-                        />
-                         {isGraded && !isCorrect && (
-                            <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200">
-                                { (question.type === 'fill-in-the-blank' || question.type === 'note-completion') && (
-                                     <p className="text-xs font-semibold text-green-600 mb-1">Correct answer: {question.answer}</p>
-                                )}
-                                <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                                <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                    {isGeneratingExplanations && !explanation ? (
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <Loader2 className="h-3 w-3 animate-spin"/>
-                                            <span>Generating explanation...</span>
-                                        </div>
-                                    ) : (
-                                        <p className="text-xs">{explanation || 'An explanation could not be generated for this answer.'}</p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
         );
+    }
+    
+    const renderQuestion = (question: ListeningQuestion) => {
+      const questionNumber = allQuestions.findIndex(q => q.id === question.id) + 1;
+  
+      return (
+        <div key={question.id} className="space-y-2">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 flex items-center justify-center h-7 w-7 text-xs font-bold text-muted-foreground">{questionNumber}</div>
+            <div className="flex-1">
+              <p className="font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
+  
+              <Controller
+                name={question.id as any}
+                control={control}
+                render={({ field }) => (
+                  <div className="pt-2">
+                    {question.type === 'multiple-choice' && (
+                      <RadioGroup onValueChange={field.onChange} value={field.value} disabled={isGraded}>
+                        {question.options?.map((option, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <RadioGroupItem value={option} id={`${question.id}-${index}`} />
+                            <Label htmlFor={`${question.id}-${index}`}>{option}</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
+                    {question.type === 'multiple-choice-multiple-answer' && (
+                      <div className="space-y-2">
+                        {question.options?.map((option, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`${question.id}-${index}`}
+                              checked={(field.value as string[])?.includes(option)}
+                              onCheckedChange={(checked) => {
+                                const currentValue = field.value as string[] || [];
+                                if (checked) {
+                                  field.onChange([...currentValue, option]);
+                                } else {
+                                  field.onChange(currentValue.filter(v => v !== option));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`${question.id}-${index}`}>{option}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(question.type === 'fill-in-the-blank' || question.type === 'note-completion') && (
+                      <Input {...field} disabled={isGraded} placeholder="Your answer" />
+                    )}
+                  </div>
+                )}
+              />
+            </div>
+          </div>
+        </div>
+      );
     };
 
     if (isGraded) {
@@ -320,7 +228,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                             <p className="text-muted-foreground">A full-length listening mock test.</p>
                         </CardHeader>
                         <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div>
+                             <div>
                                 <Progress value={progress} className="w-48" />
                                 <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
                             </div>
@@ -337,12 +245,12 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
                     <Tabs defaultValue="part-1" className="w-full">
                         <TabsList className="grid w-full grid-cols-4">
-                            {test.parts.map((part, index) => (
-                                <TabsTrigger key={part.part} value={`part-${part.part}`}>Part {index + 1}</TabsTrigger>
+                            {test.parts.map((part) => (
+                                <TabsTrigger key={part.part} value={`part-${part.part}`}>Part {part.part}</TabsTrigger>
                             ))}
                         </TabsList>
                         
-                        {test.parts.map((part, partIndex) => (
+                        {test.parts.map((part) => (
                              <TabsContent key={part.part} value={`part-${part.part}`} className="mt-4">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-32rem)]">
                                     <Card>
@@ -360,7 +268,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <CardContent className="flex-1 overflow-hidden">
                                             <ScrollArea className="h-full pr-4">
                                                 <div className="space-y-6">
-                                                     {renderQuestionGroup(part.questions || [], partIndex)}
+                                                     {part.questionGroups.map((group) => renderQuestionGroup(group))}
                                                 </div>
                                             </ScrollArea>
                                         </CardContent>
@@ -433,7 +341,7 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     }
     
     // Validate the test data structure
-    if (!test.parts || !Array.isArray(test.parts) || test.parts.length === 0) {
+    if (!test.parts || !Array.isArray(test.parts) || test.parts.length === 0 || !test.parts.every(p => p.questionGroups)) {
       return <TestDataError />;
     }
     

@@ -86,7 +86,7 @@ export interface ReadingTest {
 }
 
 
-export type ListeningQuestionType = 'multiple-choice' | 'note-completion' | 'fill-in-the-blank' | 'summary-completion';
+export type ListeningQuestionType = 'multiple-choice' | 'note-completion' | 'fill-in-the-blank' | 'summary-completion' | 'multiple-choice-multiple-answer';
 
 export interface ListeningQuestion {
     id: string;
@@ -94,22 +94,27 @@ export interface ListeningQuestion {
     question: string;
     type: ListeningQuestionType;
     options?: string[];
-    answer: string;
+    answer: string; // For multiple-choice-multiple-answer, this will be a comma-separated string, e.g., "A,C,E"
+}
+
+export interface ListeningQuestionGroup {
+  instructions: string;
+  questions: ListeningQuestion[];
 }
 
 export interface ListeningTestPart {
     part: number;
     title: string;
     transcript: string;
-    audioUrl?: string; // audioUrl is now optional at the part level
-    questions: ListeningQuestion[];
+    audioUrl?: string;
+    questionGroups: ListeningQuestionGroup[];
 }
 
 export interface ListeningTest {
     id: string;
     title: string;
     skill: 'Listening';
-    audioUrl?: string; // Main audioUrl at the top level
+    audioUrl?: string; 
     parts: ListeningTestPart[];
 }
 
@@ -127,7 +132,7 @@ export interface Submission {
   userId: DocumentReference | string;
   testId: string;
   skill: 'Writing' | 'Speaking' | 'Reading' | 'Listening' | string;
-  inputData: string | Record<string, string>; // Text response, URL, or map of answers
+  inputData: string | Record<string, any>; // Text response, URL, or map of answers (can be string array)
   aiReport: AiPoweredWritingEvaluationOutput | AiPoweredSpeakingEvaluationOutput | Record<string, string> | null;
   scoreBand: number | null;
   timestamp: Timestamp | Date;
