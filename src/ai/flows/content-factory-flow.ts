@@ -208,7 +208,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     1.  **Parse Question Paper (\`rawText\`):** Group consecutive questions that share the same instructions (e.g., "Questions 1-5", "Choose THREE letters A-G") into a single object within the \`questionGroups\` array. Each group MUST have an \`instructions\` string and a \`questions\` array.
     2.  **Assign Answers (\`answers\`):** Take the comma-separated answers string and assign the correct answer to the \`answer\` field of each corresponding question object (q1, q2, ... q40).
     3.  **Divide Transcript (\`transcript\`):** Logically divide the full transcript into four segments and place each segment into the 'transcript' field of the corresponding 'part' object (Part 1, Part 2, Part 3, Part 4).
-    4.  **Audio URL:** For the top-level \`audioUrl\` and for EACH of the 4 parts, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
+    4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
     5.  **Output:** Your entire output must be a single JSON object conforming to the ListeningTest schema.
 
 ---
