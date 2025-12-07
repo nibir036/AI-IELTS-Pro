@@ -13,10 +13,9 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { withRetry, isRetryableGoogleAIError } from '@/lib/retry';
-import { generateAudioFromText } from './text-to-speech-flow';
 import { generateLessonImage } from './generate-lesson-image-flow';
 import { generateWritingTaskImage } from './generate-writing-task-image-flow';
-import { uploadAudioToStorage, uploadImageToStorage } from '@/lib/firebase/storage';
+import { uploadImageToStorage } from '@/lib/firebase/storage';
 import { Lesson, ListeningTest, MockTest, ReadingTest, SpeakingTest } from '@/lib/types';
 import { getFirebaseAdmin } from '@/firebase/admin';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
@@ -242,20 +241,19 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     1.  **Structure:** Create 4 'parts', each with its own segment of the transcript.
     2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
     3.  **Answers:** For every single question, you MUST include the correct 'answer' inside the question object. For multiple-answer questions, the answer must be a comma-separated string (e.g., "A,D,F").
-    4.  **Specific Question Format (Apply this structure exactly):**
-        *   **Part 1:**
-            *   Questions 1-2: \`multiple-choice\` (single answer from A, B, or C).
-            *   Questions 3-10: \`fill-in-the-blank\` or \`note-completion\`.
-        *   **Part 2:**
-            *   Questions 11-15: \`fill-in-the-blank\` or \`note-completion\`.
+    4.  **Specific Question Format (Apply this structure exactly for exactly 40 questions):**
+        *   **Part 1 (10 Questions):**
+            *   Questions 1-5: \`note-completion\` or \`fill-in-the-blank\`.
+            *   Questions 6-10: \`multiple-choice\` (single answer from A, B, or C).
+        *   **Part 2 (10 Questions):**
+            *   Questions 11-15: \`note-completion\` or \`fill-in-the-blank\`.
             *   Questions 16-18: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options.
             *   Questions 19-20: \`multiple-choice-multiple-answer\`. Instructions must say "Choose TWO answers, A-E". Provide 5 options.
-        *   **Part 3:**
-            *   Questions 21-24: \`multiple-choice\` (single answer from A, B, or C).
-            *   Questions 25-27: \`multiple-choice-multiple-answer\`. Instructions must say "Choose THREE answers, A-G". Provide 7 options.
-            *   Questions 28-30: \`fill-in-the-blank\` or \`note-completion\`.
-        *   **Part 4:**
-            *   Questions 31-40: \`fill-in-the-blank\` or \`note-completion\` (typically one-word answers).
+        *   **Part 3 (10 Questions):**
+            *   Questions 21-25: \`multiple-choice\` (single answer from A, B, or C).
+            *   Questions 26-30: \`matching\` or \`multiple-choice-multiple-answer\`.
+        *   **Part 4 (10 Questions):**
+            *   Questions 31-40: \`note-completion\` or \`fill-in-the-blank\` (typically one-word answers).
     5.  **Audio URL:** Set the 'audioUrl' field for EACH of the 4 parts to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". Do NOT set a top-level audioUrl.
 
 ---
@@ -445,7 +443,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
 
     
