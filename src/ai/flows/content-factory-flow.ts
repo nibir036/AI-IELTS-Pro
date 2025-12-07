@@ -115,7 +115,7 @@ const ListeningTestPartSchema = z.object({
 });
 
 const ListeningTestSchema = z.object({
-    type: z.literal("ListeningTest").describe("A discriminator field for the schema union."),
+    type: z.enum(["ListeningTest"]).describe("A discriminator field for the schema union."),
     id: z.string().describe("A unique ID for the test, e.g., L_AC_p9q3."),
     title: z.string(),
     skill: z.enum(["Listening"]),
@@ -239,7 +239,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 *   **Task:** The 'rawText' input contains the full transcript for a 4-part listening test. The sections will be marked (e.g., "Section 1:", "Section 2:"). Generate a complete, 40-question IELTS-style Listening Test based on this transcript.
 *   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema. The AI should intelligently decide the question types based on the transcript content and standard IELTS formats.
 *   **Strict Formatting Rules:**
-    1.  **Structure:** Create 4 'parts', each with its own segment of the transcript.
+    1.  **Structure:** Create 4 'parts' inside the main object, each with its own segment of the transcript.
     2.  **Question Grouping:** Within each part, group questions under a \`questionGroups\` array. Each object in this array must have an \`instructions\` string and a \`questions\` array. This is critical for handling multiple question formats within one part.
     3.  **Specific Question Format (Apply this structure exactly):**
         *   **Part 1:**
@@ -256,6 +256,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
         *   **Part 4:**
             *   Questions 31-40: \`fill-in-the-blank\` or \`note-completion\` (typically one-word answers).
     4.  **Audio URL:** Set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
+    5.  **Answers Map:** You MUST create a top-level \`answers\` object that contains a key-value pair for every single question from q1 to q40.
 
 ---
 ### GENERAL RULES ###
