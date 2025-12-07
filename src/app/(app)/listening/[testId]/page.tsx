@@ -154,7 +154,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                             name={question.id}
                             control={control}
                             render={({ field }) => (
-                            <div className="pt-2">
+                            <div className="pt-1">
                                 {question.type === 'multiple-choice' && (
                                 <>
                                     <p className="font-medium mb-2" dangerouslySetInnerHTML={{ __html: question.question }} />
@@ -194,9 +194,9 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                 )}
                                 {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion') && (
                                    <div className="flex items-center flex-wrap font-medium">
-                                        <span>{questionTextParts[0]}</span>
+                                        <span dangerouslySetInnerHTML={{ __html: questionTextParts[0] }} />
                                         <Input {...field} disabled={isGraded} placeholder="........" className="w-40 inline-block mx-2 h-8" />
-                                        <span>{questionTextParts[1]}</span>
+                                        <span dangerouslySetInnerHTML={{ __html: questionTextParts[1] || ''}} />
                                    </div>
                                 )}
                             </div>
@@ -241,14 +241,15 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                         <CardContent className="space-y-4">
                            <AudioPlayer src={test.audioUrl || ''} />
                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-                                <div>
-                                    <Progress value={progress} className="w-48" />
-                                    <CardDescription className="pt-2">{answeredQuestions} of {totalQuestions} answered</CardDescription>
+                                <div className="w-full sm:w-auto">
+                                    <Progress value={progress} className="w-full sm:w-48" />
+                                    <CardDescription className="pt-2 text-center sm:text-left">{answeredQuestions} of {totalQuestions} answered</CardDescription>
                                 </div>
                                 <Button
                                     type="submit"
                                     size="lg"
                                     disabled={isSubmitting}
+                                    className="w-full sm:w-auto"
                                 >
                                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Submit & Grade Full Test

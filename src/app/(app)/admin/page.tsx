@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -57,6 +58,8 @@ const creationCards = [
 export default function AdminPage() {
   const [contentType, setContentType] = useState<ContentType | ''>('');
   const [inputText, setInputText] = useState('');
+  const [transcript, setTranscript] = useState('');
+  const [answers, setAnswers] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -85,7 +88,12 @@ export default function AdminPage() {
     methods.reset();
     
     try {
-      const aiResult = await processContent({ contentType, rawText: inputText });
+      const aiResult = await processContent({ 
+        contentType, 
+        rawText: inputText,
+        transcript: contentType === 'ListeningTest' ? transcript : undefined,
+        answers: contentType === 'ListeningTest' ? answers : undefined,
+       });
 
       let targetCollection: string;
         if ('skill' in aiResult && aiResult.skill) {
@@ -93,7 +101,12 @@ export default function AdminPage() {
                 case 'Reading': targetCollection = 'readingTests'; break;
                 case 'Listening': targetCollection = 'listeningTests'; break;
                 case 'Writing': targetCollection = 'mockTests'; break;
-                default: throw new Error(`Unknown skill type for saving: ${aiResult.skill}`);
+                default: 
+                    if ('type' in aiResult && aiResult.type === "ListeningTest") {
+                        targetCollection = 'listeningTests';
+                        break;
+                    }
+                    throw new Error(`Unknown skill type for saving: ${aiResult.skill}`);
             }
         } else if ('type' in aiResult && aiResult.type) {
              switch (aiResult.type) {
@@ -120,13 +133,19 @@ export default function AdminPage() {
             throw new Error("Could not determine target collection for saving. The AI result is malformed.");
         }
       
-      const docRef = doc(firestore, targetCollection, aiResult.id);
-      await setDoc(docRef, aiResult);
-      toast({
-        title: "Content Saved!",
-        description: `New content was successfully saved to '${targetCollection}'.`,
-      });
-      setInputText(''); // Clear input on success
+      if ('id' in aiResult && aiResult.id) {
+        const docRef = doc(firestore, targetCollection, aiResult.id);
+        await setDoc(docRef, aiResult);
+        toast({
+            title: "Content Saved!",
+            description: `New content was successfully saved to '${targetCollection}'.`,
+        });
+        setInputText(''); // Clear input on success
+        setTranscript('');
+        setAnswers('');
+      } else {
+          throw new Error("Generated content is missing a valid 'id' property.");
+      }
 
     } catch (err: any) {
       console.error("Error processing content:", err);
@@ -299,10 +318,33 @@ export default function AdminPage() {
                     <Textarea
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
-                        placeholder="Or paste your raw text content here..."
+                        placeholder="Paste your raw text, question paper, or topic here..."
                         className="text-sm min-h-[128px]"
                     />
                 </div>
+
+                {contentType === 'ListeningTest' && (
+                  <>
+                    <div className="space-y-2 md:col-span-2">
+                      <h3 className="font-semibold text-sm">Listening Test Transcript</h3>
+                       <Textarea
+                          value={transcript}
+                          onChange={(e) => setTranscript(e.target.value)}
+                          placeholder="Paste the full audio transcript here..."
+                          className="text-sm min-h-[150px]"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                       <h3 className="font-semibold text-sm">Listening Test Answers</h3>
+                       <Textarea
+                          value={answers}
+                          onChange={(e) => setAnswers(e.target.value)}
+                          placeholder="Paste the comma-separated answers here (e.g., answer1,answer2,answer3)..."
+                          className="text-sm min-h-[80px]"
+                      />
+                    </div>
+                  </>
+                )}
             </div>
              <div className="flex flex-col sm:flex-row items-center gap-4">
                  <Select value={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
@@ -402,3 +444,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

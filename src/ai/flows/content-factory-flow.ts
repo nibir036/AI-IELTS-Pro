@@ -7,7 +7,7 @@
  *
  * - processContent - A function that handles the content creation process.
  * - ProcessContentInput - The input type for the function.
- * - ProcessContentOutput - The return type for the function.
+ * - ProcessContent-Output - The return type for the function.
  */
 
 import { ai } from '@/ai/genkit';
@@ -24,6 +24,8 @@ import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 const ProcessContentInputSchema = z.object({
   contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
   rawText: z.string().describe('The raw text content or topic to be processed.'),
+  transcript: z.string().optional().describe("The full transcript for a listening test."),
+  answers: z.string().optional().describe("A comma-separated string of answers for a listening test."),
 });
 export type ProcessContentInput = z.infer<typeof ProcessContentInputSchema>;
 
@@ -157,11 +159,7 @@ export async function processContent(
 
 const prompt = ai.definePrompt({
   name: 'contentFactoryPrompt',
-  input: { schema: z.object({
-    contentType: ProcessContentInputSchema.shape.contentType,
-    rawText: ProcessContentInputSchema.shape.rawText,
-    knowledge: z.string().optional().describe("Relevant information from the knowledge base."),
-  }) },
+  input: { schema: ProcessContentInputSchema },
   output: { schema: ProcessContentOutputSchema },
   prompt: `You are an AI system with two specialized personas acting in a sequence.
 FIRST, you are a "Creative Associate" who brainstorms content.
@@ -169,7 +167,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 ---
 ### WORKFLOW ###
-1.  **Creative Associate Role:** Based on the user's input ('contentType' and 'rawText'), first mentally brainstorm and generate the required content (passages, questions, answers, lesson text). Do this internally.
+1.  **Creative Associate Role:** Based on the user's input, first mentally brainstorm and generate the required content (passages, questions, answers, lesson text).
 2.  **Senior Editor Role:** Take the brainstormed content from Step 1 and meticulously format it into a single, valid JSON object that strictly adheres to the user's requested 'contentType' and the corresponding schema provided in this prompt. This is your ONLY output.
 
 ---
@@ -177,7 +175,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'Lesson' (e.g., Grammar or Vocabulary):
 *   **Role:** Expert English Language Tutor for IELTS.
-*   **Task:** Generate a complete lesson plan.
+*   **Task:** Generate a complete lesson plan based on the \`rawText\`.
 *   **Structure Requirements:**
     1.  **ID/Metadata:** Generate a unique ID, title, level, and a one-sentence \`content_en\` summary.
     2.  **Content Blocks:** Use \`contentBlocks\` to provide clear explanations, examples, and tips. Use \`<b>\` tags for emphasis.
@@ -187,61 +185,31 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 *   **Role:** Act as a certified IELTS Speaking Examiner.
 *   **Task:** Generate a complete, unique IELTS Speaking Test (Part 1, 2, and 3). The 'rawText' from the user is the central theme for the test.
 *   **Structure Requirements:**
-    1.  **Part 1:** Generate 10 standard interview-style questions covering 3 common areas (e.g., Hometown, Work/Study, Hobbies), subtly related to the 'rawText' theme if possible.
-    2.  **Part 2:** Generate a detailed Cue Card prompt on the 'rawText' topic. Include the standard four bullet points (e.g., what, where, why, how).
-    3.  **Part 3:** Generate 6 abstract, demanding discussion questions that naturally follow the theme of the Part 2 Cue Card.
-*   **Output Format:** Your JSON output MUST be a single object that conforms to the 'SpeakingPromptSet' schema. It must contain a 'prompts' array with exactly 3 objects, one for each part of the speaking test. The title for each should be the main topic (e.g., "Speaking: Holidays"). Ensure the 'skill' field is set to 'Speaking' for each prompt.
+    1.  **Part 1:** Generate 10 standard interview-style questions covering 3 common areas related to the 'rawText' theme.
+    2.  **Part 2:** Generate a detailed Cue Card prompt on the 'rawText' topic. Include the standard four bullet points.
+    3.  **Part 3:** Generate 6 abstract discussion questions that follow the theme of the Part 2 Cue Card.
+*   **Output Format:** Your JSON output MUST be a single object conforming to the 'SpeakingPromptSet' schema.
 
 #### IF contentType is 'WritingTest':
 *   **Role:** Act as a highly experienced IELTS Writing Examiner.
-*   **Task:** The 'rawText' will contain one or two topics separated by a semicolon (e.g., "A topic for Task 1; A topic for Task 2" or just "A topic for Task 2"). Generate a complete IELTS Writing Test. If only a Task 2 topic is provided, create a relevant, generic Task 1 topic (e.g., a simple chart about education trends if Task 2 is about education).
-*   **Structure Requirements:**
-    1.  **IELTS Writing Task 1 (Academic):**
-        *   **Topic:** Generate a prompt based on a visual representation (e.g., bar chart, line graph, process diagram, or table). The prompt must instruct the student to select and report main features and make comparisons.
-        *   **Word Count:** The target word count must be 150.
-    2.  **IELTS Writing Task 2 (Essay):**
-        *   **Topic:** Use the provided topic from the 'rawText' input.
-        *   **Question Type:** The essay prompt must be a common IELTS type (e.g., Agree/Disagree, Discussion of Both Views, Problem/Solution, or Advantages/Disadvantages).
-        *   **Word Count:** The target word count must be 250.
-*   **Output Format:** Your JSON output MUST be an object that conforms to the WritingTest schema, containing two items in the 'questions' array, one for each task.
+*   **Task:** The 'rawText' will contain one or two topics. Generate a complete IELTS Writing Test. If only a Task 2 topic is provided, create a relevant, generic Task 1 topic.
+*   **Structure Requirements:** Generate two questions (Task 1 and Task 2) with topics, word counts, and task types.
+*   **Output Format:** Your JSON output MUST conform to the WritingTest schema.
 
 #### IF contentType is 'ReadingTest':
 *   **Role:** Act as a superior grand master level IELTS Exam Content Creator.
-*   **Task:** The 'rawText' will contain three topics separated by semicolons (e.g., "Topic 1; Topic 2; Topic 3"). Generate a Full IELTS Academic Reading Test with 3 distinct passages and **EXACTLY 40 questions in total**.
-*   **Strict Formatting Rules:**
-    *   The final JSON output MUST contain 3 items in the 'parts' array.
-    *   Each part must contain a passage with paragraphs separated by double newlines (\\n\\n).
-    *   Question IDs must be unique across the entire test (q1, q2, ... q40).
-    *   Each question or group of questions requiring instructions MUST have an \`id\` field in the question object. The \`instructions\` field should be added to the \`questionGroups\`.
-*   **Passage 1 (Factual Text - 13 Questions):**
-    *   Topic: Use the first topic from the 'rawText' input.
-    *   Length: 700-750 words.
-    *   Questions 1-7: "note-completion". Instructions: "Complete the notes below. Choose NO MORE THAN TWO WORDS from the passage for each answer."
-    *   Questions 8-13: "true-false-not-given". Instructions: "Do the following statements agree with the information given in Reading Passage 1? Write TRUE, FALSE, or NOT GIVEN."
-*   **Passage 2 (Discursive Text - 13 Questions):**
-    *   Topic: Use the second topic from the 'rawText' input.
-    *   Length: 750-800 words.
-    *   Questions 14-19: "matching-headings". Provide a list of 8 headings in the 'options' field for the first question (q14). The question's text should be the paragraph identifier (e.g., "Paragraph A"). Instructions: "Reading Passage 2 has six paragraphs, A-F. Choose the correct heading for each paragraph from the list of headings below."
-    *   Questions 20-23: "matching-information". Instructions: "Look at the following statements (Questions 20-23) and the paragraphs of Reading Passage 2. Match each statement with the correct paragraph, A-F." The 'answer' for each should be a single letter (e.g., "A").
-    *   Questions 24-26: "multiple-choice". Instructions: "Choose the correct letter, A, B, C or D."
-*   **Passage 3 (Abstract Text - 14 Questions):**
-    *   Topic: Use the third topic from the 'rawText' input.
-    *   Length: 850-900 words.
-    *   Questions 27-32: "summary-completion". This MUST be a single question object with id "q27". The 'question' field must contain the entire summary paragraph with placeholders like '__(27)__'. The 'answer' field must be a single, comma-separated string of the correct words.
-        *   IF instructions are "Choose ONE WORD ONLY from the passage for each answer.", you MUST NOT generate an 'answerBox'.
-        *   IF instructions are "Complete the summary using the list of words, A-J, below.", you MUST generate an 'answerBox' with 10 words.
-    *   Questions 33-36: "yes-no-not-given". Instructions: "Do the following statements agree with the claims of the writer in Reading Passage 3? Write YES, NO, or NOT GIVEN."
-    *   Questions 37-40: "matching-sentence-endings". The first part of the sentence is the 'question', and the list of possible endings MUST be in the 'options' field for the first question of this block (q37). Instructions: "Complete each sentence with the correct ending, A-G, below."
+*   **Task:** The 'rawText' will contain three topics. Generate a Full IELTS Academic Reading Test with 3 distinct passages and **EXACTLY 40 questions in total**.
+*   **Strict Formatting Rules:** Follow the detailed structure for passages and question types as previously defined. Ensure all 40 questions have unique IDs.
 
 #### IF contentType is 'ListeningTest':
-*   **Role:** Elite IELTS Listening Test Creator.
-*   **Task:** The 'rawText' input contains a full, pre-formatted 40-question listening paper. Your task is to convert this paper into the required JSON format and invent a plausible transcript that matches the questions and answers.
-*   **STRICT JSON Structure:** You MUST generate a single JSON object that conforms to the ListeningTest schema.
-*   **Strict Formatting Rules:**
-    1.  **Invent Transcript:** Create a realistic, detailed transcript for a 4-part listening test. The transcript MUST contain the answers to all 40 questions from the 'rawText'. Divide this transcript logically into 4 segments and place each segment into the 'transcript' field of the corresponding 'part' object.
-    2.  **Question Grouping:** Analyze the provided questions. Group consecutive questions that share the same instructions (e.g., "Questions 1-5", "Choose THREE letters A-G") into a single object within the \`questionGroups\` array. Each group MUST have an \`instructions\` string and a \`questions\` array.
-    3.  **Answers:** For every single question, you MUST infer the correct 'answer' from the transcript you invent. The answer MUST be included inside the question object. For multiple-answer questions, the answer must be a comma-separated string (e.g., "A,D,F").
+*   **Role:** Elite IELTS Listening Test Content Parser.
+*   **Task:** The user will provide three inputs: \`rawText\` (the full 40-question test paper), \`transcript\` (the full audio transcript), and \`answers\` (a comma-separated list of all 40 correct answers). Your task is to precisely parse and combine these three inputs into a single, valid JSON object.
+*   **STRICT JSON Structure:**
+    1.  **Parse Question Paper (\`rawText\`):** Group consecutive questions that share the same instructions (e.g., "Questions 1-5", "Choose THREE letters A-G") into a single object within the \`questionGroups\` array. Each group MUST have an \`instructions\` string and a \`questions\` array.
+    2.  **Assign Answers (\`answers\`):** Take the comma-separated answers string and assign the correct answer to the \`answer\` field of each corresponding question object (q1, q2, ... q40).
+    3.  **Divide Transcript (\`transcript\`):** Logically divide the full transcript into four segments and place each segment into the 'transcript' field of the corresponding 'part' object (Part 1, Part 2, Part 3, Part 4).
     4.  **Audio URL:** For the top-level \`audioUrl\` and for EACH of the 4 parts, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
+    5.  **Output:** Your entire output must be a single JSON object conforming to the ListeningTest schema.
 
 ---
 ### GENERAL RULES ###
@@ -254,7 +222,9 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 - **Desired Content Type:** '{{{contentType}}}'
 - **Knowledge Base Context (use if helpful):** {{{knowledge}}}
-- **Raw Text to Process:** '{{{rawText}}}'
+- **Raw Text/Question Paper:** '{{{rawText}}}'
+- **Transcript (for ListeningTest):** '{{{transcript}}}'
+- **Answers (for ListeningTest):** '{{{answers}}}'
 `,
   config: {
     temperature: 0.2, 
@@ -393,12 +363,17 @@ const contentFactoryFlow = ai.defineFlow(
         let targetCollection: string;
         const content = structuredContent as any;
 
-        if (content.skill) {
+        if (content.type === "ListeningTest" || content.skill === 'Reading' || content.skill === 'Writing' || content.skill === 'Listening') {
              switch (content.skill) {
                 case 'Reading': targetCollection = 'readingTests'; break;
                 case 'Listening': targetCollection = 'listeningTests'; break;
                 case 'Writing': targetCollection = 'mockTests'; break;
-                default: throw new Error(`Unknown skill type for saving: ${content.skill}`);
+                default:
+                    if(content.type === "ListeningTest"){
+                       targetCollection = 'listeningTests';
+                       break;
+                    }
+                    throw new Error(`Unknown skill type for saving: ${content.skill}`);
             }
         } else if (content.type) {
              switch (content.type) {
@@ -408,8 +383,6 @@ const contentFactoryFlow = ai.defineFlow(
                 case 'Speaking':
                     targetCollection = 'lessons';
                     break;
-                case 'ListeningTest':
-                    targetCollection = 'listeningTests'; break;
                 default:
                      throw new Error(`Unknown content type for saving: ${content.type}`);
             }
