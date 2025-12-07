@@ -281,7 +281,7 @@ const contentFactoryFlow = ai.defineFlow(
     }
     console.log("Structured content generated.");
     
-    // 4. Post-process for media generation and saving
+    // 4. Post-process for Speaking prompts (they are a special case, a set of documents)
     if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
         const batch = firestore.batch();
 
@@ -311,7 +311,10 @@ const contentFactoryFlow = ai.defineFlow(
         if (task1 && task1.topic) {
             try {
                 console.log(`Generating image for Task 1: "${task1.topic}"`);
-                const imageResult = await generateWritingTaskImage(task1.topic);
+                // Wrap the image generation in its own retry logic
+                const imageResult = await withRetry(() => generateWritingTaskImage(task1.topic), {
+                    retryOn: isRetryableGoogleAIError,
+                });
                 
                 if (!imageResult.imageDataUri || !imageResult.imageDataUri.startsWith('data:')) {
                      throw new Error("Invalid image data URI received from image generation flow.");
@@ -410,3 +413,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
