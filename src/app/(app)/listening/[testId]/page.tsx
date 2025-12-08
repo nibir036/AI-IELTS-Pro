@@ -1,29 +1,37 @@
 
 'use client';
 
-import { useState, useRef, useEffect, use } from 'react';
+import { useState, useRef, useEffect, useCallback, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, serverTimestamp, doc, increment } from 'firebase/firestore';
-import type { ListeningTest, ListeningQuestion, ListeningQuestionGroup } from '@/lib/types';
+import { useFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { listeningTests } from '@/lib/data';
+import type { ListeningTest, ListeningQuestion } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb, Info, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb, List, Headphones, Info } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-type UserAnswers = Record<string, string | string[]>;
+type UserAnswers = Record<string, string>;
 type AnswerExplanations = Record<string, string>;
 
 function formatTime(seconds: number): string {
@@ -37,7 +45,6 @@ function ModernAudioPlayer({ src }: { src: string }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
-    const [volume, setVolume] = useState(1);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -52,16 +59,10 @@ function ModernAudioPlayer({ src }: { src: string }) {
 
         audio.addEventListener('loadedmetadata', setAudioData);
         audio.addEventListener('timeupdate', setAudioTime);
-        audio.addEventListener('play', () => setIsPlaying(true));
-        audio.addEventListener('pause', () => setIsPlaying(false));
-        audio.addEventListener('ended', () => setIsPlaying(false));
 
         return () => {
             audio.removeEventListener('loadedmetadata', setAudioData);
             audio.removeEventListener('timeupdate', setAudioTime);
-            audio.removeEventListener('play', () => setIsPlaying(true));
-            audio.removeEventListener('pause', () => setIsPlaying(false));
-            audio.removeEventListener('ended', () => setIsPlaying(false));
         };
     }, []);
 
@@ -74,59 +75,44 @@ function ModernAudioPlayer({ src }: { src: string }) {
         setIsPlaying(!isPlaying);
     };
 
-    const handleSeek = (value: number[]) => {
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (audioRef.current) {
-            audioRef.current.currentTime = value[0];
-            setCurrentTime(value[0]);
-        }
-    };
-
-    const handleVolumeChange = (value: number[]) => {
-        if (audioRef.current) {
-            audioRef.current.volume = value[0];
-            setVolume(value[0]);
+            audioRef.current.currentTime = Number(e.target.value);
+            setCurrentTime(Number(e.target.value));
         }
     };
 
     return (
-        <div className="flex items-center gap-4 rounded-full bg-muted p-2 w-full max-w-lg mx-auto">
-            <audio ref={audioRef} src={src} preload="metadata" />
-            <Button onClick={togglePlayPause} variant="ghost" size="icon" className="rounded-full">
-                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+        <div className="flex items-center gap-4 rounded-lg bg-muted p-4">
+            <audio ref={audioRef} src={src} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} preload="metadata" />
+            <Button onClick={togglePlayPause} variant="ghost" size="icon">
+                {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
             </Button>
-            <span className="text-xs font-mono text-muted-foreground w-20">
-                {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
-            <Slider
-                value={[currentTime]}
-                max={duration || 100}
-                step={1}
-                onValueChange={handleSeek}
-                className="flex-1"
-            />
-            <div className="flex items-center gap-2 w-28">
-                 {volume > 0 ? (
-                    <Volume2 className="h-5 w-5 text-muted-foreground cursor-pointer" onClick={() => handleVolumeChange([0])}/>
-                ) : (
-                    <VolumeX className="h-5 w-5 text-muted-foreground cursor-pointer" onClick={() => handleVolumeChange([1])}/>
-                )}
-                <Slider
-                    value={[volume]}
-                    max={1}
-                    step={0.1}
-                    onValueChange={handleVolumeChange}
-                    className="flex-1"
+            <div className="flex-1 flex items-center gap-2">
+                <span className="text-xs font-mono text-muted-foreground">{formatTime(currentTime)}</span>
+                <input
+                    type="range"
+                    min="0"
+                    max={duration || 0}
+                    value={currentTime}
+                    onChange={handleSeek}
+                    className="w-full h-1 bg-primary/20 rounded-full appearance-none cursor-pointer"
                 />
+                 <span className="text-xs font-mono text-muted-foreground">{formatTime(duration)}</span>
             </div>
         </div>
     );
 }
 
-function ListeningTestComponent({ test }: { test: ListeningTest }) {
+export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
+    const { testId } = use(params);
+
+    const test = listeningTests.find(t => t.id === testId);
+
     const startTimeRef = useRef<Date | null>(null);
 
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -135,14 +121,11 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const [explanations, setExplanations] = useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
     
-    const allQuestions = test.parts.flatMap(p => p.questionGroups.flatMap(qg => qg.questions));
-    const totalQuestions = allQuestions.length;
-
-     useEffect(() => {
+    useEffect(() => {
         startTimeRef.current = new Date();
-    }, []);
-    
-    const handleAnswerChange = (questionId: string, answer: string | string[]) => {
+    }, [])
+
+    const handleAnswerChange = (questionId: string, answer: string) => {
         if (isGraded) return;
         setUserAnswers(prev => ({ ...prev, [questionId]: answer }));
     };
@@ -151,66 +134,51 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         if (!test) return;
 
         let correctCount = 0;
-        allQuestions.forEach(q => {
-            const userAnswer = userAnswers[q.id];
-            const correctAnswer = q.answer;
-            let isCorrect = false;
-
-            if (q.type === 'multiple-choice-multiple-answer') {
-                const correctAnswersSet = new Set(correctAnswer.split(',').map(s => s.trim()).sort());
-                const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
-                isCorrect = correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
-            } else if (typeof userAnswer === 'string') {
-                 isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase();
-            }
-
-            if (isCorrect) {
+        test.questions.forEach(q => {
+             const userAnswer = userAnswers[q.id] || '';
+             const correctAnswer = q.answer;
+             if (userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
                 correctCount++;
             }
         });
-
-        const finalScore = (correctCount / totalQuestions) * 9.0;
+        const finalScore = (correctCount / test.questions.length) * 9.0;
         setScore(finalScore);
         setIsGraded(true);
 
         // Generate explanations for incorrect answers
         let newExplanations: AnswerExplanations = {};
-        if (test.parts.every(p => p.transcript)) {
-            const incorrectAnswers = allQuestions.filter(q => {
-                 const userAnswer = userAnswers[q.id];
-                 const correctAnswer = q.answer;
-                 if (q.type === 'multiple-choice-multiple-answer') {
-                    const correctAnswersSet = new Set(correctAnswer.split(',').map(s => s.trim()).sort());
-                    const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
-                    return !(correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value)));
-                } else if (typeof userAnswer === 'string') {
-                    return userAnswer.trim().toLowerCase() !== correctAnswer.toLowerCase();
-                }
-                return true; // Not answered or wrong type
+        if (test.transcript) {
+            const incorrectAnswers = test.questions.filter(q => {
+                const userAnswer = userAnswers[q.id]?.trim().toLowerCase();
+                const correctAnswer = q.answer.toLowerCase();
+                return userAnswer !== correctAnswer;
             });
 
             if (incorrectAnswers.length > 0) {
                 setIsGeneratingExplanations(true);
-                const explanationPromises = incorrectAnswers.map(q => {
-                    const part = test.parts.find(p => p.questionGroups.some(qg => qg.questions.some(qq => qq.id === q.id)));
-                    return generateTestCorrectionExplanation({
-                        context: part!.transcript,
+                 try {
+                    let tempExplanations: AnswerExplanations = {};
+                    for (const q of incorrectAnswers) {
+                      const result = await generateTestCorrectionExplanation({
+                        context: test.transcript!,
                         question: q.question,
-                        userAnswer: Array.isArray(userAnswers[q.id]) ? (userAnswers[q.id] as string[]).join(', ') : userAnswers[q.id] as string || "No answer",
+                        userAnswer: userAnswers[q.id] || "No answer",
                         correctAnswer: q.answer
-                    }).then(result => ({ id: q.id, explanation: result.explanation }))
-                      .catch(err => {
-                        console.error("Error generating explanation for question", q.id, err);
-                        return { id: q.id, explanation: "Could not generate explanation at this time."};
-                      })
-                });
-
-                const results = await Promise.all(explanationPromises);
-                results.forEach(res => {
-                    newExplanations[res.id] = res.explanation;
-                });
-                setExplanations(newExplanations);
-                setIsGeneratingExplanations(false);
+                      });
+                      tempExplanations[q.id] = result.explanation;
+                       // Update state after each explanation is generated
+                      setExplanations(prev => ({...prev, ...tempExplanations}));
+                    }
+                } catch (err) {
+                    console.error("Error generating explanations sequentially", err);
+                    toast({
+                        variant: 'destructive',
+                        title: 'AI Error',
+                        description: 'Could not generate all explanations.'
+                    });
+                } finally {
+                    setIsGeneratingExplanations(false);
+                }
             }
         }
         
@@ -242,50 +210,23 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             });
         }
     };
-    
-    const answeredQuestionsCount = Object.values(userAnswers).filter(val => (Array.isArray(val) ? val.length > 0 : val && val.trim() !== '')).length;
-    const progress = totalQuestions > 0 ? (answeredQuestionsCount / totalQuestions) * 100 : 0;
 
-    const renderQuestionGroup = (group: ListeningQuestionGroup, partNumber: number, groupIndex: number) => {
-        return (
-            <div key={`${partNumber}-${groupIndex}`} className="space-y-4 rounded-lg border p-4">
-                 <div className="text-sm font-medium text-foreground pb-4 border-b flex items-start gap-2">
-                    <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                    <div dangerouslySetInnerHTML={{ __html: group.instructions }} />
-                </div>
-                 <div className="space-y-6">
-                    {group.questions.map((q) => renderQuestion(q))}
-                 </div>
-            </div>
-        );
-    }
+    if (!test) notFound();
+
+    const progress = (Object.keys(userAnswers).length / test.questions.length) * 100;
     
     const renderQuestion = (question: ListeningQuestion) => {
-        const userAnswer = userAnswers[question.id] || [];
-        const isCorrect = isGraded ? (() => {
-            const correctAnswer = question.answer;
-            if (question.type === 'multiple-choice-multiple-answer') {
-                const correctAnswersSet = new Set(correctAnswer.split(',').map(s => s.trim()).sort());
-                const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
-                return correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
-            } else {
-                return typeof userAnswer === 'string' && userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase();
-            }
-        })() : undefined;
-
+        const userAnswer = userAnswers[question.id] || '';
+        const isCorrect = isGraded ? (userAnswer.trim().toLowerCase() === question.answer.toLowerCase()) : undefined;
         const explanation = explanations[question.id];
+        const questionTextParts = question.question.split('____');
 
         const getOptionClass = (option: string) => {
             if (!isGraded) return '';
-            const correctAnswers = question.answer.split(',').map(s => s.trim());
-            const userAnswersArray = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
-
-            if (correctAnswers.includes(option)) return 'text-green-600 font-bold';
-            if (userAnswersArray.includes(option) && !correctAnswers.includes(option)) return 'text-red-600';
+            if (option === question.answer) return 'text-green-600 font-bold';
+            if (option === userAnswer && option !== question.answer) return 'text-red-600';
             return 'text-muted-foreground';
         };
-        
-        const questionTextParts = question.question.split('____');
 
         return (
             <Card key={question.id} className={`p-4 ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
@@ -294,20 +235,24 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                         isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
                     ) : <HelpCircle className="h-5 w-5 text-muted-foreground mt-1" />}
                     
-                    {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion') ? (
-                        <div className="flex-1 font-medium flex items-center flex-wrap">
-                            <span dangerouslySetInnerHTML={{ __html: questionTextParts[0] }} />
-                            <Input value={userAnswer as string} onChange={(e) => handleAnswerChange(question.id, e.target.value)} disabled={isGraded} className="w-40 inline-block mx-2 h-8" />
-                            <span dangerouslySetInnerHTML={{ __html: questionTextParts[1] || ''}} />
+                    {(question.type === 'note-completion' || question.type === 'fill-in-the-blank') ? (
+                         <div className="flex-1 font-medium flex items-center flex-wrap">
+                             <span dangerouslySetInnerHTML={{__html: questionTextParts[0]}} />
+                             <Input
+                                value={userAnswer}
+                                onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                                disabled={isGraded}
+                                className="w-40 inline-block mx-2 h-8"
+                            />
+                             <span dangerouslySetInnerHTML={{__html: questionTextParts[1] || ''}} />
                         </div>
                     ) : (
-                        <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
+                        <p className="flex-1 font-medium" dangerouslySetInnerHTML={{__html: question.question}} />
                     )}
-
                 </div>
                 
                 {question.type === 'multiple-choice' && (
-                    <RadioGroup onValueChange={(value) => handleAnswerChange(question.id, value)} disabled={isGraded}>
+                    <RadioGroup value={userAnswer} onValueChange={(value) => handleAnswerChange(question.id, value)} disabled={isGraded} className="pl-6">
                         {question.options?.map((option, index) => (
                             <div key={index} className="flex items-center space-x-2">
                                 <RadioGroupItem value={option} id={`${question.id}-${index}`} />
@@ -319,32 +264,9 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     </RadioGroup>
                 )}
 
-                {question.type === 'multiple-choice-multiple-answer' && (
-                     <div className="space-y-2">
-                        {question.options?.map((option, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={`${question.id}-${index}`}
-                                    checked={(userAnswer as string[]).includes(option)}
-                                    onCheckedChange={(checked) => {
-                                        const currentValue = (userAnswer as string[]) || [];
-                                        if (checked) {
-                                            handleAnswerChange(question.id, [...currentValue, option]);
-                                        } else {
-                                            handleAnswerChange(question.id, currentValue.filter((v) => v !== option));
-                                        }
-                                    }}
-                                    disabled={isGraded}
-                                />
-                                <Label htmlFor={`${question.id}-${index}`} className={getOptionClass(option)}>{option}</Label>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                
-                 {(isGraded && !isCorrect) && (
+                 {isGraded && !isCorrect && (
                     <div className="mt-3">
-                         {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion') && (
+                         {(question.type === 'note-completion' || question.type === 'fill-in-the-blank') && (
                             <p className="text-xs text-green-600 font-semibold mb-2">Correct answer: {question.answer}</p>
                         )}
                         <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
@@ -356,7 +278,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                                         <span>Generating explanation...</span>
                                     </div>
                                 ) : (
-                                    <p className="text-xs">{explanation}</p>
+                                    <p className="text-xs">{explanation || "Explanation will be generated for incorrect answers."}</p>
                                 )}
                             </div>
                         </div>
@@ -368,156 +290,72 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 
     if (isGraded) {
         return (
-             <div className="flex flex-col items-center justify-center py-10">
-                 <Card className="w-full max-w-4xl">
-                    <CardHeader className="text-center">
+            <div className="max-w-4xl mx-auto space-y-6">
+                 <Card className="text-center">
+                    <CardHeader>
                         <CardTitle className="text-2xl">Practice Complete!</CardTitle>
                         <CardDescription>You scored</CardDescription>
                         <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
                         <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
-                         <div className="pt-4">
-                             <Button onClick={() => router.push('/dashboard')}>
-                                Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
-                            </Button>
-                         </div>
                     </CardHeader>
                     <CardContent>
-                        <ScrollArea className="h-[50vh] pr-4">
-                            <div className="space-y-8">
-                                {test.parts.map((part) => (
-                                    <div key={part.part}>
-                                        <h3 className="text-xl font-bold mb-4 pb-2 border-b">Part {part.part} Results</h3>
-                                        <div className="space-y-6">
-                                            {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
+                         <Button onClick={() => router.push('/dashboard')} size="lg">
+                            Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
                     </CardContent>
                 </Card>
+                <div className="space-y-4">
+                    <h2 className="text-2xl font-bold tracking-tight">Review Your Answers</h2>
+                     {test.questions.map(renderQuestion)}
+                </div>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle>{test.title}</CardTitle>
-                    <CardDescription>Listen to the audio and answer the questions below.</CardDescription>
+                    <CardDescription>Listen to the audio and answer the questions below. You can submit at any time to see your score.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {test.audioUrl ? (
-                        <ModernAudioPlayer src={test.audioUrl} />
-                    ) : (
-                        <div className="flex items-center justify-center h-16 bg-muted rounded-lg">
-                            <p className="text-muted-foreground">Audio not available for this test.</p>
-                        </div>
-                    )}
+                <CardContent>
+                   <ModernAudioPlayer src={test.audioUrl} />
                 </CardContent>
             </Card>
-
-            <Card>
+             <Card>
                 <CardHeader>
                     <CardTitle>Questions</CardTitle>
-                    <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
-                        <p>{answeredQuestionsCount} of {totalQuestions} answered</p>
+                     <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
+                        <p>{Object.keys(userAnswers).length} of {test.questions.length} answered</p>
                         <Progress value={progress} className="w-1/4" />
                     </div>
                 </CardHeader>
-                 <CardContent className="space-y-8">
-                    {test.parts.map((part) => (
-                        <div key={part.part}>
-                             <h3 className="text-xl font-bold mb-4 pb-2 border-b">Part {part.part}</h3>
-                             <div className="space-y-6">
-                                {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
+                <CardContent className="space-y-6">
+                    {(test.questionGroups || [{instructions: '', questions: test.questions}]).map((group, groupIndex) => (
+                        <div key={groupIndex} className="space-y-4">
+                            {group.instructions && (
+                                <div className="text-sm font-medium text-foreground pb-2 border-b flex items-start gap-2">
+                                    <Info className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                                    <p>{group.instructions}</p>
+                                </div>
+                            )}
+                             <div className="space-y-4">
+                                {group.questions.map(renderQuestion)}
                             </div>
                         </div>
                     ))}
                 </CardContent>
                 <CardFooter>
-                     <Button 
+                    <Button 
                         className="w-full" 
                         onClick={handleSubmit} 
+                        size="lg"
                     >
                         Submit & Grade Test
                     </Button>
                 </CardFooter>
-            </Card>
-
+             </Card>
         </div>
     );
 }
-
-function TestPageSkeleton() {
-    return (
-         <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-8 w-3/4" />
-                    <Skeleton className="h-4 w-full mt-2" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <Skeleton className="h-16 w-full max-w-lg mx-auto" />
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                   <Skeleton className="h-8 w-1/3" />
-                   <Skeleton className="h-4 w-1/2 mt-2" />
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                </CardContent>
-                 <CardFooter>
-                    <Skeleton className="h-10 w-full" />
-                 </CardFooter>
-            </Card>
-         </div>
-    )
-}
-
-export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
-    const { testId } = use(params);
-    const { firestore } = useFirebase();
-
-    const testDocRef = useMemoFirebase(() => {
-        if (!firestore || !testId) return null;
-        return doc(firestore, 'listeningTests', testId);
-    }, [firestore, testId]);
-
-    const { data: test, isLoading } = useDoc<ListeningTest>(testDocRef);
-
-    if (isLoading) {
-        return <TestPageSkeleton />;
-    }
-
-    if (!test) {
-        notFound();
-    }
-    
-    if (!test.parts) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-center py-10">
-                <Card className="max-w-lg p-8">
-                    <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-                    <CardTitle className="mt-4">Test Data Corrupted</CardTitle>
-                    <CardDescription className="mt-2">
-                        This listening test could not be loaded because its data is missing key fields like `parts`. Please regenerate it using the Admin Content Factory.
-                    </CardDescription>
-                </Card>
-            </div>
-        );
-    }
-    
-    return (
-         <div className="animate-in fade-in-50">
-            <ListeningTestComponent test={test} />
-        </div>
-    );
-}
-
-    
