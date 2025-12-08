@@ -59,7 +59,7 @@ export default function WritingPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="mb-1">{test.testType} - {question.taskType}</CardTitle>
+                      <CardTitle className="mb-1">{test.testType} - {test.questions.length > 1 ? `Tasks 1 & 2` : question.taskType}</CardTitle>
                       <Badge variant="secondary">{test.skill}</Badge>
                     </div>
                     <FileText className="h-6 w-6 text-muted-foreground" />
