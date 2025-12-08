@@ -3,16 +3,15 @@
 
 import { useState, useRef, useEffect, useCallback, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
-import { listeningTests } from '@/lib/data';
 import type { ListeningTest, ListeningQuestion, ListeningQuestionGroup } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb, List, Headphones, Info } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb, List, Headphones, Info, AlertTriangle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -31,20 +30,18 @@ import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/no
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type WaveSurfer from 'wavesurfer.js';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 type UserAnswers = Record<string, string | string[]>;
 type AnswerExplanations = Record<string, string>;
 
 
-export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
+function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
-    const { testId } = use(params);
-
-    const test = listeningTests.find(t => t.id === testId);
 
     const waveformRef = useRef<HTMLDivElement>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -62,7 +59,7 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     // State to hold the dynamically imported WaveSurfer module
     const [waveSurferModule, setWaveSurferModule] = useState<any>(null);
     
-    const allQuestions = test?.parts.flatMap(p => p.questionGroups.flatMap(qg => qg.questions)) || [];
+    const allQuestions = test.parts.flatMap(p => p.questionGroups.flatMap(qg => qg.questions));
     const totalQuestions = allQuestions.length;
 
 
@@ -209,8 +206,6 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
             });
         }
     };
-
-    if (!test) notFound();
     
     const answeredQuestionsCount = Object.values(userAnswers).filter(val => (Array.isArray(val) ? val.length > 0 : val && val.trim() !== '')).length;
     const progress = totalQuestions > 0 ? (answeredQuestionsCount / totalQuestions) * 100 : 0;
@@ -500,4 +495,77 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     );
 }
 
+function TestPageSkeleton() {
+    return (
+         <div className="space-y-6">
+            <div className="hidden lg:grid grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-4 w-full mt-2" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-10 w-32" />
+                    </CardContent>
+                </Card>
+                <Card className="flex flex-col h-full">
+                    <CardHeader>
+                       <Skeleton className="h-8 w-1/3" />
+                       <Skeleton className="h-4 w-1/2 mt-2" />
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-hidden">
+                       <Skeleton className="h-6 w-full mb-4" />
+                       <Skeleton className="h-full w-full" />
+                    </CardContent>
+                     <CardFooter>
+                        <Skeleton className="h-10 w-full" />
+                     </CardFooter>
+                </Card>
+            </div>
+             <div className="block lg:hidden">
+                <Skeleton className="h-screen w-full" />
+            </div>
+         </div>
+    )
+}
+
+export default function ListeningTaskPage({ params }: { params: Promise<{ testId: string }> }) {
+    const { testId } = use(params);
+    const { firestore } = useFirebase();
+
+    const testDocRef = useMemoFirebase(() => {
+        if (!firestore || !testId) return null;
+        return doc(firestore, 'listeningTests', testId);
+    }, [firestore, testId]);
+
+    const { data: test, isLoading } = useDoc<ListeningTest>(testDocRef);
+
+    if (isLoading) {
+        return <TestPageSkeleton />;
+    }
+
+    if (!test) {
+        notFound();
+    }
     
+    if (!test.parts) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center py-10">
+                <Card className="max-w-lg p-8">
+                    <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+                    <CardTitle className="mt-4">Test Data Corrupted</CardTitle>
+                    <CardDescription className="mt-2">
+                        This listening test could not be loaded because its data is missing key fields like `parts`. Please regenerate it using the Admin Content Factory.
+                    </CardDescription>
+                </Card>
+            </div>
+        );
+    }
+    
+    return (
+         <div className="animate-in fade-in-50">
+            <ListeningTestComponent test={test} />
+        </div>
+    );
+}
