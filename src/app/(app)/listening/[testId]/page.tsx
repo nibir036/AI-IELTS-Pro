@@ -55,27 +55,19 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const [score, setScore] = useState(0);
     const [explanations, setExplanations] = useState<AnswerExplanations>({});
     const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
-
-    // State to hold the dynamically imported WaveSurfer module
-    const [waveSurferModule, setWaveSurferModule] = useState<any>(null);
     
     const allQuestions = test.parts.flatMap(p => p.questionGroups.flatMap(qg => qg.questions));
     const totalQuestions = allQuestions.length;
 
-
     useEffect(() => {
-        // Dynamically import WaveSurfer on the client side
-        import('wavesurfer.js').then(module => {
-            setWaveSurferModule(module.default);
-        });
-    }, []);
-
-
-    useEffect(() => {
-        if (!waveSurferModule || !waveformRef.current || !test?.audioUrl) return;
-        if(wavesurferRef.current) return;
-
-        const wavesurfer = waveSurferModule.create({
+        let wavesurfer: WaveSurfer | null = null;
+    
+        const initWaveSurfer = async () => {
+          if (!waveformRef.current || !test?.audioUrl) return;
+    
+          const WaveSurfer = (await import('wavesurfer.js')).default;
+    
+          wavesurfer = WaveSurfer.create({
             container: waveformRef.current,
             waveColor: 'hsl(var(--muted-foreground))',
             progressColor: 'hsl(var(--primary))',
@@ -84,21 +76,26 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             barRadius: 2,
             height: 80,
             url: test.audioUrl,
-        });
-        wavesurferRef.current = wavesurfer;
-
-        wavesurfer.on('ready', () => setIsPlayerReady(true));
-        wavesurfer.on('play', () => {
+          });
+          wavesurferRef.current = wavesurfer;
+    
+          wavesurfer.on('ready', () => setIsPlayerReady(true));
+          wavesurfer.on('play', () => {
             setIsPlaying(true);
             if (!startTimeRef.current) {
-                startTimeRef.current = new Date();
+              startTimeRef.current = new Date();
             }
-        });
-        wavesurfer.on('pause', () => setIsPlaying(false));
-        wavesurfer.on('finish', () => setIsPlaying(false));
-        
-        return () => wavesurfer.destroy();
-    }, [waveSurferModule, test?.audioUrl]);
+          });
+          wavesurfer.on('pause', () => setIsPlaying(false));
+          wavesurfer.on('finish', () => setIsPlaying(false));
+        };
+    
+        initWaveSurfer();
+    
+        return () => {
+          wavesurfer?.destroy();
+        };
+      }, [test?.audioUrl]);
 
     const handlePlayPause = () => {
         if (wavesurferRef.current) {
