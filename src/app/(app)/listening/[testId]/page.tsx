@@ -1,42 +1,132 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useCallback, use } from 'react';
+import { useState, useRef, useEffect, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, increment } from 'firebase/firestore';
 import type { ListeningTest, ListeningQuestion, ListeningQuestionGroup } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb, List, Headphones, Info, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, Lightbulb, Info, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type WaveSurfer from 'wavesurfer.js';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Slider } from '@/components/ui/slider';
 
 
 type UserAnswers = Record<string, string | string[]>;
 type AnswerExplanations = Record<string, string>;
 
+function formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+function ModernAudioPlayer({ src }: { src: string }) {
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [duration, setDuration] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [volume, setVolume] = useState(1);
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const setAudioData = () => {
+            setDuration(audio.duration);
+            setCurrentTime(audio.currentTime);
+        };
+
+        const setAudioTime = () => setCurrentTime(audio.currentTime);
+
+        audio.addEventListener('loadedmetadata', setAudioData);
+        audio.addEventListener('timeupdate', setAudioTime);
+        audio.addEventListener('play', () => setIsPlaying(true));
+        audio.addEventListener('pause', () => setIsPlaying(false));
+        audio.addEventListener('ended', () => setIsPlaying(false));
+
+        return () => {
+            audio.removeEventListener('loadedmetadata', setAudioData);
+            audio.removeEventListener('timeupdate', setAudioTime);
+            audio.removeEventListener('play', () => setIsPlaying(true));
+            audio.removeEventListener('pause', () => setIsPlaying(false));
+            audio.removeEventListener('ended', () => setIsPlaying(false));
+        };
+    }, []);
+
+    const togglePlayPause = () => {
+        if (isPlaying) {
+            audioRef.current?.pause();
+        } else {
+            audioRef.current?.play();
+        }
+        setIsPlaying(!isPlaying);
+    };
+
+    const handleSeek = (value: number[]) => {
+        if (audioRef.current) {
+            audioRef.current.currentTime = value[0];
+            setCurrentTime(value[0]);
+        }
+    };
+
+    const handleVolumeChange = (value: number[]) => {
+        if (audioRef.current) {
+            audioRef.current.volume = value[0];
+            setVolume(value[0]);
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-4 rounded-full bg-muted p-2 w-full max-w-lg mx-auto">
+            <audio ref={audioRef} src={src} preload="metadata" />
+            <Button onClick={togglePlayPause} variant="ghost" size="icon" className="rounded-full">
+                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </Button>
+            <span className="text-xs font-mono text-muted-foreground w-20">
+                {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+            <Slider
+                value={[currentTime]}
+                max={duration || 100}
+                step={1}
+                onValueChange={handleSeek}
+                className="flex-1"
+            />
+            <div className="flex items-center gap-2 w-28">
+                 {volume > 0 ? (
+                    <Volume2 className="h-5 w-5 text-muted-foreground cursor-pointer" onClick={() => handleVolumeChange([0])}/>
+                ) : (
+                    <VolumeX className="h-5 w-5 text-muted-foreground cursor-pointer" onClick={() => handleVolumeChange([1])}/>
+                )}
+                <Slider
+                    value={[volume]}
+                    max={1}
+                    step={0.1}
+                    onValueChange={handleVolumeChange}
+                    className="flex-1"
+                />
+            </div>
+        </div>
+    );
+}
 
 function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const { firestore, user: authUser } = useFirebase();
     const { user: userProfile } = useUserProfile();
     const router = useRouter();
     const { toast } = useToast();
-
-    const waveformRef = useRef<HTMLDivElement>(null);
-    const wavesurferRef = useRef<WaveSurfer | null>(null);
-    const [isPlayerReady, setIsPlayerReady] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
     const startTimeRef = useRef<Date | null>(null);
 
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -48,55 +138,9 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const allQuestions = test.parts.flatMap(p => p.questionGroups.flatMap(qg => qg.questions));
     const totalQuestions = allQuestions.length;
 
-    useEffect(() => {
-        let wavesurfer: WaveSurfer | null = null;
-    
-        const initWaveSurfer = async () => {
-          if (!waveformRef.current || !test?.audioUrl) return;
-    
-          const WaveSurferModule = (await import('wavesurfer.js')).default;
-    
-          // Ensure we don't create multiple instances
-          if (wavesurferRef.current) {
-            wavesurferRef.current.destroy();
-          }
-
-          wavesurfer = WaveSurferModule.create({
-            container: waveformRef.current,
-            waveColor: 'hsl(var(--muted-foreground))',
-            progressColor: 'hsl(var(--primary))',
-            barWidth: 2,
-            barGap: 1,
-            barRadius: 2,
-            height: 80,
-            url: test.audioUrl,
-          });
-          wavesurferRef.current = wavesurfer;
-    
-          wavesurfer.on('ready', () => setIsPlayerReady(true));
-          wavesurfer.on('play', () => {
-            setIsPlaying(true);
-            if (!startTimeRef.current) {
-              startTimeRef.current = new Date();
-            }
-          });
-          wavesurfer.on('pause', () => setIsPlaying(false));
-          wavesurfer.on('finish', () => setIsPlaying(false));
-        };
-    
-        initWaveSurfer();
-    
-        return () => {
-          wavesurfer?.destroy();
-          wavesurferRef.current = null;
-        };
-      }, [test?.audioUrl]);
-
-    const handlePlayPause = () => {
-        if (wavesurferRef.current) {
-            wavesurferRef.current.playPause();
-        }
-    };
+     useEffect(() => {
+        startTimeRef.current = new Date();
+    }, []);
     
     const handleAnswerChange = (questionId: string, answer: string | string[]) => {
         if (isGraded) return;
@@ -361,17 +405,12 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     <CardDescription>Listen to the audio and answer the questions below.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div ref={waveformRef} className="w-full h-24 bg-muted rounded-lg" />
-                     {!isPlayerReady ? (
-                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                            <Loader2 className="h-4 w-4 animate-spin"/>
-                            <p>Loading audio player...</p>
+                    {test.audioUrl ? (
+                        <ModernAudioPlayer src={test.audioUrl} />
+                    ) : (
+                        <div className="flex items-center justify-center h-16 bg-muted rounded-lg">
+                            <p className="text-muted-foreground">Audio not available for this test.</p>
                         </div>
-                    ): (
-                         <Button onClick={handlePlayPause}>
-                            {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
-                            {isPlaying ? 'Pause' : 'Play'}
-                        </Button>
                     )}
                 </CardContent>
             </Card>
@@ -418,8 +457,7 @@ function TestPageSkeleton() {
                     <Skeleton className="h-4 w-full mt-2" />
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-16 w-full max-w-lg mx-auto" />
                 </CardContent>
             </Card>
             <Card>
@@ -479,3 +517,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         </div>
     );
 }
+
+    
