@@ -36,20 +36,6 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
 
   useEffect(() => {
     async function fetchPrediction() {
-        const cachedPrediction = sessionStorage.getItem(PREDICTION_CACHE_KEY);
-        const cachedSubmissionCount = sessionStorage.getItem(SUBMISSION_COUNT_CACHE_KEY);
-
-        // If we have submissions, check if we need to refresh the cache
-        if (submissions && cachedPrediction && cachedSubmissionCount) {
-             if (submissions.length === parseInt(cachedSubmissionCount, 10)) {
-                 setPrediction(JSON.parse(cachedPrediction));
-                 setStatus('success');
-                 setIsLoading(false);
-                 return; // No new submissions, so we use the cached prediction
-             }
-        }
-
-
       // Don't run if the user has no initial score
       if (user.currentBand === 0) {
           setStatus('initial');
@@ -57,20 +43,32 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
           return;
       }
       
-      // Wait for submissions to load
+      // Wait for submissions to load before doing anything
       if (submissionsLoading) {
         setStatus('loading');
         setIsLoading(true);
         return;
       }
-
-      // If there are no submissions, there's not enough data
+      
+      // If submissions have loaded, but there are none, there's not enough data.
       if (!submissions || submissions.length === 0) {
         setStatus('no-data');
         setIsLoading(false);
         return;
       }
 
+      // Check cache *after* we confirm we have submissions
+      const cachedPrediction = sessionStorage.getItem(PREDICTION_CACHE_KEY);
+      const cachedSubmissionCount = sessionStorage.getItem(SUBMISSION_COUNT_CACHE_KEY);
+
+      if (cachedPrediction && cachedSubmissionCount && submissions.length === parseInt(cachedSubmissionCount, 10)) {
+          setPrediction(JSON.parse(cachedPrediction));
+          setStatus('success');
+          setIsLoading(false);
+          return; // Use cache and exit if submission count hasn't changed.
+      }
+      
+      // If we are here, it means we need to fetch a new prediction.
       setIsLoading(true);
       setStatus('loading');
       try {
@@ -100,7 +98,7 @@ export function PredictedDateCard({ user }: PredictedDateCardProps) {
     }
 
     fetchPrediction();
-  }, [submissions, submissionsLoading, user]);
+  }, [submissions, submissionsLoading, user.currentBand, user.targetBand]); // Removed `user` object to prevent re-runs on other user property changes
 
   const renderContent = () => {
     switch (status) {
