@@ -187,27 +187,31 @@ export default function SubmissionPage({ params }: { params: Promise<{ submissio
       );
     }
     
-    if (submission.skill === 'Writing' && submission.aiReport && ('task1' in submission.aiReport || 'task2' in submission.aiReport)) {
-      const report = submission.aiReport as { task1: AiPoweredWritingEvaluationOutput | null, task2: AiPoweredWritingEvaluationOutput | null };
-      const finalScore = report.task1 && report.task2 
-          ? ((report.task1.overallBand + report.task2.overallBand * 2) / 3)
-          : (report.task1?.overallBand || report.task2?.overallBand || 0);
+    if (submission.skill === 'Writing') {
+      const report = submission.aiReport as any; // Cast to any to handle both single and double task structures
+      if (report && ('task1' in report || 'task2' in report)) {
+        const finalScore = report.task1 && report.task2 
+            ? ((report.task1.overallBand + report.task2.overallBand * 2) / 3)
+            : (report.task1?.overallBand || report.task2?.overallBand || 0);
 
-      return (
-          <div className="space-y-6">
-              {report.task1 && report.task2 && (
-                   <Card className="bg-primary/10 border-primary/30">
-                        <CardHeader>
-                            <CardTitle className="text-xl text-primary">Overall Test Result</CardTitle>
-                            <CardDescription>Your estimated overall writing band is: <span className="text-2xl font-bold text-primary">{finalScore.toFixed(1)}</span></CardDescription>
-                            <p className="text-xs text-muted-foreground pt-2">Task 2 is weighted more heavily in the official IELTS test, which is reflected in this combined score.</p>
-                        </CardHeader>
-                    </Card>
-              )}
-             {report.task1 && <WritingEvaluationResults result={report.task1} title="Task 1 Analysis" />}
-             {report.task2 && <WritingEvaluationResults result={report.task2} title="Task 2 Analysis" />}
-          </div>
-      );
+        return (
+            <div className="space-y-6">
+                {report.task1 && report.task2 && (
+                     <Card className="bg-primary/10 border-primary/30">
+                          <CardHeader>
+                              <CardTitle className="text-xl text-primary">Overall Test Result</CardTitle>
+                              <CardDescription>Your estimated overall writing band is: <span className="text-2xl font-bold text-primary">{finalScore.toFixed(1)}</span></CardDescription>
+                              <p className="text-xs text-muted-foreground pt-2">Task 2 is weighted more heavily in the official IELTS test, which is reflected in this combined score.</p>
+                          </CardHeader>
+                      </Card>
+                )}
+               {report.task1 && <WritingEvaluationResults result={report.task1} title="Task 1 Analysis" />}
+               {report.task2 && <WritingEvaluationResults result={report.task2} title="Task 2 Analysis" />}
+            </div>
+        );
+      }
+      // Handle old structure if needed, or just show the main component
+      return <WritingEvaluationResults result={report as AiPoweredWritingEvaluationOutput} />;
     }
 
     if (submission.skill === 'Speaking') {
@@ -317,5 +321,3 @@ function SubmissionSkeleton() {
     </div>
   );
 }
-
-    

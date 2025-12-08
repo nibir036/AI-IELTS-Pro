@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useCallback, use } from 'react';
+import { useState, useRef, useEffect, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, increment } from 'firebase/firestore';
@@ -15,15 +15,12 @@ import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, L
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 
 
 type UserAnswers = Record<string, string | string[]>;
-type AnswerExplanations = Record<string, string>;
-
 
 function formatTime(seconds: number): string {
     if (isNaN(seconds)) return '0:00';
@@ -107,8 +104,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
     const [isGraded, setIsGraded] = useState(false);
     const [score, setScore] = useState(0);
-    const [explanations, setExplanations] = useState<AnswerExplanations>({});
-    const [isGeneratingExplanations, setIsGeneratingExplanations] = useState(false);
 
     useEffect(() => {
         startTimeRef.current = new Date();
@@ -156,44 +151,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         setScore(finalScore);
         setIsGraded(true);
 
-        const incorrectAnswers = allQuestions.filter(q => {
-            const userAnswer = userAnswers[q.id];
-            const correctAnswer = q.answer;
-             if (q.type === 'multiple-choice-multiple-answer') {
-                const correctAnswersSet = new Set(correctAnswer.split(',').map(s => s.trim()).sort());
-                const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
-                return !(correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value)));
-            } else {
-                return (userAnswer as string || '').trim().toLowerCase() !== correctAnswer.toLowerCase();
-            }
-        });
-        
-        let newExplanations: AnswerExplanations = {};
-        if (incorrectAnswers.length > 0) {
-            setIsGeneratingExplanations(true);
-            try {
-                for (const q of incorrectAnswers) {
-                    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay
-                    const part = test.parts.find(p => p.questionGroups.some(qg => qg.questions.some(qq => qq.id === q.id)));
-                    if (part) {
-                        const result = await generateTestCorrectionExplanation({
-                            context: part.transcript,
-                            question: q.question,
-                            userAnswer: Array.isArray(userAnswers[q.id]) ? (userAnswers[q.id] as string[]).join(', ') : userAnswers[q.id] as string || "No answer",
-                            correctAnswer: q.answer
-                        });
-                        newExplanations[q.id] = result.explanation;
-                        setExplanations(prev => ({...prev, [q.id]: result.explanation}));
-                    }
-                }
-            } catch (err) {
-                 console.error("Error generating explanations sequentially", err);
-                 toast({ variant: 'destructive', title: 'AI Error', description: 'Could not generate all explanations.'});
-            } finally {
-                 setIsGeneratingExplanations(false);
-            }
-        }
-        
         if (authUser && firestore && userProfile) {
             const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
             
@@ -202,7 +159,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                 skill: 'Listening',
                 testId: test.id,
                 inputData: userAnswers,
-                aiReport: newExplanations,
+                aiReport: {}, // No AI report for listening tests
                 scoreBand: finalScore,
                 timestamp: serverTimestamp(),
             });
@@ -238,7 +195,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
             }
         })() : undefined;
 
-        const explanation = explanations[q.id];
         const questionTextParts = q.question.split('____');
 
         const getOptionClass = (option: string) => {
@@ -305,19 +261,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                  {isGraded && !isCorrect && (
                     <div className="mt-3">
                          <p className="text-xs text-green-600 font-semibold mb-2">Correct answer: {q.answer}</p>
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
-                            <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                {isGeneratingExplanations && !explanation ? (
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <Loader2 className="h-3 w-3 animate-spin"/>
-                                        <span>Generating explanation...</span>
-                                    </div>
-                                ) : (
-                                    <p className="text-xs">{explanation || "Explanation will be generated for incorrect answers."}</p>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 )}
             </Card>
@@ -450,5 +393,3 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
     
     return <ListeningTestComponent test={test} />;
 }
-
-    
