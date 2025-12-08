@@ -292,7 +292,17 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                      {isGraded ? (
                         isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
                     ) : <HelpCircle className="h-5 w-5 text-muted-foreground mt-1" />}
-                    <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
+                    
+                    {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion') ? (
+                        <div className="flex-1 font-medium flex items-center flex-wrap">
+                            <span dangerouslySetInnerHTML={{ __html: questionTextParts[0] }} />
+                            <Input value={userAnswer as string} onChange={(e) => handleAnswerChange(question.id, e.target.value)} disabled={isGraded} className="w-40 inline-block mx-2 h-8" />
+                            <span dangerouslySetInnerHTML={{ __html: questionTextParts[1] || ''}} />
+                        </div>
+                    ) : (
+                        <p className="flex-1 font-medium" dangerouslySetInnerHTML={{ __html: question.question }} />
+                    )}
+
                 </div>
                 
                 {question.type === 'multiple-choice' && (
@@ -331,31 +341,23 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     </div>
                 )}
                 
-                {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion') && (
-                    <div className="relative">
-                        <div className="flex items-center flex-wrap font-medium">
-                             <span dangerouslySetInnerHTML={{ __html: questionTextParts[0] }} />
-                             <Input value={userAnswer as string} onChange={(e) => handleAnswerChange(question.id, e.target.value)} disabled={isGraded} className="w-40 inline-block mx-2 h-8" />
-                             <span dangerouslySetInnerHTML={{ __html: questionTextParts[1] || ''}} />
-                        </div>
-                         {isGraded && !isCorrect && (
-                            <p className="text-xs text-green-600 mt-1">Correct answer: {question.answer}</p>
+                 {(isGraded && !isCorrect) && (
+                    <div className="mt-3">
+                         {(question.type === 'fill-in-the-blank' || question.type === 'note-completion' || question.type === 'summary-completion') && (
+                            <p className="text-xs text-green-600 font-semibold mb-2">Correct answer: {question.answer}</p>
                         )}
-                    </div>
-                )}
-                
-                 {isGraded && !isCorrect && (
-                    <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
-                           <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            {isGeneratingExplanations && !explanation ? (
-                                <div className="flex items-center gap-2 text-xs">
-                                    <Loader2 className="h-3 w-3 animate-spin"/>
-                                    <span>Generating explanation...</span>
-                                </div>
-                            ) : (
-                                <p className="text-xs">{explanation}</p>
-                            )}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                            <div className="flex items-start gap-2 text-blue-700 dark:text-blue-300">
+                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                {isGeneratingExplanations && !explanation ? (
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <Loader2 className="h-3 w-3 animate-spin"/>
+                                        <span>Generating explanation...</span>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs">{explanation}</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -437,7 +439,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                      <Button 
                         className="w-full" 
                         onClick={handleSubmit} 
-                        disabled={answeredQuestionsCount !== totalQuestions}
                     >
                         Submit & Grade Test
                     </Button>
@@ -517,5 +518,3 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         </div>
     );
 }
-
-    
