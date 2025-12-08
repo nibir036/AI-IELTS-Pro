@@ -160,8 +160,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                 const correctAnswersSet = new Set(correctAnswer.split(',').map(s => s.trim()).sort());
                 const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
                 isCorrect = correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
-            } else {
-                 isCorrect = (userAnswer as string || '').trim().toLowerCase() === correctAnswer.toLowerCase();
+            } else if (typeof userAnswer === 'string') {
+                 isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase();
             }
 
             if (isCorrect) {
@@ -183,9 +183,10 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     const correctAnswersSet = new Set(correctAnswer.split(',').map(s => s.trim()).sort());
                     const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
                     return !(correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value)));
-                } else {
-                    return (userAnswer as string || '').trim().toLowerCase() !== correctAnswer.toLowerCase();
+                } else if (typeof userAnswer === 'string') {
+                    return userAnswer.trim().toLowerCase() !== correctAnswer.toLowerCase();
                 }
+                return true; // Not answered or wrong type
             });
 
             if (incorrectAnswers.length > 0) {
@@ -268,7 +269,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                 const givenAnswersSet = new Set((Array.isArray(userAnswer) ? userAnswer : []).sort());
                 return correctAnswersSet.size === givenAnswersSet.size && [...correctAnswersSet].every(value => givenAnswersSet.has(value));
             } else {
-                return (userAnswer as string || '').trim().toLowerCase() === correctAnswer.toLowerCase();
+                return typeof userAnswer === 'string' && userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase();
             }
         })() : undefined;
 
@@ -518,3 +519,5 @@ export default function ListeningTaskPage({ params }: { params: Promise<{ testId
         </div>
     );
 }
+
+    
