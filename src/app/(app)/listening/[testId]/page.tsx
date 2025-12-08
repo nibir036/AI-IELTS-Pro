@@ -15,19 +15,9 @@ import { CheckCircle, XCircle, ChevronRight, HelpCircle, Play, Pause, Loader2, L
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { generateTestCorrectionExplanation } from '@/ai/flows/generate-test-correction-explanation';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type WaveSurfer from 'wavesurfer.js';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,7 +37,6 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     const wavesurferRef = useRef<WaveSurfer | null>(null);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [hasPlayed, setHasPlayed] = useState(false);
     const startTimeRef = useRef<Date | null>(null);
 
     const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
@@ -65,9 +54,14 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         const initWaveSurfer = async () => {
           if (!waveformRef.current || !test?.audioUrl) return;
     
-          const WaveSurfer = (await import('wavesurfer.js')).default;
+          const WaveSurferModule = (await import('wavesurfer.js')).default;
     
-          wavesurfer = WaveSurfer.create({
+          // Ensure we don't create multiple instances
+          if (wavesurferRef.current) {
+            wavesurferRef.current.destroy();
+          }
+
+          wavesurfer = WaveSurferModule.create({
             container: waveformRef.current,
             waveColor: 'hsl(var(--muted-foreground))',
             progressColor: 'hsl(var(--primary))',
@@ -94,13 +88,13 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
     
         return () => {
           wavesurfer?.destroy();
+          wavesurferRef.current = null;
         };
       }, [test?.audioUrl]);
 
     const handlePlayPause = () => {
         if (wavesurferRef.current) {
             wavesurferRef.current.playPause();
-            if (!hasPlayed) setHasPlayed(true);
         }
     };
     
@@ -325,169 +319,92 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         );
     };
 
-    const GradedView = () => (
-         <div className="flex flex-col h-full">
-            <div className="flex flex-col items-center justify-center text-center bg-muted rounded-lg p-6 mb-4">
-                <CardTitle className="text-xl">Practice Complete!</CardTitle>
-                <p className="text-muted-foreground mt-2">You scored</p>
-                <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
-                <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
-                <Button onClick={() => router.push('/dashboard')} className="mt-6">
-                    Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
+    if (isGraded) {
+        return (
+             <div className="flex flex-col items-center justify-center py-10">
+                 <Card className="w-full max-w-4xl">
+                    <CardHeader className="text-center">
+                        <CardTitle className="text-2xl">Practice Complete!</CardTitle>
+                        <CardDescription>You scored</CardDescription>
+                        <p className="text-6xl font-bold text-primary my-2">{score.toFixed(1)} / 9.0</p>
+                        <p className="text-muted-foreground">({((score / 9.0) * 100).toFixed(0)}%)</p>
+                         <div className="pt-4">
+                             <Button onClick={() => router.push('/dashboard')}>
+                                Back to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
+                         </div>
+                    </CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[50vh] pr-4">
+                            <div className="space-y-8">
+                                {test.parts.map((part) => (
+                                    <div key={part.part}>
+                                        <h3 className="text-xl font-bold mb-4 pb-2 border-b">Part {part.part} Results</h3>
+                                        <div className="space-y-6">
+                                            {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
             </div>
-            <ScrollArea className="h-full pr-4 mt-2">
-                 <div className="space-y-8">
-                    {test.parts.map((part) => (
-                        <Card key={part.part}>
-                            <CardHeader>
-                                <CardTitle>Part {part.part}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            </ScrollArea>
-        </div>
-    )
+        )
+    }
 
-    const UngradedView = () => (
-         <>
-            <div className="mb-4">
-                <Progress value={progress} />
-                <p className="text-xs text-muted-foreground text-center mt-1">{answeredQuestionsCount} of {totalQuestions} answered</p>
-            </div>
-            <ScrollArea className="h-[calc(100vh-28rem)] lg:h-full pr-4">
-                 <div className="space-y-8">
-                    {test.parts.map((part) => (
-                        <Card key={part.part}>
-                            <CardHeader>
-                                <CardTitle>Part {part.part}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            </ScrollArea>
-        </>
-    )
+    return (
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>{test.title}</CardTitle>
+                    <CardDescription>Listen to the audio and answer the questions below.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div ref={waveformRef} className="w-full h-24 bg-muted rounded-lg" />
+                     {!isPlayerReady ? (
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin"/>
+                            <p>Loading audio player...</p>
+                        </div>
+                    ): (
+                         <Button onClick={handlePlayPause}>
+                            {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
+                            {isPlaying ? 'Pause' : 'Play'}
+                        </Button>
+                    )}
+                </CardContent>
+            </Card>
 
-    const QuestionsCard = () => (
-        <Card className="flex flex-col h-full">
-            <CardHeader>
-                <CardTitle>Questions</CardTitle>
-                {!isGraded && <CardDescription>Answer all questions before submitting.</CardDescription>}
-                {isGraded && <CardDescription>Review your results below.</CardDescription>}
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden">
-                { isGraded ? <GradedView /> : <UngradedView /> }
-            </CardContent>
-            {!isGraded && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Questions</CardTitle>
+                    <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
+                        <p>{answeredQuestionsCount} of {totalQuestions} answered</p>
+                        <Progress value={progress} className="w-1/4" />
+                    </div>
+                </CardHeader>
+                 <CardContent className="space-y-8">
+                    {test.parts.map((part) => (
+                        <div key={part.part}>
+                             <h3 className="text-xl font-bold mb-4 pb-2 border-b">Part {part.part}</h3>
+                             <div className="space-y-6">
+                                {(part.questionGroups || []).map((group, groupIndex) => renderQuestionGroup(group, part.part, groupIndex))}
+                            </div>
+                        </div>
+                    ))}
+                </CardContent>
                 <CardFooter>
-                    <Button 
+                     <Button 
                         className="w-full" 
                         onClick={handleSubmit} 
                         disabled={answeredQuestionsCount !== totalQuestions}
                     >
-                        Submit & Grade
+                        Submit & Grade Test
                     </Button>
                 </CardFooter>
-            )}
-        </Card>
-    )
+            </Card>
 
-    return (
-        <div className="space-y-6">
-            <div className="block lg:hidden">
-                 <Tabs defaultValue="audio" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="audio"><Headphones className="mr-2"/> Audio</TabsTrigger>
-                        <TabsTrigger value="questions"><List className="mr-2"/> Questions</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="audio">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{test.title}</CardTitle>
-                                <CardDescription>Listen to the audio. You will only hear it once. Answer the questions as you listen.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div ref={waveformRef} className="w-full h-24 bg-muted rounded-lg" />
-                                 {!isPlayerReady ? (
-                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                        <Loader2 className="h-4 w-4 animate-spin"/>
-                                        <p>Loading audio player...</p>
-                                    </div>
-                                ): (
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                             <Button onClick={(e) => { if(hasPlayed) { e.preventDefault(); } }} disabled={isPlaying || hasPlayed} className="w-full sm:w-auto">
-                                                {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
-                                                {hasPlayed ? 'Audio can only be played once' : isPlaying ? 'Playing...' : 'Play Audio'}
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                         <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                            <AlertDialogTitle>Start the listening test?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                In an real IELTS test, the audio is played only once. Click "Play" to start the test. You will not be able to pause or replay the audio.
-                                            </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                            <AlertDialogAction onClick={handlePlayPause}>Play</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                     <TabsContent value="questions">
-                        <QuestionsCard />
-                     </TabsContent>
-                </Tabs>
-            </div>
-            <div className="hidden lg:grid grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{test.title}</CardTitle>
-                        <CardDescription>Listen to the audio. You will only hear it once. Answer the questions as you listen.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div ref={waveformRef} className="w-full h-24 bg-muted rounded-lg" />
-                        {!isPlayerReady ? (
-                            <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin"/>
-                                <p>Loading audio player...</p>
-                            </div>
-                        ): (
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button onClick={(e) => { if(hasPlayed) { e.preventDefault(); } }} disabled={isPlaying || hasPlayed} className="w-full sm:w-auto">
-                                        {isPlaying ? <Pause className="mr-2"/> : <Play className="mr-2"/>}
-                                        {hasPlayed ? 'Audio can only be played once' : isPlaying ? 'Playing...' : 'Play Audio'}
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Start the listening test?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        In an real IELTS test, the audio is played only once. Click "Play" to start the test. You will not be able to pause or replay the audio.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogAction onClick={handlePlayPause}>Play</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        )}
-                    </CardContent>
-                </Card>
-                <QuestionsCard />
-            </div>
         </div>
     );
 }
@@ -495,34 +412,30 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
 function TestPageSkeleton() {
     return (
          <div className="space-y-6">
-            <div className="hidden lg:grid grid-cols-2 gap-6 h-[calc(100vh-10rem)]">
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-8 w-3/4" />
-                        <Skeleton className="h-4 w-full mt-2" />
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <Skeleton className="h-24 w-full" />
-                        <Skeleton className="h-10 w-32" />
-                    </CardContent>
-                </Card>
-                <Card className="flex flex-col h-full">
-                    <CardHeader>
-                       <Skeleton className="h-8 w-1/3" />
-                       <Skeleton className="h-4 w-1/2 mt-2" />
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-hidden">
-                       <Skeleton className="h-6 w-full mb-4" />
-                       <Skeleton className="h-full w-full" />
-                    </CardContent>
-                     <CardFooter>
-                        <Skeleton className="h-10 w-full" />
-                     </CardFooter>
-                </Card>
-            </div>
-             <div className="block lg:hidden">
-                <Skeleton className="h-screen w-full" />
-            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-8 w-3/4" />
+                    <Skeleton className="h-4 w-full mt-2" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-10 w-32" />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                   <Skeleton className="h-8 w-1/3" />
+                   <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                </CardContent>
+                 <CardFooter>
+                    <Skeleton className="h-10 w-full" />
+                 </CardFooter>
+            </Card>
          </div>
     )
 }
