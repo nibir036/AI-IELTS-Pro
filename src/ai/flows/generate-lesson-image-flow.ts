@@ -37,7 +37,7 @@ const generateLessonImageFlow = ai.defineFlow(
     const fullPrompt = `A cute, cartoonish, simple, minimalist, doodle-style illustration that literally depicts the following scene: "${prompt}". The style should have clean lines and a friendly feel, suitable for an educational app. Do NOT create complex charts or graphs.`;
 
     const { media } = await withRetry(() => ai.generate({
-      model: 'googleai/gemini-2.5-flash-image-preview',
+      model: 'googleai/imagen-4.0-fast-generate-001',
       prompt: fullPrompt,
       config: {
         responseModalities: ['IMAGE'],
