@@ -35,11 +35,11 @@ export default function SpeakingPage() {
             <div className="mx-auto bg-muted rounded-full p-4 w-fit">
                 <Mic className="h-10 w-10 text-muted-foreground" />
             </div>
-            <CardTitle className="mt-4">No Speaking Prompts Found</CardTitle>
+            <CardTitle className="mt-4">No Speaking Tests Found</CardTitle>
             <CardDescription>
                 {isUserAdmin 
-                    ? "Create new speaking prompts for users to practice with."
-                    : "New speaking prompts will be available soon."
+                    ? "Create new speaking tests for users to practice with."
+                    : "New speaking tests will be available soon."
                 }
             </CardDescription>
         </CardHeader>
@@ -48,7 +48,7 @@ export default function SpeakingPage() {
                 <Button asChild>
                     <Link href="/admin/create/speaking">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Create New Prompt
+                        Create New Test
                     </Link>
                 </Button>
             </CardContent>
@@ -62,7 +62,7 @@ export default function SpeakingPage() {
         <div>
             <h1 className="text-3xl font-bold tracking-tight">Speaking Practice</h1>
             <p className="text-muted-foreground">
-            Choose a prompt, practice your response, and get instant AI-powered feedback.
+            Choose a test, practice all three parts, and get instant AI-powered feedback.
             </p>
         </div>
          {isUserAdmin && speakingPrompts && speakingPrompts.length > 0 && (

@@ -1,52 +1,44 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { evaluateSpeaking } from '@/ai/flows/speaking-evaluation-flow';
-import type { AiPoweredSpeakingEvaluationOutput } from '@/lib/types';
+import type { AiPoweredSpeakingEvaluationOutput, SpeakingTest } from '@/lib/types';
 import { SpeakingEvaluationResults } from './speaking-evaluation-results';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mic, StopCircle, Send, VideoOff } from 'lucide-react';
+import { Loader2, Mic, StopCircle, Send, VideoOff, ArrowLeft, ArrowRight, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
-
 import { useFirebase } from '@/firebase';
 import { collection, doc, increment, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { onAuthStateChanged } from 'firebase/auth';
+import { Progress } from '@/components/ui/progress';
+import { useRouter } from 'next/navigation';
 
-// Dynamically import WaveSurfer and RecordPlugin to ensure they only run on the client
 let WaveSurfer: any = null;
 let RecordPlugin: any = null;
 if (typeof window !== 'undefined') {
-  import('wavesurfer.js').then(module => {
-    WaveSurfer = module.default;
-  });
-  import('wavesurfer.js/dist/plugins/record.esm.js').then(module => {
-    RecordPlugin = module.default;
-  });
+  import('wavesurfer.js').then(module => { WaveSurfer = module.default; });
+  import('wavesurfer.js/dist/plugins/record.esm.js').then(module => { RecordPlugin = module.default; });
 }
 
 interface SpeakingEvaluationProps {
-  task: string;
-  testId: string;
+  test: SpeakingTest;
 }
 
-export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
-  const [isLoading, setIsLoading] = useState(false);
+export function SpeakingEvaluation({ test }: SpeakingEvaluationProps) {
+  const [currentPart, setCurrentPart] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [result, setResult] = useState<AiPoweredSpeakingEvaluationOutput | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false); // For both upload and AI eval
+  const [finalResult, setFinalResult] = useState<AiPoweredSpeakingEvaluationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
 
+  const [audioBlobs, setAudioBlobs] = useState<{ [key: number]: Blob }>({});
+  
   const wavesurferRef = useRef<any | null>(null);
   const waveformRef = useRef<HTMLDivElement>(null);
   const recordPluginRef = useRef<any | null>(null);
@@ -54,275 +46,193 @@ export function SpeakingEvaluation({ task, testId }: SpeakingEvaluationProps) {
   const { auth, firestore, user: authUser } = useFirebase();
   const { user: userProfile } = useUserProfile();
   const { toast } = useToast();
-  const startTimeRef = useRef<Date | null>(null);
+  const router = useRouter();
+
+  const initializeRecorder = useCallback(() => {
+    if (waveformRef.current && hasMicPermission && WaveSurfer && RecordPlugin && !wavesurferRef.current) {
+        const wavesurfer = WaveSurfer.create({
+            container: waveformRef.current, waveColor: 'hsl(var(--muted-foreground))', progressColor: 'hsl(var(--primary))',
+            barWidth: 2, barGap: 1, barRadius: 2, height: 80,
+        });
+        wavesurferRef.current = wavesurfer;
+        
+        const record = wavesurfer.registerPlugin(RecordPlugin.create({ scrollingWaveform: true, renderRecordedAudio: true }));
+        recordPluginRef.current = record;
+
+        record.on('record-end', (blob: Blob) => {
+            if (blob.size > 1000) {
+              setAudioBlobs(prev => ({ ...prev, [currentPart]: blob }));
+            } else {
+              setError("Recording failed or was too short. Please try again.");
+            }
+        });
+        return () => { record.destroy(); wavesurfer.destroy(); wavesurferRef.current = null; };
+    }
+  }, [hasMicPermission, currentPart]);
+  
+  useEffect(() => {
+     const cleanup = initializeRecorder();
+     return cleanup;
+  }, [initializeRecorder]);
 
   useEffect(() => {
-    if (!auth) return;
-    // Set up the onAuthStateChanged listener to know when Firebase Auth is ready.
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setIsAuthReady(true); // Mark auth as ready regardless of whether there's a user
-    });
-    return () => unsubscribe(); // Cleanup listener on unmount
-  }, [auth]);
-
-
-  useEffect(() => {
-    if (!WaveSurfer || !RecordPlugin) return;
-
     const getMicPermission = async () => {
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
         setHasMicPermission(true);
       } catch (err) {
-        console.error('Error accessing microphone:', err);
         setHasMicPermission(false);
-        toast({
-          variant: 'destructive',
-          title: 'Microphone Access Denied',
-          description: 'Please enable microphone permissions in your browser settings.',
-        });
+        toast({ variant: 'destructive', title: 'Microphone Access Denied', description: 'Please enable microphone permissions in your browser settings.'});
       }
     };
-
     getMicPermission();
   }, [toast]);
 
-  useEffect(() => {
-    // This effect initializes WaveSurfer and the Record plugin
-    // It will only run AFTER hasMicPermission is true.
-    if (waveformRef.current && hasMicPermission && WaveSurfer && RecordPlugin && !wavesurferRef.current) {
-        const wavesurfer = WaveSurfer.create({
-            container: waveformRef.current,
-            waveColor: 'hsl(var(--muted-foreground))',
-            progressColor: 'hsl(var(--primary))',
-            barWidth: 2,
-            barGap: 1,
-            barRadius: 2,
-            height: 80,
-        });
-
-        wavesurferRef.current = wavesurfer;
-        
-        const record = wavesurfer.registerPlugin(RecordPlugin.create({
-            scrollingWaveform: true,
-            renderRecordedAudio: true,
-        }));
-        recordPluginRef.current = record;
-
-        record.on('record-end', (blob: Blob) => {
-            console.log("Recording ended, blob size:", blob.size);
-            if (blob.size === 0) {
-              setError("Recording failed. The audio blob is empty. Please check your microphone.");
-              toast({
-                variant: "destructive",
-                title: "Recording Failed",
-                description: "No audio was captured. Please check your microphone and browser permissions."
-              });
-            } else {
-              setAudioBlob(blob);
-            }
-        });
-
-        return () => {
-            record.destroy();
-            wavesurfer.destroy();
-        };
-    }
-  }, [hasMicPermission]); // Dependency on hasMicPermission ensures correct order
-
   const handleStartRecording = async () => {
-    if (recordPluginRef.current && recordPluginRef.current.isRecording()) {
-      return;
-    }
-    if (recordPluginRef.current) {
-        setError(null);
-        setResult(null);
-        setAudioBlob(null);
-        setIsRecording(true);
-        if (!startTimeRef.current) {
-          startTimeRef.current = new Date();
-        }
-        try {
-          await recordPluginRef.current.startRecording();
-        } catch (err) {
-          console.error("Error starting recording:", err);
-          setError("Could not start recording. Please check microphone permissions.");
-          setIsRecording(false);
-        }
+    if (recordPluginRef.current?.isRecording()) return;
+    setError(null);
+    setAudioBlobs(prev => { const newBlobs = {...prev}; delete newBlobs[currentPart]; return newBlobs; });
+    setIsRecording(true);
+    try {
+      await recordPluginRef.current.startRecording();
+    } catch (err) {
+      setError("Could not start recording. Please check microphone permissions.");
+      setIsRecording(false);
     }
   };
 
   const handleStopRecording = () => {
-    if (recordPluginRef.current && recordPluginRef.current.isRecording()) {
-        recordPluginRef.current.stopRecording();
-        setIsRecording(false);
+    if (recordPluginRef.current?.isRecording()) {
+      recordPluginRef.current.stopRecording();
+      setIsRecording(false);
     }
   };
 
-  async function handleSubmit() {
-    if (!authUser || !firestore || !userProfile) {
-        setError("User not authenticated — cannot upload. Please log in and try again.");
-        return;
+  const uploadAudio = async (part: number, blob: Blob) => {
+      const formData = new FormData();
+      formData.append('audio', blob, `part${part}.wav`);
+      formData.append('userId', authUser!.uid);
+      const response = await fetch('/api/upload-speaking-audio', { method: 'POST', body: formData });
+      if (!response.ok) throw new Error(`Failed to upload audio for Part ${part}.`);
+      const { filePath } = await response.json();
+      return filePath;
+  }
+
+  const handleFullSubmit = async () => {
+    if (!authUser || !firestore || !userProfile || Object.keys(audioBlobs).length !== 3) {
+      setError("Please complete all three parts before submitting.");
+      return;
     }
-    if (!audioBlob) {
-        setError("No audio recorded. Please record your response first.");
-        return;
-    }
-    if (audioBlob.size < 1000) { // Check for a reasonably sized blob
-        setError("Cannot submit a very short or empty recording. Please record your response again.");
-        return;
-    }
-    
-    console.log("Upload initiated by UID:", authUser.uid);
-    
-    setIsLoading(true);
-    setIsUploading(true);
+
+    setIsProcessing(true);
     setError(null);
-    setResult(null);
+    setFinalResult(null);
 
     try {
-      // Create a FormData object and append the audio blob and user ID
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.wav');
-      formData.append('userId', authUser.uid);
+        const filePaths: { [key: string]: string } = {};
+        let combinedTask = `PART 1:\n${test.part1}\n\nPART 2:\n${test.part2}\n\nPART 3:\n${test.part3}`;
 
-      // Post the data to our new server-side API endpoint
-      const response = await fetch('/api/upload-speaking-audio', {
-        method: 'POST',
-        body: formData,
-      });
+        for (const part of [1, 2, 3]) {
+            filePaths[`part${part}`] = await uploadAudio(part, audioBlobs[part]);
+        }
+        
+        // This flow needs to be updated to handle multiple audio files or a combined analysis logic.
+        // For now, we will evaluate based on Part 2 audio as it's the most substantial.
+        const aiReport = await evaluateSpeaking({
+            task: combinedTask,
+            filePath: filePaths['part2'], // Pass the most important audio file for now
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload audio to the server.');
-      }
+        setFinalResult(aiReport);
+        
+        const submissionRef = doc(collection(firestore, 'users', authUser.uid, 'submissions'));
+        setDocumentNonBlocking(submissionRef, {
+            skill: 'Speaking', testId: test.id, inputData: filePaths, aiReport: aiReport,
+            scoreBand: aiReport.scoreBand, timestamp: serverTimestamp(),
+        });
+        
+        const newAverageBand = ((userProfile.currentBand * (userProfile.totalPracticeTime / 5 || 1)) + aiReport.scoreBand) / ((userProfile.totalPracticeTime / 5 || 1) + 1);
+        updateDocumentNonBlocking(doc(firestore, 'users', authUser.uid), {
+            currentBand: newAverageBand, totalPracticeTime: increment(5) // Average time
+        });
 
-      const { filePath } = await response.json();
-
-      setIsUploading(false);
-      
-      const uploadRef = doc(collection(firestore, 'uploads'));
-      setDocumentNonBlocking(uploadRef, {
-          userId: authUser.uid,
-          filePath: filePath,
-          publicUrl: `https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/${encodeURIComponent(filePath)}?alt=media`, // Construct a potential URL
-          createdAt: serverTimestamp(),
-          type: 'speaking-recording',
-      });
-      
-      const aiReport = await evaluateSpeaking({
-        task: task,
-        filePath: filePath,
-      });
-      setResult(aiReport);
-
-      const submissionRef = doc(collection(firestore, 'users', authUser.uid, 'submissions'));
-      setDocumentNonBlocking(submissionRef, {
-          skill: 'Speaking',
-          testId: testId,
-          inputData: filePath,
-          aiReport: aiReport,
-          scoreBand: aiReport.scoreBand,
-          timestamp: serverTimestamp(),
-      });
-      
-      const practiceTime = startTimeRef.current ? Math.round((new Date().getTime() - startTimeRef.current.getTime()) / 1000 / 60) : 0;
-      const newTotalSubmissions = (userProfile.totalPracticeTime / 5 || 0) + 1;
-      const newAverageBand = ((userProfile.currentBand * (newTotalSubmissions - 1)) + aiReport.scoreBand) / newTotalSubmissions;
-
-      const userRef = doc(firestore, 'users', authUser.uid);
-      updateDocumentNonBlocking(userRef, {
-        currentBand: newAverageBand,
-        totalPracticeTime: increment(practiceTime > 1 ? practiceTime : 1)
-      });
-
-      toast({
-        title: "Evaluation Complete!",
-        description: `Your speaking score of ${aiReport.scoreBand.toFixed(1)} has been saved.`,
-      });
+        toast({ title: "Evaluation Complete!", description: `Your speaking score of ${aiReport.scoreBand.toFixed(1)} has been saved.` });
 
     } catch (e: any) {
-      setError(`An error occurred during evaluation: ${e.message || 'Please try again.'}`);
+      setError(`An error occurred: ${e.message}`);
       console.error(e);
-       toast({
-        variant: "destructive",
-        title: "Evaluation Failed",
-        description: "Something went wrong while processing your request.",
-      });
+      toast({ variant: "destructive", title: "Evaluation Failed", description: "Something went wrong." });
     } finally {
-      setIsLoading(false);
-      setIsUploading(false);
+      setIsProcessing(false);
     }
-  }
+  };
+
+  const tasks = { 1: test.part1, 2: test.part2, 3: test.part3 };
+  const currentTaskText = tasks[currentPart as keyof typeof tasks];
   
-  const isSubmitDisabled = isLoading || isRecording || !audioBlob || !isAuthReady || !authUser;
+  if (finalResult) {
+      return (
+          <div className="space-y-6">
+              <Button onClick={() => router.push('/speaking')}><ArrowLeft className="mr-2" /> Back to All Prompts</Button>
+              <SpeakingEvaluationResults result={finalResult} />
+          </div>
+      );
+  }
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <Badge variant="outline" className="w-fit">Speaking Task</Badge>
-          <CardTitle className="pt-2">{task}</CardTitle>
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold tracking-tight">{test.title}</h1>
+            <Badge variant="secondary" className="text-lg">Part {currentPart} / 3</Badge>
+          </div>
+           <Progress value={(currentPart / 3) * 100} className="mt-2" />
         </CardHeader>
         <CardContent>
-          {hasMicPermission === null && <div className="flex items-center justify-center h-24 bg-muted rounded-lg"><Loader2 className="animate-spin" /></div>}
+            <Card className="bg-muted/50">
+                <CardHeader>
+                    <CardTitle>Part {currentPart} Task</CardTitle>
+                </CardHeader>
+                <CardContent className="whitespace-pre-line text-muted-foreground">{currentTaskText}</CardContent>
+            </Card>
 
           {hasMicPermission === false && (
-            <Alert variant="destructive">
-              <VideoOff className="h-4 w-4" />
+            <Alert variant="destructive" className="mt-4"><XCircle className="h-4 w-4" />
               <AlertTitle>Microphone Access Required</AlertTitle>
-              <AlertDescription>
-                Please enable microphone access in your browser settings to use the recording feature.
-              </AlertDescription>
+              <AlertDescription>Please enable microphone permissions to record.</AlertDescription>
             </Alert>
           )}
 
           {hasMicPermission && (
             <>
-              <div ref={waveformRef} id="waveform" className="w-full h-24 bg-muted rounded-lg"></div>
-              <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div ref={waveformRef} id="waveform" className="w-full h-24 bg-muted rounded-lg mt-4"></div>
+              <div className="mt-4 flex items-center justify-center gap-4">
                   {!isRecording ? (
-                  <Button onClick={handleStartRecording} disabled={isLoading}>
-                      <Mic className="mr-2 h-4 w-4" />
-                      Start Recording
-                  </Button>
+                    <Button onClick={handleStartRecording} disabled={isProcessing}>
+                        <Mic className="mr-2" /> {audioBlobs[currentPart] ? 'Record Again' : 'Start Recording'}
+                    </Button>
                   ) : (
-                  <Button onClick={handleStopRecording} variant="destructive">
-                      <StopCircle className="mr-2 h-4 w-4" />
-                      Stop Recording
-                  </Button>
+                    <Button onClick={handleStopRecording} variant="destructive"><StopCircle className="mr-2" /> Stop Recording</Button>
                   )}
-
-                  <Button onClick={handleSubmit} disabled={isSubmitDisabled} className="w-full sm:w-auto">
-                      {isLoading && isUploading && (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</>
-                      )}
-                      {isLoading && !isUploading && (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Evaluating...</>
-                      )}
-                      {!isLoading && (
-                          <><Send className="mr-2 h-4 w-4" />Submit for AI Evaluation</>
-                      )}
-                  </Button>
               </div>
             </>
           )}
         </CardContent>
+        <CardFooter className="flex justify-between">
+            <Button variant="outline" onClick={() => setCurrentPart(p => p - 1)} disabled={currentPart === 1 || isRecording || isProcessing}><ArrowLeft className="mr-2"/> Previous</Button>
+            
+            {currentPart < 3 ? (
+                 <Button onClick={() => setCurrentPart(p => p + 1)} disabled={isRecording || isProcessing || !audioBlobs[currentPart]}>Next Part <ArrowRight className="ml-2"/></Button>
+            ) : (
+                 <Button onClick={handleFullSubmit} disabled={isProcessing || isRecording || Object.keys(audioBlobs).length !== 3}>
+                    {isProcessing ? <Loader2 className="mr-2 animate-spin"/> : <Send className="mr-2"/>}
+                    Submit Full Test
+                </Button>
+            )}
+        </CardFooter>
       </Card>
-
       {error && <p className="text-destructive text-sm text-center">{error}</p>}
-
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 mt-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="font-semibold">
-                {isUploading ? "Uploading your recording..." : "Our AI is analyzing your response..."}
-            </p>
-            <p className="text-sm text-muted-foreground">This may take a moment. Please wait.</p>
-        </div>
-      )}
-
-      {result && <div className="mt-8"><SpeakingEvaluationResults result={result} /></div>}
     </div>
   );
 }

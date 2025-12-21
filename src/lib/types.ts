@@ -1,5 +1,4 @@
 
-
 import type { DocumentReference, Timestamp } from "firebase/firestore";
 
 export interface User {
@@ -48,9 +47,10 @@ export interface Lesson {
 export interface SpeakingTest {
   id: string;
   title: string;
-  level: 'Part 1' | 'Part 2' | 'Part 3';
-  content_en: string;
   skill: 'Speaking';
+  part1: string;
+  part2: string;
+  part3: string;
 }
 
 
