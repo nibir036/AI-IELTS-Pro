@@ -198,7 +198,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'ReadingTest':
 *   **Role:** Act as a superior grand master level IELTS Exam Content Creator.
-*   - **Task:** The 'rawText' will contain one topic. Generate a FULL IELTS Academic Reading Test with 3 distinct passages and **EXACTLY 40 questions in total**. Each passage should be around 750-850 words.
+*   **Task:** The 'rawText' will contain one topic. Generate a FULL IELTS Academic Reading Test with 3 distinct passages and **EXACTLY 40 questions in total**. Each passage should be around 750-850 words.
 *   **Strict Formatting Rules:**
     1.  **Passages:** Create three unique, academic-style passages based on the provided topic.
     2.  **Question Variety:** Include a wide variety of question types across the 40 questions (e.g., multiple-choice, T/F/NG, matching headings, summary completion, etc.).
@@ -217,7 +217,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
         *   **CRITICAL ANSWER RULE:** For multiple-choice questions (including multiple-answer), the answer MUST be the full text of the option (e.g., "a display of instruments"), NOT just the letter (e.g., 'B').
         *   For multiple-choice-multiple-answer questions (e.g., "Choose TWO letters A-E"), the 'answer' field must be a comma-separated string of the full text of the correct options.
     3.  **Divide Transcript (\`transcript\`):** Logically divide the full transcript into four segments and place each segment into the 'transcript' field of the corresponding 'part' object (Part 1, Part 2, Part 3, Part 4).
-    4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3".
+    4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". DO NOT add an 'audioUrl' field to the individual 'parts' objects.
     5.  **Output:** Your entire output must be a single JSON object conforming to the ListeningTest schema.
 
 ---
@@ -392,5 +392,9 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
+
+    
 
     
