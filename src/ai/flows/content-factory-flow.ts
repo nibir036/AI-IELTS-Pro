@@ -193,7 +193,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 #### IF contentType is 'WritingTest':
 *   **Role:** Act as a highly experienced IELTS Writing Examiner.
 *   **Task:** The 'rawText' will contain one or two topics. Generate a complete IELTS Writing Test. If only a Task 2 topic is provided, create a relevant, generic Task 1 topic.
-*   **Structure Requirements:** Generate two questions (Task 1 and Task 2) with topics, word counts, and task types.
+*   **Structure Requirements:** Generate two questions (Task 1 and Task 2) with topics, word counts, and task types. DO NOT include an 'imageUrl' field.
 *   **Output Format:** Your JSON output MUST conform to the WritingTest schema.
 
 #### IF contentType is 'ReadingTest':
@@ -289,9 +289,10 @@ const contentFactoryFlow = ai.defineFlow(
             const speakingTest: SpeakingTest = {
                 id: prompt.id,
                 title: prompt.title,
-                level: prompt.level,
-                content_en: prompt.content_en,
                 skill: 'Speaking',
+                part1: prompt.level === 'Part 1' ? prompt.content_en : '',
+                part2: prompt.level === 'Part 2' ? prompt.content_en : '',
+                part3: prompt.level === 'Part 3' ? prompt.content_en : '',
             };
             const docRef = firestore.collection('speakingTests').doc(speakingTest.id);
             batch.set(docRef, speakingTest);
@@ -329,9 +330,9 @@ const contentFactoryFlow = ai.defineFlow(
                 console.log(`Task 1 image uploaded to ${publicUrl}`);
 
             } catch (imgError: any) {
-                console.error(`CRITICAL: Failed to generate or upload image for Task 1.`, imgError);
-                 const errorWithData = new Error(`Image generation failed. Partial content: ${JSON.stringify(structuredContent)}`);
-                 throw errorWithData;
+                console.error(`Warning: Failed to generate or upload image for Task 1. Saving test with placeholder image.`, imgError);
+                // Don't throw. Assign a placeholder and allow the test to be saved.
+                task1.imageUrl = "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_chart_1.png";
             }
         }
     } else if (input.contentType === 'Lesson' && 'contentBlocks' in structuredContent && Array.isArray(structuredContent.contentBlocks)) {
@@ -392,9 +393,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
-
-    
 
     

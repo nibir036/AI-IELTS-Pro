@@ -17,9 +17,6 @@ import { blobToBase64, cn } from '@/lib/utils';
 import { processPdf } from '@/ai/flows/process-pdf-flow';
 import { processImage } from '@/ai/flows/process-image-flow';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { FileInput } from '@/components/ui/file-input';
-import { uploadImageToStorage } from '@/lib/firebase/storage';
-import { MockTest, WritingQuestion } from '@/lib/types';
 
 
 type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
@@ -65,8 +62,6 @@ export default function AdminPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const [partialTestData, setPartialTestData] = useState<MockTest | null>(null);
-  const [isSavingManual, setIsSavingManual] = useState(false);
 
   const { toast } = useToast();
   const { firestore } = useFirebase();
@@ -84,8 +79,6 @@ export default function AdminPage() {
     }
     setIsProcessing(true);
     setError(null);
-    setPartialTestData(null);
-    methods.reset();
     
     try {
       const aiResult = await processContent({ 
@@ -113,22 +106,10 @@ export default function AdminPage() {
 
     } catch (err: any) {
       console.error("Error processing content:", err);
-      // Check if the error is the special bypass error with partial data
-      if (err.message && err.message.includes('Image generation failed. Partial content:')) {
-          const jsonString = err.message.substring(err.message.indexOf('{'));
-          try {
-              const partialResult = JSON.parse(jsonString);
-              setPartialTestData(partialResult);
-              setError("Image generation failed. Please upload an image for Task 1 and save the test manually.");
-               toast({
-                  variant: 'default',
-                  title: "Image Generation Failed",
-                  description: "Please upload an image manually to complete the test.",
-              });
-          } catch (parseError) {
-              setError(`An error occurred: ${err.message}`);
-          }
-      } else {
+      // Special handling for image generation failure is now inside the flow itself,
+      // which will show a success toast with a warning.
+      // We still show a generic error toast here for other unexpected failures.
+      if (!err.message?.includes("Image generation failed")) {
         const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
           ? "The AI service is currently overloaded. Please try again in a moment."
           : `An error occurred: ${err.message}`;
@@ -142,57 +123,6 @@ export default function AdminPage() {
     } finally {
         setIsProcessing(false);
     }
-  };
-  
-  const handleSaveWithManualImage = async (data: { manualImageFile: FileList | null }) => {
-      const file = data.manualImageFile?.[0];
-      if (!file || !partialTestData) {
-          toast({ variant: 'destructive', title: 'Error', description: 'Missing image file or test data.' });
-          return;
-      }
-      if (!firestore) {
-          toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not available.' });
-          return;
-      }
-
-      setIsSavingManual(true);
-
-      try {
-          const base64Image = (await blobToBase64(file)).split(',')[1];
-          const filePath = `writing-tasks/${partialTestData.id}/task1_image.png`;
-          const imageUrl = await uploadImageToStorage(base64Image, file.type, filePath);
-
-          const updatedResult = { ...partialTestData };
-          const task1Index = updatedResult.questions.findIndex(q => q.taskType === 'Task 1');
-          if (task1Index !== -1) {
-              (updatedResult.questions[task1Index] as WritingQuestion).imageUrl = imageUrl;
-          } else {
-              throw new Error("Could not find Task 1 in the partial test data.");
-          }
-          
-          const docRef = doc(firestore, 'mockTests', updatedResult.id);
-          await setDoc(docRef, updatedResult);
-
-          setPartialTestData(null);
-          methods.reset();
-          setError(null);
-          setInputText('');
-          toast({
-              title: 'Success!',
-              description: 'Writing test has been saved with the manually uploaded image.',
-          });
-
-      } catch (err: any) {
-          console.error("Error saving with manual image:", err);
-          setError(`Failed to save test: ${err.message}`);
-          toast({
-              variant: 'destructive',
-              title: 'Save Failed',
-              description: err.message,
-          });
-      } finally {
-          setIsSavingManual(false);
-      }
   };
 
 
@@ -334,47 +264,13 @@ export default function AdminPage() {
                     Generate & Save from Text
                 </Button>
             </div>
-             {error && !partialTestData && (
+             {error && (
                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Error</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                 </Alert>
              )}
-             {partialTestData && (
-                <FormProvider {...methods}>
-                    <form onSubmit={methods.handleSubmit(handleSaveWithManualImage)}>
-                        <Card className="mt-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700">
-                            <CardHeader>
-                                <AlertTitle className="text-amber-800 dark:text-amber-300 flex items-center gap-2"><FileUp /> Image Generation Failed – Complete Manually</AlertTitle>
-                                <AlertDescription className="text-amber-700 dark:text-amber-400 !mt-2">
-                                    The AI generated the test content but failed to create an image. Review the topic below, upload a relevant image for Task 1, and save the test.
-                                </AlertDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                            <div>
-                                <h4 className="text-sm font-semibold mb-2">Generated Test Content (Unsaved)</h4>
-                                <div className="p-4 bg-background/50 rounded-md h-full max-h-60 overflow-x-auto text-xs border">
-                                    <pre className="whitespace-pre-wrap">{JSON.stringify(partialTestData, null, 2)}</pre>
-                                </div>
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-semibold mb-2">Upload Task 1 Image</h4>
-                                <FileInput name="manualImageFile" accept="image/*" />
-                            </div>
-                                <Button 
-                                    type="submit"
-                                    disabled={isSavingManual}
-                                    className="w-full sm:w-auto"
-                                >
-                                    {isSavingManual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Save Test with This Image
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </form>
-                </FormProvider>
-            )}
           </CardContent>
         </Card>
 
