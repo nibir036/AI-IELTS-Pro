@@ -19,7 +19,7 @@ import { processImage } from '@/ai/flows/process-image-flow';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
-type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingPrompt';
+type ContentType = 'Lesson' | 'ReadingTest' | 'ListeningTest' | 'WritingTest' | 'SpeakingTest';
 
 const creationCards = [
     {
@@ -246,7 +246,7 @@ export default function AdminPage() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="Lesson">Lesson (Grammar, Vocab, etc.)</SelectItem>
-                        <SelectItem value="SpeakingPrompt">Speaking Prompt</SelectItem>
+                        <SelectItem value="SpeakingTest">Speaking Test</SelectItem>
                         <SelectItem value="WritingTest">Writing Test</SelectItem>
                         <SelectItem value="ReadingTest">Reading Test</SelectItem>
                         <SelectItem value="ListeningTest">Listening Test (from Transcript)</SelectItem>
