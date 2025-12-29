@@ -85,11 +85,11 @@ const LessonSchema = z.object({
 
 const SpeakingTestSchema = z.object({
     id: z.string().describe("A unique ID for the test, e.g., SPEAKING_a4f8."),
-    title: z.string().describe("The overall topic for the test, e.g., 'Technology'."),
+    title: z.string().describe("The overall topic for the test, extracted from the user's prompt (e.g., 'Technology', 'A Memorable Holiday')."),
     skill: z.enum(['Speaking']).default('Speaking'),
-    part1: z.string().describe("The full text for all Part 1 questions, separated by newlines."),
-    part2: z.string().describe("The full text for the Part 2 cue card."),
-    part3: z.string().describe("The full text for all Part 3 discussion questions, separated by newlines."),
+    part1: z.string().describe("The full text for all AUTO-GENERATED Part 1 questions, separated by newlines."),
+    part2: z.string().describe("The full text for the Part 2 cue card, based on the user's prompt."),
+    part3: z.string().describe("The full text for all Part 3 discussion questions, based on the user's prompt."),
 });
 
 
@@ -182,11 +182,11 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 
 #### IF contentType is 'SpeakingTest':
 *   **Role:** Act as a certified IELTS Speaking Examiner.
-*   **Task:** Generate a complete, unique IELTS Speaking Test (Part 1, 2, and 3) as a single object. The 'rawText' from the user is the central theme for the test.
+*   **Task:** The user's \`rawText\` contains the prompts for Part 2 and Part 3. Your job is to take those prompts and automatically generate a standard, appropriate Part 1 to create a complete, three-part test.
 *   **Structure Requirements:**
-    1.  **Part 1:** Generate 4-5 standard interview questions related to the 'rawText' theme. Combine them into a single string in the \`part1\` field, separated by newlines.
-    2.  **Part 2:** Generate a detailed Cue Card prompt on the 'rawText' topic, including the standard bullet points. Place this in the \`part2\` field.
-    3.  **Part 3:** Generate 4-5 abstract discussion questions that follow the theme of Part 2. Combine them into a single string in the \`part3\` field, separated by newlines.
+    1.  **Part 1 (Auto-Generate):** You MUST generate 4-5 standard, generic interview questions for Part 1. These should cover common topics like hometown, work/studies, or hobbies. Combine them into a single string in the \`part1\` field, separated by newlines.
+    2.  **Part 2 & 3 (User-Provided):** Use the user's \`rawText\` to populate the \`part2\` and \`part3\` fields.
+    3.  **Title:** Extract a concise title from the user's Part 2 prompt (e.g., "A Piece of Technology", "A Memorable Holiday").
 *   **Output Format:** Your JSON output MUST be a single object conforming to the 'SpeakingTest' schema, with \`id\`, \`title\`, \`skill\`, \`part1\`, \`part2\`, and \`part3\` fields.
 
 #### IF contentType is 'WritingTest':
