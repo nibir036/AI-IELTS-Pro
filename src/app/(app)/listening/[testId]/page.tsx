@@ -206,7 +206,7 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
         };
 
         return (
-            <Card key={q.id} className={`p-4 ${isGraded && isCorrect === false ? 'border-red-500' : ''} ${isGraded && isCorrect === true ? 'border-green-500' : ''}`}>
+            <Card key={q.id} className={\`p-4 \${isGraded && isCorrect === false ? 'border-red-500' : ''} \${isGraded && isCorrect === true ? 'border-green-500' : ''}\`}>
                 <div className="flex items-start gap-2 mb-4">
                      {isGraded ? (
                         isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />
@@ -232,8 +232,8 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                     <RadioGroup value={userAnswer as string} onValueChange={(value) => handleAnswerChange(q.id, value)} disabled={isGraded} className="pl-6">
                         {q.options?.map((option, index) => (
                             <div key={index} className="flex items-center space-x-2">
-                                <RadioGroupItem value={option} id={`${q.id}-${index}`} />
-                                <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
+                                <RadioGroupItem value={option} id={\`\${q.id}-\${index}\`} />
+                                <Label htmlFor={\`\${q.id}-\${index}\`} className={getOptionClass(option)}>
                                     {option}
                                 </Label>
                             </div>
@@ -245,12 +245,12 @@ function ListeningTestComponent({ test }: { test: ListeningTest }) {
                         {q.options?.map((option, index) => (
                             <div key={index} className="flex items-center space-x-2">
                                 <Checkbox
-                                    id={`${q.id}-${index}`}
+                                    id={\`\${q.id}-\${index}\`}
                                     checked={(userAnswer as string[] || []).includes(option)}
                                     onCheckedChange={() => handleAnswerChange(q.id, option)}
                                     disabled={isGraded}
                                 />
-                                <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
+                                <Label htmlFor={\`\${q.id}-\${index}\`} className={getOptionClass(option)}>
                                     {option}
                                 </Label>
                             </div>
