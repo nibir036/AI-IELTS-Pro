@@ -98,6 +98,66 @@
           "wordCountTarget": 250
         }
       ]
+    },
+    {
+      "id": "IELTS_Writing_b7c2",
+      "testType": "IELTS-Academic",
+      "skill": "Writing",
+      "questions": [
+        {
+          "task": 1,
+          "topic": "The bar chart shows the percentage of the total world population in 4 countries in 1950 and 2002, and projections for 2050. Summarise the information by selecting and reporting the main features and make comparisons where relevant.",
+          "imageUrl": "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/ielts_writing_b7c2_task1.png",
+          "taskType": "Task 1",
+          "wordCountTarget": 150
+        },
+        {
+          "task": 2,
+          "topic": "The use of social media is replacing face-to-face interaction among many people in society. Do you think the advantages outweigh the disadvantages?",
+          "taskType": "Task 2",
+          "wordCountTarget": 250
+        }
+      ]
+    },
+     {
+      "id": "IELTS_Writing_e2f7",
+      "testType": "IELTS-Academic",
+      "skill": "Writing",
+      "questions": [
+        {
+          "task": 1,
+          "topic": "The graph below shows the average monthly rainfall and temperature for one year in a city in Australia. Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+          "imageUrl": "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/ielts_writing_e2f7_task1.png",
+          "taskType": "Task 1",
+          "wordCountTarget": 150
+        },
+        {
+          "task": 2,
+          "topic": "It is important for children to learn the difference between right and wrong at an early age. Punishment is necessary to help them learn this distinction. To what extent do you agree or disagree with this view?",
+          "taskType": "Task 2",
+          "wordCountTarget": 250
+        }
+      ]
+    },
+    {
+      "id": "IELTS_Writing_g7h2",
+      "testType": "IELTS-Academic",
+      "skill": "Writing",
+      "questions": [
+        {
+          "task": 1,
+          "topic": "The line graph shows the percentages of Australian export with four countries. The graph below shows the percentage of Australian exports to 4 countries from 1990 to 2012.",
+          "imageUrl": "https://firebasestorage.googleapis.com/v0/b/studio-161365104-8c7c1.firebasestorage.app/o/w17.png?alt=media&token=f3d2b214-f5da-40fc-a84e-fda2a0c9ebec",
+          "taskType": "Task 1",
+          "wordCountTarget": 150
+        },
+        {
+          "task": 2,
+          "topic": "Some people believe that it is the responsibility of governments to provide financial support for artists, while others believe that artists should be funded by alternative sources. Discuss both views and give your own opinion.",
+          "taskType": "Task 2",
+          "wordCountTarget": 250
+        }
+      ]
     }
   ]
 }
