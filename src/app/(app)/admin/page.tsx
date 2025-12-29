@@ -105,21 +105,14 @@ export default function AdminPage() {
         setAnswers('');
 
     } catch (err: any) {
-      console.error("Error processing content:", err);
-      // Special handling for image generation failure is now inside the flow itself,
-      // which will show a success toast with a warning.
-      // We still show a generic error toast here for other unexpected failures.
-      if (!err.message?.includes("Image generation failed")) {
-        const errorMessage = err.message?.includes('overloaded') || err.message?.includes('503')
-          ? "The AI service is currently overloaded. Please try again in a moment."
-          : `An error occurred: ${err.message}`;
-        setError(errorMessage);
-         toast({
-          variant: 'destructive',
-          title: "Processing Failed",
-          description: errorMessage,
-        });
-      }
+        console.error("Error processing content:", err);
+        const errorMessage = err.message || "An unknown error occurred.";
+        
+        if (errorMessage.includes('429')) {
+             setError("Rate limit exceeded. The AI is busy right now. Please wait a minute and try again.");
+        } else {
+             setError(`An error occurred: ${errorMessage}`);
+        }
     } finally {
         setIsProcessing(false);
     }
@@ -310,5 +303,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
