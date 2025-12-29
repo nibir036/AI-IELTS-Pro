@@ -22,7 +22,7 @@ import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 
 
 const ProcessContentInputSchema = z.object({
-  contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingPrompt']),
+  contentType: z.enum(['Lesson', 'ReadingTest', 'ListeningTest', 'WritingTest', 'SpeakingTest']),
   rawText: z.string().describe('The raw text content or topic to be processed.'),
   transcript: z.string().optional().describe("The full transcript for a listening test."),
   answers: z.string().optional().describe("A comma-separated string of answers for a listening test."),
@@ -83,16 +83,15 @@ const LessonSchema = z.object({
   exercises: z.array(PracticeExerciseSchema).optional().describe("An array of practice exercises with answer key."),
 });
 
-const SpeakingPromptSetSchema = z.object({
-    type: z.enum(["SpeakingPromptSet"]).describe("A discriminator field for the schema union."),
-    prompts: z.array(z.object({
-        id: z.string().describe("A unique ID for the lesson, e.g., SPEAKING_a4f8."),
-        title: z.string().describe("The title of the prompt, e.g., 'Speaking: Holidays'.").default('Speaking'),
-        level: z.enum(["Part 1", "Part 2", "Part 3"]),
-        content_en: z.string().describe("The full content of the speaking prompt for that part."),
-        skill: z.enum(['Speaking']).default('Speaking'),
-    }))
+const SpeakingTestSchema = z.object({
+    id: z.string().describe("A unique ID for the test, e.g., SPEAKING_a4f8."),
+    title: z.string().describe("The overall topic for the test, e.g., 'Technology'."),
+    skill: z.enum(['Speaking']).default('Speaking'),
+    part1: z.string().describe("The full text for all Part 1 questions, separated by newlines."),
+    part2: z.string().describe("The full text for the Part 2 cue card."),
+    part3: z.string().describe("The full text for all Part 3 discussion questions, separated by newlines."),
 });
+
 
 const ReadingTestPartSchema = z.object({
     part: z.number(),
@@ -145,7 +144,7 @@ const ProcessContentOutputSchema = z.union([
     ReadingTestSchema,
     ListeningTestSchema,
     WritingTestSchema,
-    SpeakingPromptSetSchema,
+    SpeakingTestSchema,
 ]);
 export type ProcessContentOutput = z.infer<typeof ProcessContentOutputSchema>;
 
@@ -181,14 +180,14 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
     2.  **Content Blocks:** Use \`contentBlocks\` to provide clear explanations, examples, and tips. Use \`<b>\` tags for emphasis.
     3.  **Practice:** Generate at least one practice exercise in the \`exercises\` array with 5 questions and a clear answer key.
 
-#### IF contentType is 'SpeakingPrompt':
+#### IF contentType is 'SpeakingTest':
 *   **Role:** Act as a certified IELTS Speaking Examiner.
-*   **Task:** Generate a complete, unique IELTS Speaking Test (Part 1, 2, and 3). The 'rawText' from the user is the central theme for the test.
+*   **Task:** Generate a complete, unique IELTS Speaking Test (Part 1, 2, and 3) as a single object. The 'rawText' from the user is the central theme for the test.
 *   **Structure Requirements:**
-    1.  **Part 1:** Generate 10 standard interview-style questions covering 3 common areas related to the 'rawText' theme.
-    2.  **Part 2:** Generate a detailed Cue Card prompt on the 'rawText' topic. Include the standard four bullet points.
-    3.  **Part 3:** Generate 6 abstract discussion questions that follow the theme of the Part 2 Cue Card.
-*   **Output Format:** Your JSON output MUST be a single object conforming to the 'SpeakingPromptSet' schema.
+    1.  **Part 1:** Generate 4-5 standard interview questions related to the 'rawText' theme. Combine them into a single string in the \`part1\` field, separated by newlines.
+    2.  **Part 2:** Generate a detailed Cue Card prompt on the 'rawText' topic, including the standard bullet points. Place this in the \`part2\` field.
+    3.  **Part 3:** Generate 4-5 abstract discussion questions that follow the theme of Part 2. Combine them into a single string in the \`part3\` field, separated by newlines.
+*   **Output Format:** Your JSON output MUST be a single object conforming to the 'SpeakingTest' schema, with \`id\`, \`title\`, \`skill\`, \`part1\`, \`part2\`, and \`part3\` fields.
 
 #### IF contentType is 'WritingTest':
 *   **Role:** Act as a highly experienced IELTS Writing Examiner.
@@ -281,30 +280,7 @@ const contentFactoryFlow = ai.defineFlow(
     }
     console.log("Structured content generated.");
     
-    // 4. Handle SpeakingPromptSet: it's a special case, a set of documents
-    if (input.contentType === 'SpeakingPrompt' && 'type' in structuredContent && structuredContent.type === 'SpeakingPromptSet') {
-        const batch = firestore.batch();
-
-        structuredContent.prompts.forEach(prompt => {
-            const speakingTest: SpeakingTest = {
-                id: prompt.id,
-                title: prompt.title,
-                skill: 'Speaking',
-                part1: prompt.level === 'Part 1' ? prompt.content_en : '',
-                part2: prompt.level === 'Part 2' ? prompt.content_en : '',
-                part3: prompt.level === 'Part 3' ? prompt.content_en : '',
-            };
-            const docRef = firestore.collection('speakingTests').doc(speakingTest.id);
-            batch.set(docRef, speakingTest);
-        });
-
-        await batch.commit();
-        console.log("Speaking prompts saved successfully to 'speakingTests' collection.");
-        return structuredContent; // Return the set to satisfy the flow's output schema
-    }
-
-
-    // 5. Post-process for media generation - STRICTLY only for WritingTest and Lesson types
+    // 4. Post-process for media generation
     if (input.contentType === 'WritingTest' && 'questions' in structuredContent) {
         console.log("Processing Writing Test for image generation...");
         const mockTest = structuredContent as MockTest;
@@ -331,7 +307,6 @@ const contentFactoryFlow = ai.defineFlow(
 
             } catch (imgError: any) {
                 console.error(`Warning: Failed to generate or upload image for Task 1. Saving test with placeholder image.`, imgError);
-                // Don't throw. Assign a placeholder and allow the test to be saved.
                 task1.imageUrl = "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_chart_1.png";
             }
         }
@@ -366,28 +341,22 @@ const contentFactoryFlow = ai.defineFlow(
     }
 
 
-     // 6. Final step for single-object content types: save to Firestore
-    if (input.contentType !== 'SpeakingPrompt') {
-        let targetCollection: string | null = null;
-        const content = structuredContent as any;
+     // 5. Final step: save the single content object to Firestore
+    let targetCollection: string | null = null;
+    const content = structuredContent as any;
 
-        if (input.contentType === 'Lesson') {
-            targetCollection = 'lessons';
-        } else if (input.contentType === 'ReadingTest') {
-            targetCollection = 'readingTests';
-        } else if (input.contentType === 'WritingTest') {
-            targetCollection = 'mockTests';
-        } else if (input.contentType === 'ListeningTest') {
-            targetCollection = 'listeningTests';
-        }
+    if (input.contentType === 'Lesson') targetCollection = 'lessons';
+    if (input.contentType === 'ReadingTest') targetCollection = 'readingTests';
+    if (input.contentType === 'WritingTest') targetCollection = 'mockTests';
+    if (input.contentType === 'ListeningTest') targetCollection = 'listeningTests';
+    if (input.contentType === 'SpeakingTest') targetCollection = 'speakingTests';
 
-        if (targetCollection && content.id) {
-            const docRef = firestore.collection(targetCollection).doc(content.id);
-            await docRef.set(content);
-            console.log(`Content saved to '${targetCollection}/${content.id}'.`);
-        } else {
-             throw new Error(`Could not determine target collection or ID for saving content type: ${input.contentType}.`);
-        }
+    if (targetCollection && content.id) {
+        const docRef = firestore.collection(targetCollection).doc(content.id);
+        await docRef.set(content);
+        console.log(`Content saved to '${targetCollection}/${content.id}'.`);
+    } else {
+         throw new Error(`Could not determine target collection or ID for saving content type: ${input.contentType}.`);
     }
 
     return structuredContent;
