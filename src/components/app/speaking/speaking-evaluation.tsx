@@ -6,7 +6,7 @@ import { evaluateSpeaking } from '@/ai/flows/speaking-evaluation-flow';
 import type { AiPoweredSpeakingEvaluationOutput, SpeakingTest } from '@/lib/types';
 import { SpeakingEvaluationResults } from './speaking-evaluation-results';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2, Mic, StopCircle, Send, VideoOff, ArrowLeft, ArrowRight, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
