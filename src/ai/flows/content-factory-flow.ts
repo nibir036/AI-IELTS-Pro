@@ -75,7 +75,7 @@ const PracticeExerciseSchema = z.object({
 
 const LessonSchema = z.object({
   id: z.string().describe("A unique ID for the lesson, e.g., VOCAB_u5t9, SPEAKING_a4f8."),
-  type: z.enum(['Grammar', 'Vocabulary', 'Tips', 'Speaking']),
+  type: z.enum(['Grammar', 'Vocabulary', 'Tips']),
   title: z.string().describe("A concise, descriptive title for the lesson."),
   level: z.enum(['Basic', 'Intermediate', 'Advanced', 'All Levels', "Part 1", "Part 2", "Part 3"]),
   content_en: z.string().describe("A brief, one-sentence summary of the lesson's content."),
@@ -216,7 +216,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
         *   **CRITICAL ANSWER RULE:** For multiple-choice questions (including multiple-answer), the answer MUST be the full text of the option (e.g., "a display of instruments"), NOT just the letter (e.g., 'B').
         *   For multiple-choice-multiple-answer questions (e.g., "Choose TWO letters A-E"), the 'answer' field must be a comma-separated string of the full text of the correct options.
     3.  **Divide Transcript (\`transcript\`):** Logically divide the full transcript into four segments and place each segment into the 'transcript' field of the corresponding 'part' object (Part 1, Part 2, Part 3, Part 4).
-    4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". DO NOT add an 'audioUrl' field to the individual \`parts\` objects.
+    4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". DO NOT add an 'audioUrl' field to the individual 'parts' objects.
     5.  **Output:** Your entire output must be a single JSON object conforming to the ListeningTest schema.
 
 ---
@@ -364,3 +364,5 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
+
+    
