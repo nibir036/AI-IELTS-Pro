@@ -55,7 +55,7 @@ function GrammarTable({ rows }: { rows: GrammarTableRow[] }) {
                 <TableBody>
                     {rows.map((row, index) => (
                         <TableRow key={index} className={index === rows.length - 1 ? "border-b-0" : ""}>
-                            <TableCell className="w-[40%] font-mono text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: row.subject }} />
+                            <TableCell className="w-[40%] font-mono text-sm text-muted-foreground">{row.subject}</TableCell>
                             <TableCell className="font-semibold" dangerouslySetInnerHTML={{ __html: row.verb }} />
                         </TableRow>
                     ))}
@@ -152,8 +152,8 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
                     dangerouslySetInnerHTML={{ __html: displayContent }} 
                 />
             )}
-             {block.tableRows && (
-                <div className="mt-4 space-y-2">
+            {block.tableRows && (
+                 <div className="mt-4 space-y-2">
                     {block.tableRows.map((row, index) => (
                         <div key={index}>
                             <b dangerouslySetInnerHTML={{ __html: row.subject }} />: <span dangerouslySetInnerHTML={{ __html: row.verb }} />
@@ -201,10 +201,6 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
             )}
             
             {block.type === 'grammar_table' && block.tableRows && (
-                <GrammarTable rows={block.tableRows} />
-            )}
-
-            {block.type === 'example_list' && block.tableRows && (
                 <GrammarTable rows={block.tableRows} />
             )}
 
@@ -271,3 +267,5 @@ export default function LessonPage({ params }: { params: Promise<{ lessonId: str
     
     return <LessonComponent lesson={lesson} />;
 }
+
+    
