@@ -156,7 +156,7 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                 <h3 className="text-xl font-semibold tracking-tight" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
-            {block.type === 'explanation' && <ExplanationBlock block={block} />}
+            {block.type === 'explanation' && block.content && <ExplanationBlock block={block} />}
             
              {block.type === 'image_placeholder' && (
                 <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
