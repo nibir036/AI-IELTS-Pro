@@ -13,7 +13,7 @@ import Image from 'next/image';
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Separator } from '@/components/ui/separator';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getTranslation } from '@/ai/flows/multilingual-support';
@@ -55,7 +55,7 @@ function GrammarTable({ rows }: { rows: GrammarTableRow[] }) {
                 <TableBody>
                     {rows.map((row, index) => (
                         <TableRow key={index} className={index === rows.length - 1 ? "border-b-0" : ""}>
-                            <TableCell className="w-[40%] font-mono text-sm text-muted-foreground">{row.subject}</TableCell>
+                            <TableCell className="w-[40%] font-mono text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: row.subject }} />
                             <TableCell className="font-semibold" dangerouslySetInnerHTML={{ __html: row.verb }} />
                         </TableRow>
                     ))}
@@ -86,12 +86,22 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
     const [translatedContent, setTranslatedContent] = useState<string | null>(null);
     const canTranslate = user?.nativeLanguage && user.nativeLanguage.toLowerCase() !== 'english' && block.content;
 
-    const handleTranslateToggle = async () => {
+    const handleTranslateToggle = useCallback(async () => {
         if (isTranslating) return;
 
-        // If we already have a translation, just toggle the view.
+        const translationKey = `translation_${user?.nativeLanguage}_${block.content}`;
+
+        // If we already have a translation in component state, just toggle the view.
         if (translatedContent) {
             setIsTranslated(!isTranslated);
+            return;
+        }
+
+        // Check session storage cache first
+        const cachedTranslation = sessionStorage.getItem(translationKey);
+        if (cachedTranslation) {
+            setTranslatedContent(cachedTranslation);
+            setIsTranslated(true);
             return;
         }
 
@@ -105,6 +115,7 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
                 nativeLanguage: user.nativeLanguage,
             });
             setTranslatedContent(result.translatedText);
+            sessionStorage.setItem(translationKey, result.translatedText); // Cache the result
             setIsTranslated(true); // Show the translation immediately
         } catch (error) {
             console.error('Translation error:', error);
@@ -116,7 +127,7 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
         } finally {
             setIsTranslating(false);
         }
-    };
+    }, [isTranslating, translatedContent, canTranslate, isTranslated, block.content, user?.nativeLanguage, toast]);
     
     const displayContent = isTranslated ? translatedContent : block.content;
 
@@ -157,7 +168,8 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
             )}
             
             {block.type === 'explanation' && block.content && <ExplanationBlock block={block} />}
-            
+            {block.type === 'explanation' && block.tableRows && <GrammarTable rows={block.tableRows} />}
+
              {block.type === 'image_placeholder' && (
                 <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                     {block.generatedImageUrl ? (
@@ -179,6 +191,10 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
             )}
             
             {block.type === 'grammar_table' && block.tableRows && (
+                <GrammarTable rows={block.tableRows} />
+            )}
+
+            {block.type === 'example_list' && block.tableRows && (
                 <GrammarTable rows={block.tableRows} />
             )}
 
