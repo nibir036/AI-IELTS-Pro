@@ -146,10 +146,21 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
                      isTranslated ? <RotateCcw className="h-4 w-4 text-primary" /> : <Languages className="h-4 w-4" />}
                 </Button>
             )}
-            <p 
-                className="text-foreground/80 leading-relaxed" 
-                dangerouslySetInnerHTML={{ __html: displayContent || '' }} 
-            />
+            {displayContent && (
+                <p 
+                    className="text-foreground/80 leading-relaxed" 
+                    dangerouslySetInnerHTML={{ __html: displayContent }} 
+                />
+            )}
+             {block.tableRows && (
+                <div className="mt-4 space-y-2">
+                    {block.tableRows.map((row, index) => (
+                        <div key={index}>
+                            <b dangerouslySetInnerHTML={{ __html: row.subject }} />: <span dangerouslySetInnerHTML={{ __html: row.verb }} />
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     )
 }
@@ -167,8 +178,7 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                 <h3 className="text-xl font-semibold tracking-tight" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
-            {block.type === 'explanation' && block.content && <ExplanationBlock block={block} />}
-            {block.type === 'explanation' && block.tableRows && <GrammarTable rows={block.tableRows} />}
+            {block.type === 'explanation' && <ExplanationBlock block={block} />}
 
              {block.type === 'image_placeholder' && (
                 <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
