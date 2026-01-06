@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -172,7 +171,18 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
 ---
 ### PERSONA & TASK INSTRUCTIONS BY CONTENT TYPE ###
 
-#### IF contentType is 'Lesson' (e.g., Grammar or Vocabulary):
+#### IF contentType is 'Lesson' and the topic is 'Vocabulary':
+*   **Role:** Expert English Language Tutor & Lexicographer for IELTS.
+*   **Task:** Generate a comprehensive vocabulary lesson based on the theme in \`rawText\`.
+*   **Structure Requirements:**
+    1.  **ID/Metadata:** Generate a unique ID, a clear title (e.g., "Essential Vocabulary: [Topic]"), set level to 'Intermediate' or 'Advanced', and write a one-sentence \`content_en\` summary.
+    2.  **Content Blocks:** You MUST use the \`contentBlocks\` array to structure the entire lesson.
+    3.  **Sectioning:** Create multiple 'explanation' type blocks, each with a \`sectionTitle\` (e.g., "1. Core Concepts", "2. Causes and Impacts", "3. Solutions and Actions", "4. Useful Collocations").
+    4.  **Word Lists:** Within each section's 'explanation' block, present a list of 5-10 thematically related vocabulary words. For each word, provide a concise definition relevant to the IELTS context. Use HTML for structure, e.g., \`<b>Word:</b> Definition<br>\`.
+    5.  **Example Sentences:** Create a separate 'example_list' block with example sentences for some of the key vocabulary. Use \`<b>\` tags to highlight the vocabulary word in each sentence.
+    6.  **Practice:** Generate at least one 'gap-fill' practice exercise in the \`exercises\` array with 5 questions that test the newly introduced vocabulary, and provide a clear answer key.
+
+#### IF contentType is 'Lesson' (e.g., Grammar or Tips):
 *   **Role:** Expert English Language Tutor for IELTS.
 *   **Task:** Generate a complete lesson plan based on the \`rawText\`.
 *   **Structure Requirements:**
@@ -216,7 +226,7 @@ SECOND, you are a "Senior Editor & Formatter" who strictly validates and formats
         *   **CRITICAL ANSWER RULE:** For multiple-choice questions (including multiple-answer), the answer MUST be the full text of the option (e.g., "a display of instruments"), NOT just the letter (e.g., 'B').
         *   For multiple-choice-multiple-answer questions (e.g., "Choose TWO letters A-E"), the 'answer' field must be a comma-separated string of the full text of the correct options.
     3.  **Divide Transcript (\`transcript\`):** Logically divide the full transcript into four segments and place each segment into the 'transcript' field of the corresponding 'part' object (Part 1, Part 2, Part 3, Part 4).
-    4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". DO NOT add an 'audioUrl' field to the individual 'parts' objects.
+    4.  **Audio URL:** For the top-level \`audioUrl\`, set the 'audioUrl' field to the following exact placeholder URL: "https://storage.googleapis.com/aidemos/devrel_and_partners/AI%20Band%20Builder/placeholder_audio_1.mp3". DO NOT add an \`audioUrl\` field to the individual \`parts\` objects.
     5.  **Output:** Your entire output must be a single JSON object conforming to the ListeningTest schema.
 
 ---
@@ -364,5 +374,3 @@ const contentFactoryFlow = ai.defineFlow(
     return structuredContent;
   }
 );
-
-    
