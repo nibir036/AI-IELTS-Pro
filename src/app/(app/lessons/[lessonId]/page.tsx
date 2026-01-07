@@ -155,7 +155,7 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
             {block.tableRows && (
                  <div className="mt-4 space-y-2">
                     {block.tableRows.map((row, index) => (
-                        <div key={index}>
+                        <div key={index} className="text-foreground/80 leading-relaxed">
                             <b dangerouslySetInnerHTML={{ __html: row.subject }} />: <span dangerouslySetInnerHTML={{ __html: row.verb }} />
                         </div>
                     ))}
