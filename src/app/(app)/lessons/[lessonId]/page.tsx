@@ -55,8 +55,8 @@ function GrammarTable({ rows }: { rows: GrammarTableRow[] }) {
                 <TableBody>
                     {rows.map((row, index) => (
                         <TableRow key={index} className={index === rows.length - 1 ? "border-b-0" : ""}>
-                            <TableCell className="w-[40%] font-mono text-sm text-muted-foreground">{row.subject}</TableCell>
-                            <TableCell className="font-semibold" dangerouslySetInnerHTML={{ __html: row.verb }} />
+                            <TableCell className="w-[40%] font-semibold" dangerouslySetInnerHTML={{ __html: row.subject }} />
+                            <TableCell dangerouslySetInnerHTML={{ __html: row.verb }} />
                         </TableRow>
                     ))}
                 </TableBody>
@@ -146,10 +146,12 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
                      isTranslated ? <RotateCcw className="h-4 w-4 text-primary" /> : <Languages className="h-4 w-4" />}
                 </Button>
             )}
-            <p 
-                className="text-foreground/80 leading-relaxed" 
-                dangerouslySetInnerHTML={{ __html: displayContent || '' }} 
-            />
+            {displayContent && (
+                <p 
+                    className="text-foreground/80 leading-relaxed" 
+                    dangerouslySetInnerHTML={{ __html: displayContent }} 
+                />
+            )}
         </div>
     )
 }
@@ -167,8 +169,13 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                 <h3 className="text-xl font-semibold tracking-tight" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
-            {block.type === 'explanation' && <ExplanationBlock block={block} />}
-            
+            {block.type === 'explanation' && (
+                <>
+                    {block.content && <ExplanationBlock block={block} />}
+                    {block.tableRows && <GrammarTable rows={block.tableRows} />}
+                </>
+            )}
+
              {block.type === 'image_placeholder' && (
                 <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                     {block.generatedImageUrl ? (
