@@ -1,4 +1,3 @@
-
 'use client';
 
 import { use } from 'react';
@@ -46,12 +45,11 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
         return <p>Test content could not be found for this submission.</p>;
     }
     
-    const allQuestions = test.parts.flatMap(p => (p as any).questions || (p as any).questionGroups?.flatMap((qg: any) => qg.questions)) as (ReadingQuestion | ListeningQuestion)[];
     const userAnswers = submission.inputData as Record<string, any>;
 
     const renderQuestionGroup = (group: ListeningQuestionGroup, partNumber: number, groupIndex: number) => {
         return (
-            <div key={\`\${partNumber}-\${groupIndex}\`} className="space-y-4">
+            <div key={`${partNumber}-${groupIndex}`} className="space-y-4">
                  <div className="text-sm font-medium text-foreground pb-2 border-b">{group.instructions}</div>
                  <div className="space-y-6">
                     {group.questions.map((q) => renderQuestion(q))}
@@ -83,7 +81,7 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
         const questionTextParts = q.question.split('____');
 
         return (
-            <Card key={q.id} className={\`p-4 \${!isCorrect ? 'border-red-500' : 'border-green-500'}\`}>
+            <Card key={q.id} className={`p-4 ${!isCorrect ? 'border-red-500' : 'border-green-500'}`}>
                 <div className="flex items-start gap-2 mb-4">
                     {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600 mt-1" /> : <XCircle className="h-5 w-5 text-red-600 mt-1" />}
                     <p className="flex-1 font-medium" dangerouslySetInnerHTML={{__html: q.question}}/>
@@ -93,8 +91,8 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
                     <RadioGroup value={userAnswer} disabled>
                         {q.options.map((option, index) => (
                         <div key={index} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option} id={\`\${q.id}-\${index}\`} />
-                            <Label htmlFor={\`\${q.id}-\${index}\`} className={getOptionClass(option)}>
+                            <RadioGroupItem value={option} id={`${q.id}-${index}`} />
+                            <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>
                             {option}
                             </Label>
                         </div>
@@ -106,8 +104,8 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
                     <div className="space-y-2">
                         {q.options.map((option, index) => (
                         <div key={index} className="flex items-center space-x-2">
-                            <Checkbox id={\`\${q.id}-\${index}\`} checked={userAnswer?.includes(option)} disabled />
-                            <Label htmlFor={\`\${q.id}-\${index}\`} className={getOptionClass(option)}>{option}</Label>
+                            <Checkbox id={`${q.id}-${index}`} checked={userAnswer?.includes(option)} disabled />
+                            <Label htmlFor={`${q.id}-${index}`} className={getOptionClass(option)}>{option}</Label>
                         </div>
                         ))}
                     </div>
@@ -117,7 +115,7 @@ function ComprehensionTestReview({ submission }: { submission: Submission }) {
                     <div>
                          <div className="flex items-center flex-wrap font-medium">
                             <span dangerouslySetInnerHTML={{__html: questionTextParts[0]}} />
-                            <Input value={userAnswer} disabled className={\`w-40 inline-block mx-2 h-8 \${!isCorrect ? 'border-red-500' : ''}\`} />
+                            <Input value={userAnswer} disabled className={`w-40 inline-block mx-2 h-8 ${!isCorrect ? 'border-red-500' : ''}`} />
                             <span dangerouslySetInnerHTML={{__html: questionTextParts[1]}} />
                        </div>
                         {!isCorrect && <p className="text-xs text-green-600 mt-1">Correct answer: {correctAnswer}</p>}
@@ -188,7 +186,7 @@ export default function SubmissionPage({ params }: { params: Promise<{ submissio
     }
     
     if (submission.skill === 'Writing') {
-      const report = submission.aiReport as any; // Cast to any to handle both single and double task structures
+      const report = submission.aiReport as any; 
       if (report && ('task1' in report || 'task2' in report)) {
         const finalScore = report.task1 && report.task2 
             ? ((report.task1.overallBand + report.task2.overallBand * 2) / 3)
@@ -210,7 +208,6 @@ export default function SubmissionPage({ params }: { params: Promise<{ submissio
             </div>
         );
       }
-      // Handle old structure if needed, or just show the main component
       return <WritingEvaluationResults result={report as AiPoweredWritingEvaluationOutput} />;
     }
 
@@ -222,7 +219,6 @@ export default function SubmissionPage({ params }: { params: Promise<{ submissio
       return <ComprehensionTestReview submission={submission} />;
     }
     
-    // Fallback for other types
     return (
         <Card>
             <CardHeader><CardTitle>Submission Details</CardTitle></CardHeader>

@@ -1,4 +1,3 @@
-
 'use client';
 import { use } from 'react';
 import { notFound } from "next/navigation";
@@ -55,8 +54,8 @@ function GrammarTable({ rows }: { rows: GrammarTableRow[] }) {
                 <TableBody>
                     {rows.map((row, index) => (
                         <TableRow key={index} className={index === rows.length - 1 ? "border-b-0" : ""}>
-                            <TableCell className="w-[40%] font-semibold" dangerouslySetInnerHTML={{ __html: row.subject }} />
-                            <TableCell dangerouslySetInnerHTML={{ __html: row.verb }} />
+                            <TableCell className="w-[40%] font-mono text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: row.subject }} />
+                            <TableCell className="font-semibold" dangerouslySetInnerHTML={{ __html: row.verb }} />
                         </TableRow>
                     ))}
                 </TableBody>
@@ -152,6 +151,15 @@ function ExplanationBlock({ block }: { block: ContentBlock }) {
                     dangerouslySetInnerHTML={{ __html: displayContent }} 
                 />
             )}
+            {block.tableRows && (
+                 <div className="mt-4 space-y-2">
+                    {block.tableRows.map((row, index) => (
+                        <div key={index} className="text-foreground/80 leading-relaxed border-b border-muted py-2 last:border-0">
+                            <b dangerouslySetInnerHTML={{ __html: row.subject }} />: <span dangerouslySetInnerHTML={{ __html: row.verb }} />
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     )
 }
@@ -169,12 +177,7 @@ function RenderContentBlock({ block, index }: { block: ContentBlock, index: numb
                 <h3 className="text-xl font-semibold tracking-tight" dangerouslySetInnerHTML={{ __html: block.sectionTitle }}/>
             )}
             
-            {block.type === 'explanation' && (
-                <>
-                    {block.content && <ExplanationBlock block={block} />}
-                    {block.tableRows && <GrammarTable rows={block.tableRows} />}
-                </>
-            )}
+            {block.type === 'explanation' && <ExplanationBlock block={block} />}
 
              {block.type === 'image_placeholder' && (
                 <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
